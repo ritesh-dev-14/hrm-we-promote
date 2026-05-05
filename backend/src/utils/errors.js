@@ -14,6 +14,25 @@ module.exports = {
     NOT_FOUND: {
       code: "USER_001",
       message: "User not found"
+    },
+    DUPLICATE_EMAIL: {
+      code: "USER_004",
+      message: "Email already exists"
+    }
+  },
+
+  HR: {
+    MANAGER_NOT_FOUND: {
+      code: "HR_001",
+      message: "Manager not found"
+    },
+    EMPLOYEE_NOT_FOUND: {
+      code: "HR_002",
+      message: "Employee not found"
+    },
+    INVALID_USER_TYPE: {
+      code: "HR_003",
+      message: "Invalid user type"
     }
   },
 
