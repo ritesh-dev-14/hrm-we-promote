@@ -3,7 +3,7 @@ import { createContext, useContext, useState } from "react";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [role, setRole] = useState("HR");
+  const [role, setRole] = useState("MANAGER");
 
   const logout = () => {
     console.log("Logging out...");
