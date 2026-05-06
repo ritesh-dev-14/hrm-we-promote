@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid,
   CalendarDays,
@@ -6,134 +8,223 @@ import {
   CircleDollarSign,
   Settings,
   LogOut,
-  ChevronRight,
-  User,
+  Menu,
+  X,
+  Users,
+  ShieldCheck,
 } from "lucide-react";
-// 1. Import motion and AnimatePresence
-import { motion, AnimatePresence } from "framer-motion";
 
-const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutGrid },
-  { id: "attendance", label: "Attendance", icon: CalendarDays },
-  { id: "leave", label: "Leave", icon: FileText },
-  { id: "payslips", label: "Payslips", icon: CircleDollarSign },
-  { id: "settings", label: "Settings", icon: Settings },
+// Assuming your authContext is in this path
+import { useAuth } from "../context/AuthContext";
+import MainLogo from "../assets/logo.jpeg";
+
+const NAV_CONFIG = [
+  { 
+    id: "dashboard", 
+    label: "Dashboard", 
+    icon: LayoutGrid, 
+    path: "/dashboard", 
+    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] 
+  },
+  { 
+    id: "attendance", 
+    label: "Attendance", 
+    icon: CalendarDays, 
+    path: "/attendance", 
+    roles: ["EMPLOYEE", "MANAGER"] 
+  },
+  { 
+    id: "team", 
+    label: "Team Management", 
+    icon: Users, 
+    path: "/hr/team", 
+    roles: ["HR", "ADMIN"] 
+  },
+  { 
+    id: "leave", 
+    label: "Leave", 
+    icon: FileText, 
+    path: "/leave", 
+    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] 
+  },
+  { 
+    id: "payslips", 
+    label: "Payslips", 
+    icon: CircleDollarSign, 
+    path: "/payslips", 
+    roles: ["EMPLOYEE", "MANAGER", "HR"] 
+  },
+  { 
+    id: "admin-panel", 
+    label: "Admin Controls", 
+    icon: ShieldCheck, 
+    path: "/admin/settings", 
+    roles: ["ADMIN"] 
+  },
+  { 
+    id: "settings", 
+    label: "Settings", 
+    icon: Settings, 
+    path: "/settings", 
+    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"] 
+  },
 ];
 
-export default function PixelPerfectSidebar({
-  user = { name: "Ritesh Sharma", role: "Employee" },
-}) {
-  const [active, setActive] = useState("dashboard");
+export default function ProfessionalSidebar({ children }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { role, logout } = useAuth(); 
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  return (
-    <aside className="w-62 h-screen bg-[#0E1628] flex flex-col font-sans overflow-hidden">
-      {/* 1. BRANDING SECTION */}
-      <div className="p-6 border-b border-dashed border-blue-400/30">
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3"
-        >
-          <div className="w-8 h-8 flex items-center justify-center text-white">
-            <User size={24} />
+  /**
+   * 2. Filter Nav Items based on Role
+   * useMemo prevents recalculating on every re-render.
+   */
+  const allowedNavItems = useMemo(() => {
+    return NAV_CONFIG.filter((item) => item.roles.includes(role));
+  }, [role]);
+
+  const activeTab = useMemo(() => {
+    return allowedNavItems.find((item) => location.pathname.startsWith(item.path))?.id || "dashboard";
+  }, [location.pathname, allowedNavItems]);
+
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "unset";
+  }, [isMobileMenuOpen]);
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-[#0B1120] text-white">
+      {/* BRANDING */}
+      <div className="py-10 flex flex-col items-center border-b border-white/[0.03]">
+        <div className="relative group">
+          <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full group-hover:bg-indigo-500/30 transition-colors" />
+          <div className="relative w-20 h-20 rounded-full border-[3px] border-white/10 p-1 shadow-2xl bg-[#1C2539]">
+            <img 
+              src={MainLogo} 
+              alt="Company Logo" 
+              className="w-full h-full rounded-full object-cover transition-all" 
+            />
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-white text-[14px] font-bold leading-tight">
-              Employee MS
-            </h1>
-            <p className="text-[#8A94A6] text-[10px] font-medium uppercase tracking-tight">
-              Management System
-            </p>
-          </div>
-        </motion.div>
+        </div>
+        <div className="mt-4 flex flex-col items-center">
+          <h2 className="text-[14px] font-bold text-white tracking-wide">Portal</h2>
+          <span className="text-[10px] px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-400 font-black uppercase tracking-tighter">
+            {role} Access
+          </span>
+        </div>
       </div>
 
-      {/* 2. USER PROFILE CARD */}
-      <div className="p-4 border-b border-dashed border-blue-400/30">
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-[#1C2539] rounded-xl p-3 flex items-center gap-3 border border-white/5 cursor-pointer"
-        >
-          <div className="w-9 h-9 rounded-lg bg-[#2D3748] flex items-center justify-center text-[#8A94A6] text-xs font-bold border border-white/10">
-            {user.name.charAt(0)}
-          </div>
-          <div className="flex flex-col overflow-hidden">
-            <span className="text-white text-[13px] font-bold truncate">
-              {user.name}
-            </span>
-            <span className="text-[#8A94A6] text-[11px] font-medium">
-              {user.role}
-            </span>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* 3. NAVIGATION LIST */}
-      <div className="flex-1 px-3 py-6">
-        <p className="px-4 text-[10px] font-bold text-[#4B5563] uppercase tracking-[0.15em] mb-4">
-          Navigation
-        </p>
-
-        <nav className="flex flex-col gap-1">
-          {NAV_ITEMS.map((item) => {
-            const isActive = active === item.id;
+      {/* NAVIGATION */}
+      <div className="flex-1 px-4 py-8 overflow-y-auto custom-scrollbar">
+        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-6">Main Menu</p>
+        <nav className="flex flex-col gap-2">
+          {allowedNavItems.map((item) => {
+            const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setActive(item.id)}
-                className={`group w-full relative flex items-center gap-3.5 px-4 py-2.5 rounded-lg transition-colors duration-300 ${
-                  isActive ? "text-white" : "text-[#8A94A6] hover:text-white"
+                onClick={() => {
+                  navigate(item.path);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`group relative flex items-center gap-3.5 px-4 py-3.5 rounded-xl transition-all duration-300 ${
+                  isActive ? "text-white" : "text-slate-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                {/* SLIDING ACTIVE BACKGROUND */}
                 {isActive && (
                   <motion.div
-                    layoutId="active-bg"
-                    className="absolute inset-0 bg-[#1C2539] rounded-lg -z-10"
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    layoutId="active-pill-bg"
+                    className="absolute inset-0 bg-indigo-600/10 border border-indigo-500/20 rounded-xl"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-
-                <item.icon
-                  size={18}
-                  className={`transition-colors duration-300 ${isActive ? "text-white" : "text-[#8A94A6] group-hover:text-white"}`}
+                <item.icon 
+                  size={20} 
+                  className={`relative z-10 transition-colors ${isActive ? "text-indigo-400" : "group-hover:text-slate-200"}`} 
                 />
-
-                <span className="text-[13px] font-bold flex-1 text-left">
-                  {item.label}
-                </span>
-
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                    >
-                      <ChevronRight
-                        size={14}
-                        className="text-[#3F51B5]"
-                        strokeWidth={3}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <span className="relative z-10 text-[14px] font-bold tracking-tight">{item.label}</span>
+                
+                {isActive && (
+                  <motion.div 
+                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" 
+                  />
+                )}
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* 4. LOGOUT FOOTER */}
-      <div className="p-4 border-t border-dashed border-blue-400/30">
-        <motion.button
-          whileHover={{ x: 5 }}
-          className="w-full flex items-center gap-3.5 px-4 py-2 text-[#8A94A6] hover:text-white transition-colors"
+      {/* FOOTER */}
+      <div className="p-4 border-t border-white/[0.03]">
+        <button 
+          onClick={logout}
+          className="w-full flex items-center gap-3.5 px-4 py-3 text-slate-400 hover:text-rose-400 hover:bg-rose-500/5 transition-all rounded-xl group"
         >
-          <LogOut size={18} />
-          <span className="text-[13px] font-bold">Log out</span>
+          <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-[14px] font-bold">Sign Out</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex min-h-screen bg-[#F9FAFB]">
+      {/* DESKTOP SIDEBAR */}
+      <aside className="hidden lg:flex w-64 h-screen sticky top-0 border-r border-black/[0.05] z-30 shrink-0">
+        <SidebarContent />
+      </aside>
+
+      {/* MOBILE TRIGGER */}
+      <div className="lg:hidden fixed top-5 left-5 z-40">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="flex items-center gap-2.5 p-1.5 pr-4 bg-[#0B1120] border border-white/10 rounded-full shadow-2xl"
+        >
+          <div className="w-9 h-9 rounded-full border border-white/10 overflow-hidden">
+            <img src={MainLogo} alt="Logo" className="w-full h-full object-cover" />
+          </div>
+          <Menu size={20} className="text-indigo-400" />
         </motion.button>
       </div>
-    </aside>
+
+      {/* MOBILE DRAWER */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }} 
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute left-0 top-0 bottom-0 w-[280px] shadow-2xl"
+            >
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="absolute top-6 right-6 p-2 bg-white/5 rounded-full text-slate-400"
+              >
+                <X size={20} />
+              </button>
+              <SidebarContent />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <main className="flex-1 w-full relative">
+        <div className="p-6 lg:p-10 max-w-7xl mx-auto">
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }

@@ -38,7 +38,7 @@ const EmployeeHomePage = () => {
             Welcome back, Ritesh!
           </h1>
           <p className="text-gray-500 mt-1 font-medium">
-            Web Developer Manager <span className="mx-2 text-gray-300">|</span> IT Department
+            Web Developer <span className="mx-2 text-gray-300">|</span> IT Department
           </p>
         </header>
 
