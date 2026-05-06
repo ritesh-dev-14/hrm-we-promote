@@ -70,6 +70,63 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// model User {
+//   id          String   @id @default(uuid())
+//   employeeId  String   @unique
+
+//   name        String
+//   email       String   @unique
+//   password    String
+//   role        Role
+
+//   department  String?
+
+//   createdById String?
+
+//   createdBy   User?  @relation("Hierarchy", fields: [createdById], references: [id])
+//   children    User[] @relation("Hierarchy")
+
+//   attendances Attendance[]
+
+//   tasksCreated Task[] @relation("ManagerTasks")
+// assignments  TaskAssignment[]
+// notifications Notification[]
+
+//   createdAt   DateTime @default(now())
+// }
+
+
+// model User {
+//   id          String   @id @default(uuid())
+//   employeeId  String   @unique
+
+//   name        String
+//   email       String   @unique
+//   password    String
+//   role        Role
+
+//   department  String?
+//   position    String?   // ✅ NEW
+
+//   // 👇 who created (HR)
+//   createdById String?
+//   createdBy   User?  @relation("Hierarchy", fields: [createdById], references: [id])
+//   children    User[] @relation("Hierarchy")
+
+//   // 👇 NEW: manager relation (VERY IMPORTANT)
+//   managerId   String?
+//   manager     User?   @relation("ManagerEmployee", fields: [managerId], references: [id])
+//   teamMembers User[]  @relation("ManagerEmployee")
+
+//   attendances Attendance[]
+
+//   tasksCreated Task[] @relation("ManagerTasks")
+//   assignments  TaskAssignment[]
+//   notifications Notification[]
+
+//   createdAt   DateTime @default(now())
+// }
+
 model User {
   id          String   @id @default(uuid())
   employeeId  String   @unique
@@ -80,13 +137,23 @@ model User {
   role        Role
 
   department  String?
+  position    String?     // ✅ NEW FIELD
+
+  managerId   String?     // ✅ NEW FIELD
+
+  // 🔥 SELF RELATION (manager ↔ employees)
+  manager     User?  @relation("UserManager", fields: [managerId], references: [id])
+  subordinates User[] @relation("UserManager")
 
   createdById String?
-
   createdBy   User?  @relation("Hierarchy", fields: [createdById], references: [id])
   children    User[] @relation("Hierarchy")
 
   attendances Attendance[]
+
+  tasksCreated Task[] @relation("ManagerTasks")
+  assignments  TaskAssignment[]
+  notifications Notification[]
 
   createdAt   DateTime @default(now())
 }
@@ -136,4 +203,128 @@ enum AttendanceStatus {
   PRESENT
   HALF_DAY
   ABSENT
+   HOLIDAY
+}
+
+
+//Task Management Models
+
+model Task {
+  id          String   @id @default(uuid())
+
+  title       String
+  description String?
+
+  date        DateTime   // 👈 IMPORTANT (schedule date)
+
+  location    String?    // Google map link or manual
+  setupType   SetupType  // 👈 ENUM
+
+  managerId   String
+  // manager     User @relation(fields: [managerId], references: [id])
+  manager     User @relation("ManagerTasks", fields: [managerId], references: [id])
+
+  status      TaskStatus @default(PENDING)
+
+  assignments TaskAssignment[]
+
+  createdAt   DateTime @default(now())
+}
+
+enum SetupType {
+  PREMIUM
+  VERY_PREMIUM
+  PHONE
+}
+
+enum TaskStatus {
+  PENDING
+  ASSIGNED
+  SUBMITTED
+  VERIFIED
+}
+
+
+
+// model TaskAssignment {
+//   id          String   @id @default(uuid())
+
+//   taskId      String
+//   employeeId  String
+
+//   groupId     String?   // 👈 for grouping employees
+
+//   task        Task @relation(fields: [taskId], references: [id])
+//   employee    User @relation(fields: [employeeId], references: [employeeId])
+
+//   status      AssignmentStatus @default(ASSIGNED)
+
+//   submission  TaskSubmission?
+
+//   createdAt   DateTime @default(now())
+
+//   @@unique([taskId, employeeId]) // prevent duplicate assignment
+// }
+
+model TaskAssignment {
+  id        String @id @default(uuid())
+
+  taskId    String
+  userId    String   // 👈 renamed (important)
+
+  groupId   String?
+
+  task      Task @relation(fields: [taskId], references: [id])
+  employee  User @relation(fields: [userId], references: [id])
+
+  status    AssignmentStatus @default(ASSIGNED)
+
+  submission TaskSubmission?
+
+  createdAt DateTime @default(now())
+
+  @@unique([taskId, userId])
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  SUBMITTED
+  APPROVED
+}
+
+
+model TaskSubmission {
+  id             String   @id @default(uuid())
+
+  assignmentId   String   @unique
+
+  completedCount Int
+  pendingCount   Int
+
+  driveLink      String
+
+  submittedAt    DateTime @default(now())
+
+  assignment TaskAssignment @relation(fields: [assignmentId], references: [id])
+}
+
+
+model Notification {
+  id        String   @id @default(uuid())
+
+  userId    String
+  message   String
+
+  type      NotificationType
+
+  isRead    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum NotificationType {
+  TASK_REMINDER
+  ESCALATION
 }

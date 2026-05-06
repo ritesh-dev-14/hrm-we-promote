@@ -39,18 +39,19 @@ module.exports = {
   ATTENDANCE: {
     ALREADY_STARTED: {
       code: "ATT_001",
-      message: "Attendance already started today"
+      message: "Work already started",
     },
     NOT_STARTED: {
       code: "ATT_002",
-      message: "Attendance not started"
-    }
-  },
-
-  COMMON: {
-    SERVER_ERROR: {
-      code: "COM_001",
-      message: "Something went wrong"
-    }
+      message: "Work not started",
+    },
+    BREAK_ACTIVE: {
+      code: "ATT_003",
+      message: "Break already active",
+    },
+    NO_ACTIVE_BREAK: {
+      code: "ATT_004",
+      message: "No active break found",
+    },
   }
 };

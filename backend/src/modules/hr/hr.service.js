@@ -120,25 +120,78 @@ exports.deleteManager = async (employeeId) => {
 };
 
 // 🔹 Employee Services
+// exports.createEmployee = async (user, body) => {
+//   // Check if email already exists
+//   const existingUser = await prisma.user.findUnique({
+//     where: { email: body.email },
+//   });
+
+//   if (existingUser) {
+//     throw new ApiError(400, { code: "USER_004", message: "Email already exists" });
+//   }
+
+//   const hashed = await bcrypt.hash(body.password, 10);
+
+//   return prisma.user.create({
+//     data: {
+//       employeeId: body.employeeId || "EMP-" + Date.now(),
+//       name: body.name,
+//       email: body.email,
+//       password: hashed,
+//       role: "EMPLOYEE",
+//       createdById: user.id,
+//     },
+//     select: {
+//       id: true,
+//       employeeId: true,
+//       name: true,
+//       email: true,
+//       role: true,
+//       createdAt: true,
+//     },
+//   });
+// };
+
 exports.createEmployee = async (user, body) => {
-  // Check if email already exists
+  // 🔹 Check duplicate email
   const existingUser = await prisma.user.findUnique({
     where: { email: body.email },
   });
 
   if (existingUser) {
-    throw new ApiError(400, { code: "USER_004", message: "Email already exists" });
+    throw new ApiError(400, ERRORS.USER.DUPLICATE_EMAIL);
+  }
+
+  // 🔹 If managerId is provided → validate manager exists
+  let manager = null;
+  if (body.managerId) {
+    manager = await prisma.user.findUnique({
+      where: { id: body.managerId },
+    });
+
+    if (!manager) {
+      throw new ApiError(404, "Manager not found");
+    }
+
+    if (manager.role !== "MANAGER") {
+      throw new ApiError(400, "Assigned user is not a manager");
+    }
   }
 
   const hashed = await bcrypt.hash(body.password, 10);
 
-  return prisma.user.create({
+  const newUser = await prisma.user.create({
     data: {
       employeeId: body.employeeId || "EMP-" + Date.now(),
       name: body.name,
       email: body.email,
       password: hashed,
-      role: "EMPLOYEE",
+
+      role: body.role,
+      department: body.department,
+      position: body.position,
+
+      managerId: body.managerId || null, // 👈 NEW
       createdById: user.id,
     },
     select: {
@@ -147,9 +200,14 @@ exports.createEmployee = async (user, body) => {
       name: true,
       email: true,
       role: true,
+      department: true,
+      position: true,
+      managerId: true,
       createdAt: true,
     },
   });
+
+  return newUser;
 };
 
 exports.getEmployees = async (user) => {
@@ -163,6 +221,9 @@ exports.getEmployees = async (user) => {
       name: true,
       email: true,
       role: true,
+      department: true,
+      position: true,
+      managerId: true,
       createdAt: true,
     },
   });
@@ -177,6 +238,9 @@ exports.getEmployee = async (employeeId) => {
       name: true,
       email: true,
       role: true,
+      department: true,
+      position: true,
+      managerId: true,
       createdAt: true,
     },
   });
@@ -208,6 +272,9 @@ exports.updateEmployee = async (employeeId, body) => {
       name: true,
       email: true,
       role: true,
+      department: true,
+      position: true,
+      managerId: true,
       createdAt: true,
     },
   });

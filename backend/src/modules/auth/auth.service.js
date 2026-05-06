@@ -20,7 +20,7 @@ exports.login = async (data) => {
   }
 
   const token = jwt.sign(
-    { id: user.id, role: user.role },
+    { id: user.id, employeeId: user.employeeId, role: user.role },
     process.env.JWT_SECRET
   );
 

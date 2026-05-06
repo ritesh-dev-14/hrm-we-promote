@@ -17,6 +17,8 @@ app.get("/", (req, res) => {
 app.use("/api/auth", require("./modules/auth/auth.routes"));
 app.use("/api/hr", require("./modules/hr/hr.routes"));
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/manager/tasks", require("./modules/task/task.routes"));
+app.use("/api/employee", require("./modules/employee/employee.routes"));
 
 // Error handling middleware
 
