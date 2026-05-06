@@ -121,7 +121,6 @@
 //   );
 // }
 
-
 import { useState } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -132,20 +131,38 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const { setRole } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
 
-    // Role logic based on your system roles: EMPLOYEE, MANAGER, HR, ADMIN
-    if (email.includes("admin")) setRole("ADMIN");
-    else if (email.includes("hr")) setRole("HR");
-    else if (email.includes("manager")) setRole("MANAGER");
-    else setRole("EMPLOYEE");
+    try {
+      const res = await API.post("/api/auth/login", {
+        email,
+        password,
+      });
 
-    navigate("/dashboard");
+      // ✅ backend response
+      const { user, token } = res.data.data;
+
+      // store token
+      localStorage.setItem("token", token);
+
+      // set role from backend
+      setRole(user.role);
+
+      // redirect
+      navigate("/dashboard");
+
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || "Login failed";
+      console.error("Login error:", errorMsg);
+      setError(errorMsg);
+    }
   };
 
   return (
@@ -165,6 +182,13 @@ export default function Login() {
           </p>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-5">
 
@@ -180,7 +204,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full h-12 pl-10 pr-4 rounded-xl border"
+                className="w-full h-12 pl-10 pr-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] outline-none focus:border-[#6366F1] focus:ring-2 focus:ring-indigo-500/10 transition-all"
                 placeholder="Enter email"
               />
             </div>
@@ -198,14 +222,14 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full h-12 pl-10 pr-10 rounded-xl border"
+                className="w-full h-12 pl-10 pr-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] outline-none focus:border-[#6366F1] focus:ring-2 focus:ring-indigo-500/10 transition-all"
                 placeholder="Enter password"
               />
 
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -215,7 +239,7 @@ export default function Login() {
           {/* Button */}
           <button
             type="submit"
-            className="w-full h-12 bg-[#6366F1] text-white rounded-xl font-bold"
+            className="w-full h-12 mt-4 bg-[#6366F1] text-white rounded-xl font-bold hover:bg-[#4F46E5] transition-all"
           >
             Login
           </button>

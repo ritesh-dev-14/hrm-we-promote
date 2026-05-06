@@ -1,16 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   Users, 
   Building2, 
   Calendar, 
-  FileText 
+  FileText,
+  Plus
 } from "lucide-react";
+import HrAddEmployee from "./HrAddEmployee";
 
 /**
- * Pixel-Perfect Admin Dashboard
- * Based on HRMS visual guidelines.
+ * HR Dashboard with employee management
  */
-const AdminDashboard = () => {
+const HrHomePage = () => {
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  const [employees, setEmployees] = useState([]);
+
   const stats = [
     { title: "Total Employees", value: "5", icon: Users },
     { title: "Departments", value: "10", icon: Building2 },
@@ -18,19 +22,32 @@ const AdminDashboard = () => {
     { title: "Pending Leaves", value: "0", icon: FileText },
   ];
 
+  const handleAddEmployee = (newEmployee) => {
+    setEmployees([...employees, newEmployee]);
+  };
+
   return (
     // Changed py-16 to responsive padding to avoid mobile clipping
     <div className="min-h-screen bg-[#F9FAFB] px-6 py-8 lg:p-12 transition-colors duration-500">
       <div className="max-w-[1400px] mx-auto">
         
-        {/* Header Section */}
-        <header className="mb-10 lg:mb-12">
-          <h1 className="text-2xl lg:text-[28px] font-bold text-[#0F172A] tracking-tight">
-            Dashboard
-          </h1>
-          <p className="text-slate-500 font-medium mt-1 text-sm lg:text-base">
-            Welcome back, Admin — here's your overview
-          </p>
+        {/* Header Section with Add Button */}
+        <header className="mb-10 lg:mb-12 flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl lg:text-[28px] font-bold text-[#0F172A] tracking-tight">
+              HR Dashboard
+            </h1>
+            <p className="text-slate-500 font-medium mt-1 text-sm lg:text-base">
+              Manage employees and team operations
+            </p>
+          </div>
+          <button 
+            onClick={() => setIsAddEmployeeOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-[#6366F1] text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-[#4F46E5] transition-all"
+          >
+            <Plus size={20} />
+            Add Employee
+          </button>
         </header>
 
         {/* Stats Grid Section */}
@@ -67,10 +84,17 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Placeholder for future charts/content to maintain layout balance */}
+        {/* Add Employee Modal */}
+        <HrAddEmployee 
+          isOpen={isAddEmployeeOpen} 
+          onClose={() => setIsAddEmployeeOpen(false)}
+          onSave={handleAddEmployee}
+        />
+
+        {/* Placeholder for future content */}
         <div className="mt-12 grid grid-cols-1 gap-6">
            <div className="h-[400px] w-full border-2 border-dashed border-slate-200 rounded-[32px] flex items-center justify-center text-slate-400 font-medium italic">
-             Overview charts and recent activity will appear here...
+             Employee list and recent activity will appear here...
            </div>
         </div>
       </div>
@@ -78,4 +102,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default HrHomePage;

@@ -1,23 +1,36 @@
-import { useState } from "react";
-import { Search, Edit3, Trash2, Plus, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Edit3, Trash2, Plus, ShieldCheck, User } from "lucide-react";
 import HrAddEmployee from "./HrAddEmployee";
+import API from "../../services/api";
 
 export default function HrTeamPage() {
-  const [employees, setEmployees] = useState([
-    { id: 1, name: "James Thomas", department: "Sales", position: "Lead", role: "MANAGER" },
-    { id: 2, name: "Richard Robert", department: "Engineering", position: "Software Developer", role: "EMPLOYEE" },
-    { id: 3, name: "Sarah Admin", department: "HR", position: "HR Manager", role: "ADMIN" },
-  ]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState({ isOpen: false, mode: 'add', data: null });
 
-  const handleSave = (data) => {
-    if (modal.mode === 'edit') {
-      setEmployees(prev => prev.map(emp => emp.id === data.id ? data : emp));
-    } else {
-      setEmployees(prev => [...prev, { ...data, id: Date.now() }]);
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      const res = await API.get("/api/hr/employees");
+      setEmployees(res.data.data || []);
+      setError(null);
+    } catch (err) {
+      console.error("❌ Failed to fetch employees:", err);
+      setError("Failed to load employees");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleSave = () => {
+    fetchEmployees();
   };
 
   const filtered = employees.filter(emp => 
@@ -78,8 +91,16 @@ export default function HrTeamPage() {
               <h3 className="text-xl font-bold text-[#1E293B]">{emp.name}</h3>
               <p className="text-[#64748B] font-medium text-sm mt-1">{emp.position}</p>
 
+              {/* Manager Badge (If exists) */}
+              {emp.manager && (
+                <div className="mt-4 flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-100 rounded-full">
+                  <User size={12} className="text-[#64748B]" />
+                  <span className="text-[10px] font-bold text-[#64748B] uppercase">Mgr: {emp.manager.name}</span>
+                </div>
+              )}
+
               {/* Role Badge */}
-              <div className="mt-4 flex items-center gap-1.5 px-3 py-1 bg-indigo-50 rounded-full">
+              <div className="mt-2 flex items-center gap-1.5 px-3 py-1 bg-indigo-50 rounded-full">
                 <ShieldCheck size={12} className="text-[#6366F1]" />
                 <span className="text-[10px] font-bold text-[#6366F1] uppercase">{emp.role}</span>
               </div>
@@ -87,6 +108,25 @@ export default function HrTeamPage() {
           </div>
         ))}
       </div>
+
+      {loading && (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#6366F1]"></div>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="text-center py-20">
+          <p className="text-red-500 font-bold">{error}</p>
+          <button onClick={fetchEmployees} className="text-[#6366F1] mt-2 underline">Try again</button>
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div className="text-center py-20 text-slate-400 italic">
+          No employees found matching your search.
+        </div>
+      )}
 
       <HrAddEmployee 
         isOpen={modal.isOpen} 

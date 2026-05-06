@@ -42,7 +42,6 @@ exports.getManagers = async (user) => {
   return prisma.user.findMany({
     where: {
       role: "MANAGER",
-      createdById: user.id,
     },
     select: {
       id: true,
@@ -224,6 +223,11 @@ exports.getEmployees = async (user) => {
       department: true,
       position: true,
       managerId: true,
+      manager: {
+        select: {
+          name: true
+        }
+      },
       createdAt: true,
     },
   });
@@ -241,6 +245,11 @@ exports.getEmployee = async (employeeId) => {
       department: true,
       position: true,
       managerId: true,
+      manager: {
+        select: {
+          name: true
+        }
+      },
       createdAt: true,
     },
   });
