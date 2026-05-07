@@ -76,19 +76,16 @@ export default function ProfessionalSidebar({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // logout
   const handleLogout = () => {
     logout();
     navigate("/login");
     setIsMobileMenuOpen(false);
   };
 
-  // filter menu based on role
   const allowedNavItems = useMemo(() => {
     return NAV_CONFIG.filter((item) => item.roles.includes(role));
   }, [role]);
 
-  // active tab detection
   const activeTab = useMemo(() => {
     return (
       allowedNavItems.find((item) =>
@@ -102,25 +99,30 @@ export default function ProfessionalSidebar({ children }) {
   }, [isMobileMenuOpen]);
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#0B1120] text-white">
+    <div className="flex flex-col h-full w-full bg-[#0B1120] text-white">
+
       {/* LOGO */}
-      <div className="py-10 flex flex-col items-center border-b border-white/[0.03]">
-        <div className="w-20 h-20 rounded-full border-[3px] border-white/10 p-1 bg-[#1C2539]">
-          <img
-            src={MainLogo}
-            alt="Logo"
-            className="w-full h-full rounded-full object-cover"
-          />
+      <div className="flex flex-col items-center justify-center px-6 py-8 border-b border-white/[0.05] shrink-0">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-xl" />
+
+          <div className="relative w-20 h-20 rounded-full border border-white/10 p-1 bg-[#111827] shadow-lg">
+            <img
+              src={MainLogo}
+              alt="Logo"
+              className="w-full h-full rounded-full object-cover"
+            />
+          </div>
         </div>
-        <h2 className="text-[14px] font-bold mt-4">Portal</h2>
-        <span className="text-[10px] px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-400 uppercase">
+
+        <span className="mt-5 text-[11px] font-semibold tracking-[0.18em] uppercase px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
           {role}
         </span>
       </div>
 
-      {/* NAV */}
-      <div className="flex-1 px-4 py-8 overflow-y-auto">
-        <nav className="flex flex-col gap-2">
+      {/* NAVIGATION */}
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <nav className="space-y-2">
           {allowedNavItems.map((item) => {
             const isActive = activeTab === item.id;
 
@@ -131,17 +133,29 @@ export default function ProfessionalSidebar({ children }) {
                   navigate(item.path);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 text-left overflow-hidden
+                ${
                   isActive
-                    ? "bg-indigo-600/10 text-white"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    ? "bg-gradient-to-r from-indigo-500/15 to-indigo-500/5 border border-indigo-500/10 text-white shadow-lg shadow-indigo-500/5"
+                    : "text-slate-400 hover:text-white hover:bg-white/[0.04]"
                 }`}
               >
-                <item.icon
-                  size={20}
-                  className={isActive ? "text-indigo-400" : ""}
-                />
-                <span className="text-sm font-semibold">
+                {isActive && (
+                  <div className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-indigo-400" />
+                )}
+
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+                  ${
+                    isActive
+                      ? "bg-indigo-500/10 text-indigo-300"
+                      : "bg-white/[0.03] text-slate-400 group-hover:bg-white/[0.06] group-hover:text-white"
+                  }`}
+                >
+                  <item.icon size={18} />
+                </div>
+
+                <span className="text-sm font-medium tracking-[0.01em]">
                   {item.label}
                 </span>
               </button>
@@ -150,56 +164,65 @@ export default function ProfessionalSidebar({ children }) {
         </nav>
       </div>
 
-      {/* LOGOUT */}
-      <div className="p-4 border-t border-white/[0.03]">
+      {/* FOOTER */}
+      <div className="p-4 border-t border-white/[0.05] shrink-0">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl"
+          className="group w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300"
         >
-          <LogOut size={20} />
-          <span className="font-semibold">Sign Out</span>
+          <div className="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center group-hover:bg-red-500/10 transition-all duration-300">
+            <LogOut size={18} />
+          </div>
+
+          <span className="text-sm font-medium">Sign Out</span>
         </button>
       </div>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-[#F9FAFB]">
-      {/* DESKTOP */}
-      <aside className="hidden lg:flex w-64 h-screen sticky top-0">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
+
+      {/* DESKTOP SIDEBAR */}
+      <aside className="hidden lg:flex lg:w-[280px] lg:min-w-[280px] lg:max-w-70 h-screen sticky top-0 border-r border-slate-200/80 bg-[#0B1120]">
         <SidebarContent />
       </aside>
 
-      {/* MOBILE BUTTON */}
-      <div className="lg:hidden fixed top-5 left-5 z-40">
-        <button
-          onClick={() => setIsMobileMenuOpen(true)}
-          className="p-2 bg-[#0B1120] text-white rounded-full"
-        >
-          <Menu />
-        </button>
-      </div>
+      {/* MOBILE MENU BUTTON */}
+      <button
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="lg:hidden fixed top-5 left-5 z-40 w-11 h-11 rounded-xl bg-[#0B1120] text-white flex items-center justify-center shadow-lg"
+      >
+        <Menu size={20} />
+      </button>
 
-      {/* MOBILE MENU */}
+      {/* MOBILE SIDEBAR */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
+
+            {/* BACKDROP */}
             <motion.div
-              className="absolute inset-0 bg-black/60"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setIsMobileMenuOpen(false)}
             />
 
+            {/* SIDEBAR */}
             <motion.div
-              initial={{ x: "-100%" }}
+              initial={{ x: -320 }}
               animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              className="absolute left-0 top-0 w-[280px] h-full bg-[#0B1120]"
+              exit={{ x: -320 }}
+              transition={{ type: "spring", damping: 24, stiffness: 220 }}
+              className="absolute left-0 top-0 h-full w-70 bg-[#0B1120] border-r border-white/5 shadow-2xl"
             >
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="absolute top-4 right-4 text-white"
+                className="absolute top-5 right-5 z-50 w-9 h-9 rounded-lg bg-white/4 text-white flex items-center justify-center hover:bg-white/8 transition-all"
               >
-                <X />
+                <X size={18} />
               </button>
 
               <SidebarContent />
@@ -209,7 +232,9 @@ export default function ProfessionalSidebar({ children }) {
       </AnimatePresence>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 p-6 lg:p-10">{children}</main>
+      <main className="flex-1 min-w-0">
+        {children}
+      </main>
     </div>
   );
 }

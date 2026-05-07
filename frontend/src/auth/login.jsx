@@ -28,8 +28,6 @@ export default function Login() {
         password,
       });
 
-      console.log("LOGIN RESPONSE:", response);
-
       const user = response?.data?.data?.user;
       const token = response?.data?.data?.token;
 
@@ -52,7 +50,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
-      <div className="w-full max-w-[440px] bg-white p-10 rounded-[32px] shadow-xl border border-[#F1F5F9]">
+      <div className="w-full max-w-110 bg-white p-10 rounded-4xl shadow-xl border border-[#F1F5F9]">
         {/* Header */}
         <div className="text-center mb-10">
           <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-[#6366F1] mx-auto mb-4">

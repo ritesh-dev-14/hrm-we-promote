@@ -1,93 +1,47 @@
-import { useNavigate } from 'react-router-dom';
-import { Calendar, FileText, DollarSign, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const EmployeeHomePage = () => {
+import AttendanceCard from "../../components/attendece/AttendenceCard";
+
+import DashboardHero from "../../components/dashboard/DashBoardHero";
+import QuickActions from "../../components/dashboard/QuickActions";
+import StatsCards from "../../components/dashboard/StatsCard";
+
+import {
+  employeeActions,
+  employeeStats,
+} from "../../components/dashboard/dashboardData.js";
+
+const ManagerHomePage = () => {
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user"));
+  const firstName = user.name.split(" ")[0];
 
-  const stats = [
-    {
-      label: "Days Present",
-      value: "20",
-      icon: Calendar,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-    },
-    {
-      label: "Pending Leaves",
-      value: "2",
-      icon: FileText,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
-    },
-    {
-      label: "Latest Payslip",
-      value: "₹12,000",
-      icon: DollarSign,
-      color: "text-green-600",
-      bg: "bg-green-50",
-    },
-  ];
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] py-10 px-6 ">
-      <div className="max-w-6xl ">
-        
-        {/* Header Section */}
-        <header className="mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            Welcome back, Ritesh!
-          </h1>
-          <p className="text-gray-500 mt-1 font-medium">
-            Web Developer Manager <span className="mx-2 text-gray-300">|</span> IT Department
-          </p>
-        </header>
+    <div className="min-h-screen bg-[#F6F8FB] p-4 lg:p-6">
+      <div className="max-w-7xl mx-auto">
+        <DashboardHero
+          name={firstName}
+          title="Welcome back"
+          description="Here's an overview of your attendance, payroll activity, and current work session performance."
+          buttonText="Open Attendance"
+          onClick={() => navigate("/attendance")}
+        />
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          {stats.map((stat, index) => (
-            <div 
-              key={index} 
-              className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
-            >
-              <div>
-                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-                  {stat.label}
-                </p>
-                <h2 className="text-3xl font-bold text-gray-900 mt-1">
-                  {stat.value}
-                </h2>
-              </div>
-              <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center`}>
-                <stat.icon size={24} className={stat.color} />
-              </div>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 mb-6">
+          <div className="xl:col-span-7">
+            <div className="bg-white border border-slate-200 rounded-4xl p-6 h-full shadow-[0_20px_60px_rgba(15,23,42,0.05)]">
+              <AttendanceCard />
             </div>
-          ))}
+          </div>
+
+          <QuickActions actions={employeeActions} />
         </div>
 
-        {/* Quick Actions Section */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Quick Actions</h3>
-            <p className="text-gray-500 text-sm">Manage your attendance and time-off requests.</p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <button
-              onClick={() => navigate('/attendance')}
-              className="group flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-100"
-            >
-              Mark Attendance
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-
-            <button className="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all active:scale-95">
-              Apply for Leave
-            </button>
-          </div>
-        </div>
+        <StatsCards stats={employeeStats} />
       </div>
     </div>
   );
 };
 
-export default EmployeeHomePage;
+export default ManagerHomePage;
