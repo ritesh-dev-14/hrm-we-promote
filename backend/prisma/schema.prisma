@@ -1,3 +1,12 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
 model User {
   id          String   @id @default(uuid())
   employeeId  String   @unique
@@ -74,7 +83,7 @@ enum AttendanceStatus {
   PRESENT
   HALF_DAY
   ABSENT
-   HOLIDAY
+  HOLIDAY
 }
 
 
