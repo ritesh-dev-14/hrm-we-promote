@@ -93,15 +93,30 @@ const ROUTES = [
  * ✅ FINAL ROUTES
  */
 export const AppRoutes = () => {
-  const { role } = useAuth();
+  const { role, user, token, isLoading } = useAuth();
+
+  // Check if user is authenticated (has both user and token)
+  const isAuthenticated = user && token;
+
+  // Show loading screen while checking localStorage
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Routes>
       {/* Login route - accessible without authentication */}
       <Route path="/login" element={<Login />} />
 
-      {/* Protected routes - require role */}
-      {role && (
+      {/* Protected routes - require authentication */}
+      {isAuthenticated && role && (
         <>
           {ROUTES.map((route) => {
             if (!route.roles.includes(role)) return null;
@@ -120,11 +135,13 @@ export const AppRoutes = () => {
         </>
       )}
 
-      {/* Redirect to login if no role and not on login page */}
-      {!role && <Route path="/" element={<Navigate to="/login" replace />} />}
-
-      {/* 404 */}
-      <Route path="*" element={<div>404 - No Access</div>} />
+      {/* Redirect to login if not authenticated */}
+      {!isAuthenticated && (
+        <>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </>
+      )}
     </Routes>
   );
 };

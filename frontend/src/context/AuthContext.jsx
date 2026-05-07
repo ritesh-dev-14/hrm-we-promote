@@ -6,6 +6,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [token, setToken] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // load from localStorage on refresh
   useEffect(() => {
@@ -17,6 +18,9 @@ export const AuthProvider = ({ children }) => {
       setRole(storedUser.role);
       setToken(storedToken);
     }
+
+    // Finish loading regardless of whether data exists
+    setIsLoading(false);
   }, []);
 
   const login = (userData, token) => {
@@ -38,7 +42,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, token, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, role, token, login, logout, isLoading }}
+    >
       {children}
     </AuthContext.Provider>
   );
