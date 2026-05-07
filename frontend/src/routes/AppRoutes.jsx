@@ -93,8 +93,9 @@ const ROUTES = [
  * ✅ FINAL ROUTES
  */
 export const AppRoutes = () => {
-  const { role } = useAuth();
+  const { role, user, token, isLoading } = useAuth();
 
+<<<<<<< HEAD
   return (
     <Routes>
       {/* Login Route - Always accessible */}
@@ -124,6 +125,55 @@ export const AppRoutes = () => {
 
       {/* 404 */}
       {role && <Route path="*" element={<div>404 - Page not found</div>} />}
+=======
+  // Check if user is authenticated (has both user and token)
+  const isAuthenticated = user && token;
+
+  // Show loading screen while checking localStorage
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      {/* Login route - accessible without authentication */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Protected routes - require authentication */}
+      {isAuthenticated && role && (
+        <>
+          {ROUTES.map((route) => {
+            if (!route.roles.includes(role)) return null;
+
+            return (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={route.component[role]}
+              />
+            );
+          })}
+
+          {/* Default Redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </>
+      )}
+
+      {/* Redirect to login if not authenticated */}
+      {!isAuthenticated && (
+        <>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </>
+      )}
+>>>>>>> f937cc1c7304440d40a84a85d2dc05f3d734fa05
     </Routes>
   );
 };

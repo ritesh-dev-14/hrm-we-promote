@@ -1,6 +1,10 @@
 import axios from "axios";
 
+<<<<<<< HEAD
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+=======
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+>>>>>>> f937cc1c7304440d40a84a85d2dc05f3d734fa05
 const API = axios.create({
   baseURL: API_URL,
   headers: {
