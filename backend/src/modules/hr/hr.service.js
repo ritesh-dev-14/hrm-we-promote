@@ -118,39 +118,6 @@ exports.deleteManager = async (employeeId) => {
   });
 };
 
-// 🔹 Employee Services
-// exports.createEmployee = async (user, body) => {
-//   // Check if email already exists
-//   const existingUser = await prisma.user.findUnique({
-//     where: { email: body.email },
-//   });
-
-//   if (existingUser) {
-//     throw new ApiError(400, { code: "USER_004", message: "Email already exists" });
-//   }
-
-//   const hashed = await bcrypt.hash(body.password, 10);
-
-//   return prisma.user.create({
-//     data: {
-//       employeeId: body.employeeId || "EMP-" + Date.now(),
-//       name: body.name,
-//       email: body.email,
-//       password: hashed,
-//       role: "EMPLOYEE",
-//       createdById: user.id,
-//     },
-//     select: {
-//       id: true,
-//       employeeId: true,
-//       name: true,
-//       email: true,
-//       role: true,
-//       createdAt: true,
-//     },
-//   });
-// };
-
 exports.createEmployee = async (user, body) => {
   // 🔹 Check duplicate email
   const existingUser = await prisma.user.findUnique({

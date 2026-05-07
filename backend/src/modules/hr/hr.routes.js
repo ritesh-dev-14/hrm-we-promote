@@ -1,24 +1,3 @@
-// const express = require("express");
-// const router = express.Router();
-
-// const auth = require("../../middleware/auth.middleware");
-// const role = require("../../middleware/role.middleware");
-
-// const controller = require("./hr.controller");
-
-// router.post("/manager", auth, role("HR"), controller.createManager);
-// router.get("/managers", auth, role("HR"), controller.getManagers);
-// router.put("/manager/:id", auth, role("HR"), controller.updateManager);
-// router.delete("/manager/:id", auth, role("HR"), controller.deleteManager);
-
-// router.get("/employees", auth, role("HR"), controller.getEmployees);
-
-// module.exports = router;
-
-
-
-
-
 const express = require("express");
 const router = express.Router();
 

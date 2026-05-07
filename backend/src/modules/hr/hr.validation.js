@@ -16,14 +16,6 @@ exports.updateManagerSchema = Joi.object({
   department: Joi.string().min(2).max(50),
 });
 
-// 🔹 Create Employee
-// exports.createEmployeeSchema = Joi.object({
-//   employeeId: Joi.string().min(3).max(50),
-//   name: Joi.string().min(3).max(50).required(),
-//   email: Joi.string().email().required(),
-//   password: Joi.string().min(6).required(),
-// });
-
 exports.createEmployeeSchema = Joi.object({
   employeeId: Joi.string().min(3).max(50),
 
