@@ -73,7 +73,7 @@ const EmployeeHomePage = () => {
           
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <button
-              onClick={() => navigate('/employee/attendance')}
+              onClick={() => navigate('/attendance')}
               className="group flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-100"
             >
               Mark Attendance
