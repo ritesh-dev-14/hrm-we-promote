@@ -91,3 +91,40 @@ exports.deleteEmployee = async (req, res, next) => {
     next(err);
   }
 };
+
+// Get Employee Attandance
+
+exports.getEmployeeAttendance = async (req, res, next) => {
+  try {
+    const data = await service.getEmployeeAttendance(
+      req.params.employeeId,
+      req.query
+    );
+
+    res.json({
+      success: true,
+      message: "Employee attendance fetched",
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get Employee Summary
+
+exports.getEmployeeAttendanceSummary = async (req, res, next) => {
+  try {
+    const data = await service.getEmployeeAttendanceSummary(
+      req.params.employeeId
+    );
+
+    res.json({
+      success: true,
+      message: "Employee attendance summary fetched",
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

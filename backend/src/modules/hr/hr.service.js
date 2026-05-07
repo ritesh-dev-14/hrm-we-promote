@@ -267,3 +267,75 @@ exports.deleteEmployee = async (employeeId) => {
     where: { employeeId },
   });
 };
+
+
+// Get Employee Attandance
+
+exports.getEmployeeAttendance = async (employeeId, query) => {
+  const { from, to } = query;
+
+  // 🔹 Check employee exists
+  const employee = await prisma.user.findUnique({
+    where: { employeeId },
+  });
+
+  if (!employee) {
+    throw new ApiError(404, "Employee not found");
+  }
+
+  const where = {
+    userId: employee.id,
+  };
+
+  if (from && to) {
+    where.date = {
+      gte: new Date(from),
+      lte: new Date(to),
+    };
+  }
+
+  return prisma.attendance.findMany({
+    where,
+    orderBy: { date: "desc" },
+    include: {
+      breaks: true,
+    },
+  });
+};
+
+// Get Employee Summary
+
+exports.getEmployeeAttendanceSummary = async (employeeId) => {
+  const employee = await prisma.user.findUnique({
+    where: { employeeId },
+  });
+
+  if (!employee) {
+    throw new ApiError(404, "Employee not found");
+  }
+
+  const records = await prisma.attendance.findMany({
+    where: { userId: employee.id },
+  });
+
+  let present = 0;
+  let halfDay = 0;
+  let absent = 0;
+  let holiday = 0;
+
+  records.forEach((r) => {
+    if (r.status === "PRESENT") present++;
+    else if (r.status === "HALF_DAY") halfDay++;
+    else if (r.status === "ABSENT") absent++;
+    else if (r.status === "HOLIDAY") holiday++;
+  });
+
+  return {
+    employeeId,
+    totalDays: records.length,
+    present,
+    halfDay,
+    absent,
+    holiday,
+  };
+};

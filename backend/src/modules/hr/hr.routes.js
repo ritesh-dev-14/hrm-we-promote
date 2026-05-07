@@ -57,6 +57,21 @@ router.put(
   controller.updateEmployee
 );
 
+// 🔹 Attendance (HR)
+router.get(
+  "/employee/:employeeId/attendance",
+  auth,
+  role("HR"),
+  controller.getEmployeeAttendance
+);
+
+router.get(
+  "/employee/:employeeId/attendance/summary",
+  auth,
+  role("HR"),
+  controller.getEmployeeAttendanceSummary
+);
+
 router.delete("/employee/:employeeId", auth, role("HR"), controller.deleteEmployee);
 
 module.exports = router;
