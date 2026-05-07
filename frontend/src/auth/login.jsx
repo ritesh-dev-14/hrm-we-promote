@@ -1,211 +1,119 @@
-// import { useState } from "react";
-// import { Eye, EyeOff, ArrowLeft, Lock, Mail } from "lucide-react";
-// import { useAuth } from "../context/AuthContext";
-// import { useNavigate, Link } from "react-router-dom";
-
-// export default function Login() {
-//   const [showPassword, setShowPassword] = useState(false);
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-
-//   const { setRole } = useAuth();
-//   const navigate = useNavigate();
-
-//   const handleLogin = (e) => {
-//     e.preventDefault();
-
-//     // Role logic based on your system roles: EMPLOYEE, MANAGER, HR, ADMIN
-//     if (email.includes("admin")) setRole("ADMIN");
-//     else if (email.includes("hr")) setRole("HR");
-//     else if (email.includes("manager")) setRole("MANAGER");
-//     else setRole("EMPLOYEE");
-
-//     navigate("/dashboard");
-//   };
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
-//       {/* Back Button */}
-
-//       <div className="w-full max-w-[440px] bg-white p-10 rounded-[32px] shadow-xl shadow-indigo-500/5 border border-[#F1F5F9]">
-        
-//         {/* Header */}
-//         <div className="text-center mb-10">
-//           <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-[#6366F1] mx-auto mb-4 shadow-inner">
-//             <Lock size={28} />
-//           </div>
-//           <h1 className="text-[32px] font-bold text-[#0F172A] tracking-tight">
-//             Welcome back
-//           </h1>
-//           <p className="text-[#64748B] font-medium mt-2">
-//             Enter your credentials to access the portal
-//           </p>
-//         </div>
-
-//         {/* Form */}
-//         <form onSubmit={handleLogin} className="space-y-5">
-
-//           {/* Email */}
-//           <div className="space-y-2">
-//             <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">
-//               Email address
-//             </label>
-//             <div className="relative group">
-//               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#6366F1] transition-colors" size={18} />
-//               <input
-//                 type="email"
-//                 placeholder="name@company.com"
-//                 value={email}
-//                 onChange={(e) => setEmail(e.target.value)}
-//                 required
-//                 className="w-full h-14 pl-12 pr-4 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] outline-none focus:border-[#6366F1] focus:ring-4 focus:ring-indigo-500/5 transition-all font-medium text-[#1E293B]"
-//               />
-//             </div>
-//           </div>
-
-//           {/* Password */}
-//           <div className="space-y-2">
-//             <div className="flex justify-between items-center px-1">
-//               <label className="text-[11px] font-black uppercase tracking-widest text-slate-500">
-//                 Password
-//               </label>
-//               <button type="button" className="text-[11px] font-bold text-[#6366F1] hover:underline">
-//                 Forgot password?
-//               </button>
-//             </div>
-
-//             <div className="relative group">
-//               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#6366F1] transition-colors" size={18} />
-//               <input
-//                 type={showPassword ? "text" : "password"}
-//                 placeholder="••••••••"
-//                 value={password}
-//                 onChange={(e) => setPassword(e.target.value)}
-//                 required
-//                 className="w-full h-14 pl-12 pr-12 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] outline-none focus:border-[#6366F1] focus:ring-4 focus:ring-indigo-500/5 transition-all font-medium text-[#1E293B]"
-//               />
-
-//               <button
-//                 type="button"
-//                 onClick={() => setShowPassword(!showPassword)}
-//                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-//               >
-//                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-//               </button>
-//             </div>
-//           </div>
-
-//           {/* Remember Me */}
-//           <div className="flex items-center gap-2 px-1">
-//             <input 
-//               type="checkbox" 
-//               id="remember" 
-//               className="w-4 h-4 rounded border-slate-300 text-[#6366F1] focus:ring-[#6366F1]" 
-//             />
-//             <label htmlFor="remember" className="text-sm font-medium text-slate-600 cursor-pointer">
-//               Remember me
-//             </label>
-//           </div>
-
-//           {/* Submit Button */}
-//           <button
-//             type="submit"
-//             className="w-full h-14 mt-4 rounded-2xl text-white font-bold bg-[#6366F1] shadow-lg shadow-indigo-200 hover:bg-[#4F46E5] hover:shadow-indigo-300 transition-all active:scale-[0.98]"
-//           >
-//             Sign in to Portal
-//           </button>
-//         </form>
-
-//       </div>
-//     </div>
-//   );
-// }
-
-
 import { useState } from "react";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import API from "../services/api"; // ✅ axios instance
+import API from "../services/api";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const { setRole } = useAuth();
+  // const { role, setRole } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    // Role logic based on your system roles: EMPLOYEE, MANAGER, HR, ADMIN
-    if (email.includes("admin")) setRole("ADMIN");
-    else if (email.includes("hr")) setRole("HR");
-    else if (email.includes("manager")) setRole("MANAGER");
-    else setRole("EMPLOYEE");
+    setError("");
 
-    navigate("/dashboard");
+    setLoading(true);
+
+    try {
+  const response = await API.post("/api/auth/login", {
+    email,
+    password,
+  });
+
+  console.log("LOGIN RESPONSE:", response);
+
+  const user = response?.data?.data?.user;
+  const token = response?.data?.data?.token;
+
+  if (!user || !token) {
+    throw new Error("Invalid API response structure");
+  }
+
+  login(user, token);
+
+  if (user.role === "ADMIN") navigate("/admin");
+  else if (user.role === "HR") navigate("/hr");
+  else navigate("/dashboard");
+} catch (err) {
+  console.error("LOGIN ERROR:", err);
+  setError(err.response?.data?.message || err.message || "Login failed");
+} finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
       <div className="w-full max-w-[440px] bg-white p-10 rounded-[32px] shadow-xl border border-[#F1F5F9]">
-        
         {/* Header */}
         <div className="text-center mb-10">
           <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-[#6366F1] mx-auto mb-4">
             <Lock size={28} />
           </div>
-          <h1 className="text-[32px] font-bold text-[#0F172A]">
-            Welcome back
-          </h1>
-          <p className="text-[#64748B] mt-2">
-            Enter your credentials
-          </p>
+          <h1 className="text-[32px] font-bold text-[#0F172A]">Welcome back</h1>
+          <p className="text-[#64748B] mt-2">Enter your credentials</p>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg text-center">
+            {error}
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-5">
-
           {/* Email */}
           <div>
-            <label className="text-xs font-bold text-slate-500">
-              Email
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">
+              Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Mail
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full h-12 pl-10 pr-4 rounded-xl border"
-                placeholder="Enter email"
+                className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                placeholder="name@company.com"
               />
             </div>
           </div>
 
           {/* Password */}
           <div>
-            <label className="text-xs font-bold text-slate-500">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Lock
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full h-12 pl-10 pr-10 rounded-xl border"
-                placeholder="Enter password"
+                className="w-full h-12 pl-10 pr-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                placeholder="••••••••"
               />
-
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -215,9 +123,17 @@ export default function Login() {
           {/* Button */}
           <button
             type="submit"
-            className="w-full h-12 bg-[#6366F1] text-white rounded-xl font-bold"
+            disabled={loading}
+            className="w-full h-12 bg-[#6366F1] hover:bg-[#4F46E5] disabled:bg-indigo-300 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
           >
-            Login
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={20} />
+                Signing in...
+              </>
+            ) : (
+              "Login"
+            )}
           </button>
         </form>
       </div>

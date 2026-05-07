@@ -10,7 +10,7 @@ export default function App() {
   const hideSidebar = location.pathname === "/login";
 
   return (
-    <AuthProvider>
+    // <AuthProvider>
       <div className="flex h-screen w-full bg-[#FDFDFD] overflow-hidden">
         
         {!hideSidebar && <Sidebar />}
@@ -22,6 +22,6 @@ export default function App() {
         </div>
 
       </div>
-    </AuthProvider>
+    // </AuthProvider>
   );
 }

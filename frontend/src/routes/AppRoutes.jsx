@@ -95,28 +95,33 @@ const ROUTES = [
 export const AppRoutes = () => {
   const { role } = useAuth();
 
-  if (!role) {
-    return <Navigate to="/login" />;
-  }
-
   return (
     <Routes>
-      {ROUTES.map((route) => {
-        if (!route.roles.includes(role)) return null;
-
-        return (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={route.component[role]}
-          />
-        );
-      })}
-
-      {/* Default Redirect */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
+      {/* Login route - accessible without authentication */}
       <Route path="/login" element={<Login />} />
+
+      {/* Protected routes - require role */}
+      {role && (
+        <>
+          {ROUTES.map((route) => {
+            if (!route.roles.includes(role)) return null;
+
+            return (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={route.component[role]}
+              />
+            );
+          })}
+
+          {/* Default Redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </>
+      )}
+
+      {/* Redirect to login if no role and not on login page */}
+      {!role && <Route path="/" element={<Navigate to="/login" replace />} />}
 
       {/* 404 */}
       <Route path="*" element={<div>404 - No Access</div>} />
