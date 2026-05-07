@@ -6,6 +6,8 @@ import DashboardHero from "../../components/dashboard/DashBoardHero";
 import QuickActions from "../../components/dashboard/QuickActions";
 import StatsCards from "../../components/dashboard/StatsCard";
 
+import API from "../../services/api.js";
+
 import {
   employeeActions,
   employeeStats,

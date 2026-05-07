@@ -38,7 +38,7 @@ export default function Login() {
       login(user, token);
 
       if (user.role === "ADMIN") navigate("/admin");
-      else if (user.role === "HR") navigate("/hr");
+      // else if (user.role === "HR") navigate("/d");
       else navigate("/dashboard");
     } catch (err) {
       console.error("LOGIN ERROR:", err);

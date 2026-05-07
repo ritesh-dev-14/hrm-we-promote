@@ -1,85 +1,208 @@
-import { Calendar, Clock, AlertCircle, CircleDot } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  CircleDot,
+} from "lucide-react";
 
-export default function AttendanceView({ stats, records }) {
+import { motion } from "framer-motion";
+
+export default function AttendanceView({
+  stats,
+  records,
+  loading,
+}) {
   const getIcon = (label) => {
-    if (label.includes("Present")) return <Calendar size={20} />;
-    if (label.includes("Late")) return <AlertCircle size={20} />;
-    return <Clock size={20} />;
+    if (label.includes("Present")) {
+      return <Calendar size={18} />;
+    }
+
+    if (label.includes("Absent")) {
+      return <CircleDot size={18} />;
+    }
+
+    return <Clock size={18} />;
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (time) => {
+    if (!time) return "--";
+
+    return new Date(time).toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatHours = (hours) => {
+    if (!hours) return "0h";
+
+    return `${hours.toFixed(1)} hrs`;
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-10 font-sans text-[#1E293B]">
-      {/* HEADER */}
-      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#0F172A]">Attendance Log</h1>
-          <p className="text-slate-500 mt-1 text-sm font-medium">Detailed history of your work sessions and punctuality.</p>
-        </div>
-        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm">
-          <CircleDot size={16} className="text-indigo-500" />
-          <span className="text-sm font-bold text-slate-700">Period: May 2026</span>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#F8FAFC] p-4 lg:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* HEADER */}
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-slate-400 mb-2">
+              Attendance
+            </p>
 
-      {/* STATS STRIP */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {stats.map((stat, i) => (
-          <div key={i} className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-indigo-100 transition-all">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
-                {getIcon(stat.label)}
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Attendance History
+            </h1>
+
+            <p className="text-sm text-slate-500 mt-2">
+              View your attendance records and working hours.
+            </p>
+          </div>
+
+        </div>
+
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {stats.map((stat, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: i * 0.05 }}
+              whileHover={{ y: -2 }}
+              className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-2">
+                    {stat.label}
+                  </p>
+
+                  <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+                    {stat.value}
+                  </h2>
+                </div>
+
+                <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500">
+                  {getIcon(stat.label)}
+                </div>
               </div>
-              <div>
-                <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
-                <h2 className="text-2xl font-bold text-slate-900">{stat.value}</h2>
-              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* TABLE */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
+        >
+          {/* TABLE HEADER */}
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Attendance Records
+              </h3>
+
+              <p className="text-sm text-slate-500 mt-1">
+                Daily check-in and working hours
+              </p>
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* HISTORY TABLE */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50/50 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                <th className="px-6 py-5">Date</th>
-                <th className="px-6 py-5">Check In</th>
-                <th className="px-6 py-5">Check Out</th>
-                <th className="px-6 py-5">Work Duration</th>
-                <th className="px-6 py-5 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {records?.length ? (
-                records.map((r, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4 font-semibold text-slate-700">{r.date}</td>
-                    <td className="px-6 py-4 text-slate-600">{r.in}</td>
-                    <td className="px-6 py-4 text-slate-600">{r.out}</td>
-                    <td className="px-6 py-4">
-                       <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">
-                         {r.hours}
-                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className="px-3 py-1 rounded-full text-[10px] font-black bg-green-50 text-green-600 border border-green-100 uppercase">
-                        Present
-                      </span>
+          {/* TABLE */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50">
+                  <th className="px-6 py-4 text-left text-[11px] uppercase tracking-[0.18em] font-bold text-slate-400">
+                    Date
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-[11px] uppercase tracking-[0.18em] font-bold text-slate-400">
+                    Clock In
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-[11px] uppercase tracking-[0.18em] font-bold text-slate-400">
+                    Clock Out
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-[11px] uppercase tracking-[0.18em] font-bold text-slate-400">
+                    Hours
+                  </th>
+
+                  <th className="px-6 py-4 text-right text-[11px] uppercase tracking-[0.18em] font-bold text-slate-400">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {!loading && records?.length > 0 ? (
+                  records.map((r, i) => (
+                    <motion.tr
+                      key={r.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.03 }}
+                      className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors"
+                    >
+                      <td className="px-6 py-5 text-sm font-semibold text-slate-700">
+                        {formatDate(r.date)}
+                      </td>
+
+                      <td className="px-6 py-5 text-sm text-slate-600">
+                        {formatTime(r.startTime)}
+                      </td>
+
+                      <td className="px-6 py-5 text-sm text-slate-600">
+                        {formatTime(r.endTime)}
+                      </td>
+
+                      <td className="px-6 py-5">
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">
+                          {formatHours(r.totalHours)}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-5 text-right">
+                        <span
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide
+                          ${
+                            r.status === "PRESENT"
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              : "bg-rose-50 text-rose-600 border border-rose-100"
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                      </td>
+                    </motion.tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="5"
+                      className="py-20 text-center"
+                    >
+                      <p className="text-sm font-medium text-slate-400">
+                        {loading
+                          ? "Loading attendance..."
+                          : "No attendance records found."}
+                      </p>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td className="p-20 text-center" colSpan="5">
-                    <p className="text-slate-400 font-medium text-sm">No records for this month yet.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

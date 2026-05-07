@@ -136,7 +136,7 @@ export default function HrTeamPage() {
           {filtered.map((person) => (
             <div
               key={person.id}
-              className="group relative bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300"
+              className="group relative bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300"
             >
               {/* Hover Actions */}
               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
@@ -236,7 +236,7 @@ export default function HrTeamPage() {
 
       {/* ERROR STATE */}
       {error && !loading && (
-        <div className="text-center py-32 bg-white rounded-[32px] border border-dashed border-slate-200 mx-auto max-w-2xl">
+        <div className="text-center py-32 bg-white rounded-4xl border border-dashed border-slate-200 mx-auto max-w-2xl">
           <p className="text-rose-500 font-bold mb-4">{error}</p>
           <button
             onClick={fetchTeamData}

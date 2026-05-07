@@ -30,7 +30,20 @@ const NAV_CONFIG = [
     label: "Attendance",
     icon: CalendarDays,
     path: "/attendance",
-    roles: ["EMPLOYEE", "MANAGER"],
+    roles: ["EMPLOYEE", "MANAGER","HR"],
+  },
+    {
+
+    id: "employee-attendance",
+
+    label: "Employee Attendance",
+
+    icon: CalendarDays,
+
+    path: "/hr/employees-attendance",
+
+    roles: ["HR"],
+
   },
   {
     id: "team",
@@ -88,9 +101,8 @@ export default function ProfessionalSidebar({ children }) {
 
   const activeTab = useMemo(() => {
     return (
-      allowedNavItems.find((item) =>
-        location.pathname.startsWith(item.path)
-      )?.id || "dashboard"
+      allowedNavItems.find((item) => location.pathname.startsWith(item.path))
+        ?.id || "dashboard"
     );
   }, [location.pathname, allowedNavItems]);
 
@@ -100,7 +112,6 @@ export default function ProfessionalSidebar({ children }) {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full w-full bg-[#0B1120] text-white">
-
       {/* LOGO */}
       <div className="flex flex-col items-center justify-center px-6 py-8 border-b border-white/[0.05] shrink-0">
         <div className="relative">
@@ -182,7 +193,6 @@ export default function ProfessionalSidebar({ children }) {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden lg:flex lg:w-[280px] lg:min-w-[280px] lg:max-w-70 h-screen sticky top-0 border-r border-slate-200/80 bg-[#0B1120]">
         <SidebarContent />
@@ -200,7 +210,6 @@ export default function ProfessionalSidebar({ children }) {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
-
             {/* BACKDROP */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -232,9 +241,7 @@ export default function ProfessionalSidebar({ children }) {
       </AnimatePresence>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 min-w-0">
-        {children}
-      </main>
+      <main className="flex-1 min-w-0">{children}</main>
     </div>
   );
 }

@@ -8,9 +8,12 @@ import AdminHomePage from "../pages/Admin/AdminHomePage";
 
 import HrHomePage from "../pages/HR/HrHomePage";
 import HrTeamPage from "../pages/HR/HrTeamPage";
-import HrLeaveManagement from "../pages/HR/HrLeaveManagement";
+import HrLeaveManagement from "../pages/HR/HrEmployeeLeaves";
 import HrPayslips from "../pages/HR/HrPaySlips";
 import HrSettings from "../pages/HR/HrSettigns";
+import HrAttendance from "../pages/HR/HrAttendance.jsx";
+import HrLeaves from "../pages/HR/HrLeaves.jsx";
+import HrAllEmployeeAttendence from "../pages/HR/HrAllEmployeeAttendence.jsx";
 
 import EmployeHomePage from "../pages/Employee/EmployeeHomePage";
 import EmployeeAttendence from "../pages/Employee/EmployeeAttendence";
@@ -40,10 +43,11 @@ const ROUTES = [
   },
   {
     path: "/attendance",
-    roles: ["EMPLOYEE", "MANAGER"],
+    roles: ["EMPLOYEE", "MANAGER", "HR"],
     component: {
       EMPLOYEE: <EmployeeAttendence />,
       MANAGER: <ManagerAttendence />,
+      HR: <HrAttendance />,
     },
   },
   {
@@ -52,9 +56,10 @@ const ROUTES = [
     component: {
       EMPLOYEE: <EmployeeLeave />,
       MANAGER: <ManagerLeave />,
-      HR: <HrLeaveManagement />,
+      HR: <HrLeaves />,
     },
   },
+
   {
     path: "/payslips",
     roles: ["EMPLOYEE", "MANAGER", "HR"],
@@ -62,6 +67,24 @@ const ROUTES = [
       EMPLOYEE: <EmployeePayslips />,
       MANAGER: <ManagerPayslips />,
       HR: <HrPayslips />,
+    },
+  },
+  {
+    path: "/hr/employees-attendance",
+
+    roles: ["HR"],
+
+    component: {
+      HR: <HrAllEmployeeAttendence />,
+    },
+  },
+  {
+    path: "/hr/employees-leaves",
+
+    roles: ["HR"],
+
+    component: {
+      HR: <HrLeaveManagement />,
     },
   },
   {
