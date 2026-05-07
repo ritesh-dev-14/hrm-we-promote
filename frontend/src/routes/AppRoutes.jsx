@@ -95,37 +95,6 @@ const ROUTES = [
 export const AppRoutes = () => {
   const { role, user, token, isLoading } = useAuth();
 
-<<<<<<< HEAD
-  return (
-    <Routes>
-      {/* Login Route - Always accessible */}
-      <Route path="/login" element={<Login />} />
-
-      {/* Protected Routes - Only if logged in */}
-      {role && ROUTES.map((route) => {
-        if (!route.roles.includes(role)) return null;
-
-        return (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={route.component[role]}
-          />
-        );
-      })}
-
-      {/* Default Redirect */}
-      <Route 
-        path="/" 
-        element={role ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
-      />
-
-      {/* Fallback - Not logged in, redirect to login */}
-      {!role && <Route path="*" element={<Navigate to="/login" replace />} />}
-
-      {/* 404 */}
-      {role && <Route path="*" element={<div>404 - Page not found</div>} />}
-=======
   // Check if user is authenticated (has both user and token)
   const isAuthenticated = user && token;
 
@@ -173,7 +142,6 @@ export const AppRoutes = () => {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       )}
->>>>>>> f937cc1c7304440d40a84a85d2dc05f3d734fa05
     </Routes>
   );
 };
