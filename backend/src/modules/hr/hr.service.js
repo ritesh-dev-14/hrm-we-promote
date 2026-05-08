@@ -339,3 +339,86 @@ exports.getEmployeeAttendanceSummary = async (employeeId) => {
     holiday,
   };
 };
+
+// 🔹 GET ALL LEAVES
+exports.getAllLeaves = async () => {
+  return prisma.leave.findMany({
+    include: {
+      user: {
+        select: {
+          name: true,
+          employeeId: true,
+          department: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
+
+// 🔹 APPROVE / REJECT
+exports.updateLeaveStatus = async (leaveId, hrId, body) => {
+  const { status, reviewNote } = body;
+
+  const leave = await prisma.leave.findUnique({
+    where: { id: leaveId },
+  });
+
+  if (!leave) {
+    throw new ApiError(404, "Leave not found");
+  }
+
+  if (leave.status !== "PENDING") {
+    throw new ApiError(400, "Leave already processed");
+  }
+
+  // ❗ require note if rejected
+  if (status === "REJECTED" && !reviewNote) {
+    throw new ApiError(400, "Rejection reason is required");
+  }
+
+  return prisma.leave.update({
+    where: { id: leaveId },
+    data: {
+      status,
+      reviewNote,
+      reviewedBy: hrId,
+    },
+  });
+};
+
+
+// 🔹 EMPLOYEE LEAVE SUMMARY
+exports.getEmployeeLeaveSummary = async (employeeId) => {
+  const user = await prisma.user.findUnique({
+    where: { employeeId },
+  });
+
+  if (!user) {
+    throw new ApiError(404, "Employee not found");
+  }
+
+  const leaves = await prisma.leave.findMany({
+    where: { userId: user.id },
+  });
+
+  let approved = 0;
+  let pending = 0;
+  let rejected = 0;
+
+  leaves.forEach((l) => {
+    if (l.status === "APPROVED") approved++;
+    else if (l.status === "PENDING") pending++;
+    else if (l.status === "REJECTED") rejected++;
+  });
+
+  return {
+    totalLeaves: leaves.length,
+    approved,
+    pending,
+    rejected,
+  };
+};

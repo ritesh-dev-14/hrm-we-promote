@@ -74,4 +74,22 @@ router.get(
 
 router.delete("/employee/:employeeId", auth, role("HR"), controller.deleteEmployee);
 
+// 🔥 LEAVE MANAGEMENT
+
+router.get("/leaves", auth, role("HR"), controller.getAllLeaves);
+
+router.put(
+  "/leave/:id",
+  auth,
+  role("HR"),
+  controller.updateLeaveStatus
+);
+
+router.get(
+  "/leave/:employeeId",
+  auth,
+  role("HR"),
+  controller.getEmployeeLeaveSummary
+);
+
 module.exports = router;

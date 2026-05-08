@@ -29,6 +29,9 @@ model User {
   createdBy   User?  @relation("Hierarchy", fields: [createdById], references: [id])
   children    User[] @relation("Hierarchy")
 
+  leaves       Leave[]
+  reviewedLeaves Leave[] @relation("LeaveReviewer")
+
   attendances Attendance[]
 
   tasksCreated Task[] @relation("ManagerTasks")
@@ -207,4 +210,55 @@ model Notification {
 enum NotificationType {
   TASK_REMINDER
   ESCALATION
+}
+
+// model Leave {
+//   id          String   @id @default(uuid())
+
+//   userId      String
+//   user        User @relation(fields: [userId], references: [id])
+
+//   fromDate   DateTime
+//   toDate     DateTime
+
+//   reason      String
+
+//   status      LeaveStatus @default(PENDING)
+
+//   // HR action
+//   reviewedBy  String?
+//   reviewer    User? @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
+
+//   reviewNote  String?   // 👈 HR reason (reject/approve note)
+
+//   createdAt   DateTime @default(now())
+// }
+
+model Leave {
+  id          String   @id @default(uuid())
+
+  userId      String
+  user        User @relation(fields: [userId], references: [id])
+
+  startDate   DateTime
+  endDate     DateTime
+
+  reason      String
+
+  status      LeaveStatus @default(PENDING)
+
+  reviewedBy  String?
+  reviewer    User? @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
+
+  reviewNote  String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])   // 🔥 add this
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

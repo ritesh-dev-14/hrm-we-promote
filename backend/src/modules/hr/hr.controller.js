@@ -128,3 +128,52 @@ exports.getEmployeeAttendanceSummary = async (req, res, next) => {
     next(err);
   }
 };
+
+// 🔹 GET ALL LEAVES
+exports.getAllLeaves = async (req, res, next) => {
+  try {
+    const data = await service.getAllLeaves();
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🔹 APPROVE / REJECT LEAVE
+exports.updateLeaveStatus = async (req, res, next) => {
+  try {
+    const data = await service.updateLeaveStatus(
+      req.params.id,
+      req.user.id,
+      req.body
+    );
+
+    res.json({
+      success: true,
+      message: "Leave updated successfully",
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🔹 EMPLOYEE LEAVE SUMMARY
+exports.getEmployeeLeaveSummary = async (req, res, next) => {
+  try {
+    const data = await service.getEmployeeLeaveSummary(
+      req.params.employeeId
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

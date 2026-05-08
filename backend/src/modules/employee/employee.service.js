@@ -58,3 +58,48 @@ exports.submitTask = async (user, assignmentId, body) => {
 
   return submission;
 };
+
+
+// 🔹 APPLY LEAVE
+exports.applyLeave = async (user, body) => {
+  const { startDate, endDate, reason } = body;
+
+  // ❗ validate dates
+  if (new Date(startDate) > new Date(endDate)) {
+    throw new ApiError(400, "Start date cannot be after end date");
+  }
+
+  // ❗ prevent overlapping leaves
+  const overlap = await prisma.leave.findFirst({
+    where: {
+      userId: user.id,
+      OR: [
+        {
+          startDate: { lte: new Date(endDate) },
+          endDate: { gte: new Date(startDate) },
+        },
+      ],
+    },
+  });
+
+  if (overlap) {
+    throw new ApiError(400, "Leave already applied for these dates");
+  }
+
+  return prisma.leave.create({
+    data: {
+      userId: user.id,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      reason,
+    },
+  });
+};
+
+// 🔹 GET MY LEAVES
+exports.getMyLeaves = async (user) => {
+  return prisma.leave.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
+};
