@@ -38,6 +38,8 @@ model User {
   assignments  TaskAssignment[]
   notifications Notification[]
 
+  leaveBalance LeaveBalance[]
+
   createdAt   DateTime @default(now())
 }
 
@@ -87,6 +89,7 @@ enum AttendanceStatus {
   HALF_DAY
   ABSENT
   HOLIDAY
+  LEAVE   // 🔥 ADD THIS (better clarity)
 }
 
 
@@ -234,31 +237,81 @@ enum NotificationType {
 //   createdAt   DateTime @default(now())
 // }
 
+// model Leave {
+//   id          String   @id @default(uuid())
+
+//   userId      String
+//   user        User @relation(fields: [userId], references: [id])
+
+//   startDate   DateTime
+//   endDate     DateTime
+
+//   reason      String
+
+//   status      LeaveStatus @default(PENDING)
+
+//   reviewedBy  String?
+//   reviewer    User? @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
+
+//   reviewNote  String?
+
+//   createdAt   DateTime @default(now())
+
+//   @@index([userId])   // 🔥 add this
+// }
+
 model Leave {
   id          String   @id @default(uuid())
 
   userId      String
-  user        User @relation(fields: [userId], references: [id])
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   startDate   DateTime
   endDate     DateTime
+
+  type        LeaveType   // 🔥 NEW
+  days        Int         // 🔥 NEW (important)
 
   reason      String
 
   status      LeaveStatus @default(PENDING)
 
   reviewedBy  String?
-  reviewer    User? @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
+  reviewer    User? @relation("LeaveReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
 
   reviewNote  String?
 
   createdAt   DateTime @default(now())
 
-  @@index([userId])   // 🔥 add this
+  @@index([userId])
+  @@index([status])
+}
+
+model LeaveBalance {
+  id        String @id @default(uuid())
+
+  userId    String
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  casual    Int @default(14)
+  sick      Int @default(6)
+
+  usedCasual Int @default(0)
+  usedSick   Int @default(0)
+
+  year      Int
+
+  createdAt DateTime @default(now())
+  @@unique([userId, year])   // 🔥 IMPORTANT FIX
 }
 
 enum LeaveStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
 }

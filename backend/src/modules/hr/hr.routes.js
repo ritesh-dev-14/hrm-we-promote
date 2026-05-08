@@ -11,6 +11,7 @@ const {
   updateManagerSchema,
   createEmployeeSchema,
   updateEmployeeSchema,
+   updateLeaveSchema
 } = require("./hr.validation");
 
 // 🔹 Manager Routes
@@ -76,20 +77,51 @@ router.delete("/employee/:employeeId", auth, role("HR"), controller.deleteEmploy
 
 // 🔥 LEAVE MANAGEMENT
 
-router.get("/leaves", auth, role("HR"), controller.getAllLeaves);
+// router.get("/leaves", auth, role("HR"), controller.getAllLeaves);
 
-router.put(
-  "/leave/:id",
+// ✅ FIRST
+// router.get(
+//   "/leave/employee/:employeeId",
+//   auth,
+//   role("HR"),
+//   controller.getEmployeeLeaveSummary
+// );
+
+// ✅ THEN
+// router.put(
+//   "/leave/:id",
+//   auth,
+//   role("HR"),
+//   controller.updateLeaveStatus
+// );
+
+
+
+
+// 🔹 Get all leave requests
+router.get(
+  "/leaves",
   auth,
   role("HR"),
-  controller.updateLeaveStatus
+  controller.getAllLeaves
 );
 
+// 🔹 IMPORTANT: Specific routes BEFORE parameterized routes
 router.get(
-  "/leave/:employeeId",
+  "/leave/employee/:employeeId",
   auth,
   role("HR"),
   controller.getEmployeeLeaveSummary
 );
+
+// 🔹 Approve / Reject leave
+router.put(
+  "/leave/:id",
+  auth,
+  role("HR"),
+  validate(updateLeaveSchema),
+  controller.updateLeaveStatus
+);
+
 
 module.exports = router;

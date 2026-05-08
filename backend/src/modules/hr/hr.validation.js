@@ -38,3 +38,8 @@ exports.updateEmployeeSchema = Joi.object({
   name: Joi.string().min(3).max(50),
   email: Joi.string().email(),
 });
+
+exports.updateLeaveSchema = Joi.object({
+  status: Joi.string().valid("APPROVED", "REJECTED").required(),
+  reviewNote: Joi.string().allow("", null),
+});

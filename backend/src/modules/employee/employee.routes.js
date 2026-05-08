@@ -21,5 +21,3 @@ router.post("/leave", auth, validate(applyLeaveSchema), controller.applyLeave);
 router.get("/leaves", auth, controller.getMyLeaves);
 
 module.exports = router;
-
-module.exports = router;
