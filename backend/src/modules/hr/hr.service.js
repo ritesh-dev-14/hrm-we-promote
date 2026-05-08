@@ -118,6 +118,69 @@ exports.deleteManager = async (employeeId) => {
   });
 };
 
+// exports.createEmployee = async (user, body) => {
+//   // 🔹 Check duplicate email
+//   const existingUser = await prisma.user.findUnique({
+//     where: { email: body.email },
+//   });
+
+//   if (existingUser) {
+//     throw new ApiError(400, ERRORS.USER.DUPLICATE_EMAIL);
+//   }
+
+//   // 🔹 If managerId is provided → validate manager exists
+//   let manager = null;
+//   if (body.managerId) {
+//     // 🔥 Look up by employeeId (not id)
+//     manager = await prisma.user.findUnique({
+//       where: { employeeId: body.managerId },
+//     });
+
+//     if (!manager) {
+//       throw new ApiError(404, "Manager not found");
+//     }
+
+//     if (manager.role !== "MANAGER") {
+//       throw new ApiError(400, "Assigned user is not a manager");
+//     }
+    
+//     // 🔥 Use manager's UUID id for the relation
+//     body.managerId = manager.id;
+//   }
+
+//   const hashed = await bcrypt.hash(body.password, 10);
+
+//   const newUser = await prisma.user.create({
+//     data: {
+//       employeeId: body.employeeId || "EMP-" + Date.now(),
+//       name: body.name,
+//       email: body.email,
+//       password: hashed,
+
+//       role: body.role,
+//       department: body.department,
+//       position: body.position,
+
+//       managerId: body.managerId || null, // 👈 NEW
+//       createdById: user.id,
+//     },
+//     select: {
+//       id: true,
+//       employeeId: true,
+//       name: true,
+//       email: true,
+//       role: true,
+//       department: true,
+//       position: true,
+//       managerId: true,
+//       createdAt: true,
+//     },
+//   });
+
+//   return newUser;
+// };
+
+
 exports.createEmployee = async (user, body) => {
   // 🔹 Check duplicate email
   const existingUser = await prisma.user.findUnique({
@@ -128,12 +191,12 @@ exports.createEmployee = async (user, body) => {
     throw new ApiError(400, ERRORS.USER.DUPLICATE_EMAIL);
   }
 
-  // 🔹 If managerId is provided → validate manager exists
-  let manager = null;
+  let managerId = null;
+
+  // 🔥 If managerId passed → validate by UUID
   if (body.managerId) {
-    // 🔥 Look up by employeeId (not id)
-    manager = await prisma.user.findUnique({
-      where: { employeeId: body.managerId },
+    const manager = await prisma.user.findUnique({
+      where: { id: body.managerId }, // ✅ UUID based
     });
 
     if (!manager) {
@@ -143,9 +206,8 @@ exports.createEmployee = async (user, body) => {
     if (manager.role !== "MANAGER") {
       throw new ApiError(400, "Assigned user is not a manager");
     }
-    
-    // 🔥 Use manager's UUID id for the relation
-    body.managerId = manager.id;
+
+    managerId = manager.id;
   }
 
   const hashed = await bcrypt.hash(body.password, 10);
@@ -161,7 +223,7 @@ exports.createEmployee = async (user, body) => {
       department: body.department,
       position: body.position,
 
-      managerId: body.managerId || null, // 👈 NEW
+      managerId: managerId, // ✅ clean
       createdById: user.id,
     },
     select: {
@@ -173,12 +235,23 @@ exports.createEmployee = async (user, body) => {
       department: true,
       position: true,
       managerId: true,
+
+      // 🔥 show manager info
+      manager: {
+        select: {
+          id: true,
+          name: true,
+          employeeId: true,
+        },
+      },
+
       createdAt: true,
     },
   });
 
   return newUser;
 };
+
 
 exports.getEmployees = async (user) => {
   return prisma.user.findMany({

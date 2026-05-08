@@ -16,6 +16,23 @@ exports.updateManagerSchema = Joi.object({
   department: Joi.string().min(2).max(50),
 });
 
+// exports.createEmployeeSchema = Joi.object({
+//   employeeId: Joi.string().min(3).max(50),
+
+//   name: Joi.string().min(3).max(50).required(),
+//   email: Joi.string().email().required(),
+//   password: Joi.string().min(6).required(),
+
+//   role: Joi.string()
+//     .valid("ADMIN", "HR", "MANAGER", "EMPLOYEE")
+//     .required(),
+
+//   department: Joi.string().min(2).max(50).required(),
+//   position: Joi.string().min(2).max(50).required(),
+
+//   managerId: Joi.string().optional(), // 👈 important
+// });
+
 exports.createEmployeeSchema = Joi.object({
   employeeId: Joi.string().min(3).max(50),
 
@@ -24,13 +41,13 @@ exports.createEmployeeSchema = Joi.object({
   password: Joi.string().min(6).required(),
 
   role: Joi.string()
-    .valid("ADMIN", "HR", "MANAGER", "EMPLOYEE")
+    .valid("EMPLOYEE") // 🔥 restrict here
     .required(),
 
   department: Joi.string().min(2).max(50).required(),
   position: Joi.string().min(2).max(50).required(),
 
-  managerId: Joi.string().optional(), // 👈 important
+  managerId: Joi.string().uuid().optional(), // 🔥 UUID validation
 });
 
 // 🔹 Update Employee

@@ -47,10 +47,24 @@ exports.deleteManager = async (req, res, next) => {
 };
 
 // 🔹 Employee Controllers
+// exports.createEmployee = async (req, res, next) => {
+//   try {
+//     const data = await service.createEmployee(req.user, req.body);
+//     res.json({ success: true, data });
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+
 exports.createEmployee = async (req, res, next) => {
   try {
     const data = await service.createEmployee(req.user, req.body);
-    res.json({ success: true, data });
+
+    res.json({
+      success: true,
+      message: "Employee created successfully",
+      data,
+    });
   } catch (err) {
     next(err);
   }
