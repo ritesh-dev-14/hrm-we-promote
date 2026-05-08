@@ -39,10 +39,7 @@ exports.assignTask = async (user, taskId, body) => {
   const uniqueIds = new Set(employeeIds);
 
   if (uniqueIds.size !== employeeIds.length) {
-    throw new ApiError(400, {
-      code: "TASK_001",
-      message: "Duplicate employees in assignment",
-    });
+    throw new ApiError(400, ERRORS.TASK.DUPLICATE_ASSIGNMENT);
   }
 
   // 🔥 Check employees exist
@@ -54,10 +51,7 @@ exports.assignTask = async (user, taskId, body) => {
   });
 
   if (employees.length !== employeeIds.length) {
-    throw new ApiError(400, {
-      code: "TASK_002",
-      message: "Some employees not found",
-    });
+    throw new ApiError(400, ERRORS.TASK.EMPLOYEE_NOT_FOUND);
   }
 
   // 🔥 Create assignments

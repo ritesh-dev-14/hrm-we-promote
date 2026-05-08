@@ -200,11 +200,11 @@ exports.createEmployee = async (user, body) => {
     });
 
     if (!manager) {
-      throw new ApiError(404, "Manager not found");
+      throw new ApiError(404, ERRORS.HR.MANAGER_NOT_FOUND);
     }
 
     if (manager.role !== "MANAGER") {
-      throw new ApiError(400, "Assigned user is not a manager");
+      throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
     }
 
     managerId = manager.id;
@@ -357,7 +357,7 @@ exports.getEmployeeAttendance = async (employeeId, query) => {
   });
 
   if (!employee) {
-    throw new ApiError(404, "Employee not found");
+    throw new ApiError(404, ERRORS.HR.EMPLOYEE_NOT_FOUND);
   }
 
   const where = {
@@ -388,7 +388,7 @@ exports.getEmployeeAttendanceSummary = async (employeeId) => {
   });
 
   if (!employee) {
-    throw new ApiError(404, "Employee not found");
+    throw new ApiError(404, ERRORS.HR.EMPLOYEE_NOT_FOUND);
   }
 
   const records = await prisma.attendance.findMany({
@@ -673,7 +673,7 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
   const { status, reviewNote } = body;
 
   if (!["APPROVED", "REJECTED"].includes(status)) {
-    throw new ApiError(400, "Invalid status");
+    throw new ApiError(400, ERRORS.LEAVE.INVALID_STATUS);
   }
 
   // 🔥 SECURITY CHECK: Verify HR user exists and has HR role
@@ -682,7 +682,7 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
   });
 
   if (!hrUser || hrUser.role !== "HR") {
-    throw new ApiError(403, "Unauthorized: Only HR can approve/reject leaves");
+    throw new ApiError(403, ERRORS.AUTH.HR_ONLY);
   }
 
   const leave = await prisma.leave.findUnique({
@@ -690,16 +690,16 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
   });
 
   if (!leave) {
-    throw new ApiError(404, "Leave not found");
+    throw new ApiError(404, ERRORS.LEAVE.NOT_FOUND);
   }
 
   if (leave.status !== "PENDING") {
-    throw new ApiError(400, "Leave already processed");
+    throw new ApiError(400, ERRORS.LEAVE.ALREADY_PROCESSED);
   }
 
   // ❗ require note if rejected
   if (status === "REJECTED" && !reviewNote) {
-    throw new ApiError(400, "Rejection reason is required");
+    throw new ApiError(400, ERRORS.LEAVE.REJECTION_REASON_REQUIRED);
   }
 
   // 🔥 IF APPROVED
@@ -727,13 +727,13 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
     // 🔥 SAFETY CHECK
     if (leave.type === "CASUAL") {
       if (balance.casual - balance.usedCasual < leave.days) {
-        throw new ApiError(400, "Not enough casual leave balance");
+        throw new ApiError(400, ERRORS.LEAVE.INSUFFICIENT_BALANCE);
       }
     }
 
     if (leave.type === "SICK") {
       if (balance.sick - balance.usedSick < leave.days) {
-        throw new ApiError(400, "Not enough sick leave balance");
+        throw new ApiError(400, ERRORS.LEAVE.INSUFFICIENT_BALANCE);
       }
     }
 

@@ -58,7 +58,7 @@ exports.startWork = async (userId) => {
   });
 
   if (attendance?.endTime) {
-    throw new ApiError(400, "Work already completed for today");
+    throw new ApiError(400, ERRORS.ATTENDANCE.WORK_COMPLETED);
   }
 
   if (attendance?.startTime) {
@@ -192,13 +192,13 @@ exports.stopWork = async (userId) => {
   }
 
   if (attendance.endTime) {
-    throw new ApiError(400, "Work already stopped");
+    throw new ApiError(400, ERRORS.ATTENDANCE.WORK_ALREADY_STOPPED);
   }
 
   // ❌ prevent stop if break active
   const activeBreak = attendance.breaks.find((b) => !b.endTime);
   if (activeBreak) {
-    throw new ApiError(400, "End break before stopping work");
+    throw new ApiError(400, ERRORS.ATTENDANCE.BREAK_ACTIVE);
   }
 
   const endTime = new Date();
@@ -273,7 +273,7 @@ exports.startBreak = async (userId) => {
   }
 
   if (attendance.endTime) {
-    throw new ApiError(400, "Work already ended");
+    throw new ApiError(400, ERRORS.ATTENDANCE.WORK_COMPLETED);
   }
 
   const activeBreak = attendance.breaks.find((b) => !b.endTime);
@@ -326,7 +326,7 @@ exports.endBreak = async (userId) => {
   });
 
   if (!attendance || attendance.endTime) {
-    throw new ApiError(400, "Invalid attendance state");
+    throw new ApiError(400, ERRORS.ATTENDANCE.INVALID_STATE);
   }
 
   const activeBreak = attendance.breaks.find((b) => !b.endTime);
@@ -500,7 +500,7 @@ exports.getEmployeeAttendance = async (employeeId, query) => {
   });
 
   if (!user) {
-    throw new ApiError(404, "Employee not found");
+    throw new ApiError(404, ERRORS.HR.EMPLOYEE_NOT_FOUND);
   }
 
   const where = {

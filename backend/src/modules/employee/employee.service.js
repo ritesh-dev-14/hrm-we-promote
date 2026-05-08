@@ -25,19 +25,19 @@ exports.submitTask = async (user, assignmentId, body) => {
   });
 
   if (!assignment) {
-    throw new ApiError(404, "Assignment not found");
+    throw new ApiError(404, ERRORS.TASK.ASSIGNMENT_NOT_FOUND);
   }
 
   if (assignment.userId !== user.id) {
-    throw new ApiError(403, "Not your task");
+    throw new ApiError(403, ERRORS.TASK.NOT_ASSIGNED);
   }
 
   if (assignment.status === "SUBMITTED") {
-    throw new ApiError(400, "Task already submitted");
+    throw new ApiError(400, ERRORS.TASK.ALREADY_SUBMITTED);
   }
 
   if (body.completedCount + body.pendingCount <= 0) {
-    throw new ApiError(400, "Invalid task counts");
+    throw new ApiError(400, ERRORS.TASK.INVALID_SUBMISSION);
   }
 
   const submission = await prisma.taskSubmission.create({
@@ -193,7 +193,7 @@ exports.applyLeave = async (user, body) => {
 
   // 🔥 validate type
   if (!["CASUAL", "SICK"].includes(type)) {
-    throw new ApiError(400, "Invalid leave type");
+    throw new ApiError(400, ERRORS.LEAVE.INVALID_TYPE);
   }
 
   const start = new Date(startDate);
@@ -204,7 +204,7 @@ exports.applyLeave = async (user, body) => {
   end.setHours(0, 0, 0, 0);
 
   if (start > end) {
-    throw new ApiError(400, "Start date cannot be after end date");
+    throw new ApiError(400, ERRORS.LEAVE.INVALID_DATES);
   }
 
   // ❗ prevent past leave
@@ -212,7 +212,7 @@ exports.applyLeave = async (user, body) => {
   today.setHours(0, 0, 0, 0);
 
   if (start < today) {
-    throw new ApiError(400, "Cannot apply leave for past dates");
+    throw new ApiError(400, ERRORS.LEAVE.PAST_DATES);
   }
 
   // 🔥 calculate days
@@ -230,7 +230,7 @@ exports.applyLeave = async (user, body) => {
   });
 
   if (overlap) {
-    throw new ApiError(400, "Leave already applied for these dates");
+    throw new ApiError(400, ERRORS.LEAVE.ALREADY_APPLIED);
   }
 
   // 🔥 get balance
@@ -257,7 +257,7 @@ exports.applyLeave = async (user, body) => {
   // 🔥 CHECK BALANCE
   if (type === "CASUAL") {
     if (balance.casual - balance.usedCasual < days) {
-      throw new ApiError(400, "Not enough casual leaves");
+      throw new ApiError(400, ERRORS.LEAVE.INSUFFICIENT_BALANCE);
     }
 
     // 🔥 FIXED monthly rule
@@ -277,13 +277,13 @@ exports.applyLeave = async (user, body) => {
     });
 
     if (monthlyLeave) {
-      throw new ApiError(400, "Only 1 casual leave allowed per month");
+      throw new ApiError(400, ERRORS.LEAVE.MONTHLY_LIMIT_EXCEEDED);
     }
   }
 
   if (type === "SICK") {
     if (balance.sick - balance.usedSick < days) {
-      throw new ApiError(400, "Not enough sick leaves");
+      throw new ApiError(400, ERRORS.LEAVE.INSUFFICIENT_BALANCE);
     }
   }
 
@@ -321,4 +321,37 @@ exports.getMyLeaves = async (user) => {
     },
     orderBy: { createdAt: "desc" },
   });
+};
+
+exports.getMyLeaveBalance = async (user) => {
+  const year = new Date().getFullYear();
+
+  let balance = await prisma.leaveBalance.findUnique({
+    where: {
+      userId_year: {
+        userId: user.id,
+        year,
+      },
+    },
+  });
+
+  // 🔥 auto create if not exists
+  if (!balance) {
+    balance = await prisma.leaveBalance.create({
+      data: {
+        userId: user.id,
+        year,
+      },
+    });
+  }
+
+  return {
+    casualTotal: balance.casual,
+    casualUsed: balance.usedCasual,
+    casualLeft: balance.casual - balance.usedCasual,
+
+    sickTotal: balance.sick,
+    sickUsed: balance.usedSick,
+    sickLeft: balance.sick - balance.usedSick,
+  };
 };

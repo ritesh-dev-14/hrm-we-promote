@@ -19,5 +19,6 @@ router.post("/task/:id/submit", auth, controller.submitTask);
 // 🔥 NEW (LEAVE)
 router.post("/leave", auth, validate(applyLeaveSchema), controller.applyLeave);
 router.get("/leaves", auth, controller.getMyLeaves);
+router.get("/leave-balance", auth, controller.getMyLeaveBalance);
 
 module.exports = router;

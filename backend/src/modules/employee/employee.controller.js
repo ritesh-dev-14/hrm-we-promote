@@ -50,3 +50,16 @@ exports.getMyLeaves = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getMyLeaveBalance = async (req, res, next) => {
+  try {
+    const data = await service.getMyLeaveBalance(req.user);
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
