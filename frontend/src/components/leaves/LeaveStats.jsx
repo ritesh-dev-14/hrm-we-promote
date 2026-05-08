@@ -19,7 +19,7 @@ export default function LeaveStats({ stats }) {
       iconColor: "text-slate-600",
     },
     {
-      label: "Leave Balance",
+      label: "Annual Leave",
       count: stats?.annual || 0,
       icon: TreePalm,
       accentColor: "border-slate-700",

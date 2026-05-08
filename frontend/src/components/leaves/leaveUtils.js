@@ -5,6 +5,7 @@ export default function useLeaves() {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // FETCH LEAVES
   const fetchLeaves = async () => {
     try {
       setLoading(true);
@@ -13,7 +14,10 @@ export default function useLeaves() {
 
       setLeaves(res.data?.data || []);
     } catch (err) {
-      console.error("Error fetching leaves:", err);
+      console.error(
+        "Error fetching leaves:",
+        err?.response?.data || err.message,
+      );
     } finally {
       setLoading(false);
     }
@@ -26,62 +30,43 @@ export default function useLeaves() {
   // STATS
   const stats = useMemo(() => {
     return {
-      sick: leaves.filter((l) => l.type === "SICK").length,
+      sick: leaves.filter((l) => l.type === "SICK" && l.status === "APPROVED")
+        .length,
 
-      casual: leaves.filter((l) => l.type === "CASUAL").length,
+      casual: leaves.filter(
+        (l) => l.type === "CASUAL" && l.status === "APPROVED",
+      ).length,
+
+      annual: leaves.filter(
+        (l) => l.type === "ANNUAL" && l.status === "APPROVED",
+      ).length,
     };
   }, [leaves]);
 
   // APPLY LEAVE
-  // const applyLeave = async (formData) => {
-  //   try {
-  //     await API.post("/api/employee/leave", {
-  //       startDate: formData.startDate,
-  //       endDate: formData.endDate,
-  //       reason: formData.reason,
-  //       type: formData.type,
-  //     });
-
-  //     await fetchLeaves();
-
-  //     return true;
-  //   } catch (err) {
-  //     console.error("Error applying leave:", err);
-
-  //     return false;
-  //   }
-  // };
-
   const applyLeave = async (formData) => {
-  try {
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
+    try {
+      await API.post("/api/employee/leave", {
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        reason: formData.reason.trim(),
+        type: formData.type,
+      });
 
-    // calculate total leave days
-    const timeDiff = end.getTime() - start.getTime();
+      await fetchLeaves();
 
-    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+      return true;
+    } catch (err) {
+      console.error(
+        "Error applying leave:",
+        err?.response?.data || err.message,
+      );
 
-    await API.post("/api/employee/leave", {
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      reason: formData.reason,
-      type: formData.type,
-      days,
-    });
+      alert(err?.response?.data?.message || "Failed to apply leave");
 
-    await fetchLeaves();
-
-    return true;
-  } catch (err) {
-    console.error(
-      "Error applying leave:",
-      err?.response?.data || err.message
-    );
-
-    return false;
-  }
-};
+      return false;
+    }
+  };
 
   return {
     leaves,
