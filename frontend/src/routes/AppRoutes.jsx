@@ -14,6 +14,7 @@ import HrSettings from "../pages/HR/HrSettigns";
 import HrAttendance from "../pages/HR/HrAttendance.jsx";
 import HrLeaves from "../pages/HR/HrLeaves.jsx";
 import HrAllEmployeeAttendence from "../pages/HR/HrAllEmployeeAttendence.jsx";
+import EmployeeDetails from "../pages/HR/employeeDetailsHr/EmployeeDetails.jsx";
 
 import EmployeHomePage from "../pages/Employee/EmployeeHomePage";
 import EmployeeAttendence from "../pages/Employee/EmployeeAttendence";
@@ -76,6 +77,13 @@ const ROUTES = [
 
     component: {
       HR: <HrAllEmployeeAttendence />,
+    },
+  },
+  {
+    path: "/hr/team/:id",
+    roles: ["HR"],
+    component: {
+      HR: <EmployeeDetails />,
     },
   },
   {
