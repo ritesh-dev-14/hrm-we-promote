@@ -2,49 +2,55 @@ export default function LeaveTable({ leaves, loading }) {
   const getStatusStyle = (status) => {
     switch (status) {
       case "APPROVED":
-        return "text-emerald-600 bg-emerald-50/50 border-emerald-100";
+        return "text-emerald-700 bg-emerald-50 border-emerald-200";
       case "REJECTED":
-        return "text-rose-600 bg-rose-50/50 border-rose-100";
+        return "text-rose-700 bg-rose-50 border-rose-200";
       default:
-        // PENDING status uses a sophisticated amber/indigo mix
-        return "text-amber-600 bg-amber-50/50 border-amber-100";
+        // PENDING status
+        return "text-amber-700 bg-amber-50 border-amber-200";
     }
   };
 
   return (
-    <div className="bg-white border border-slate-100 rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.02)] transition-all duration-500">
+    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-separate border-spacing-0">
           <thead>
-            <tr className="bg-slate-50/40">
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-50">
+            <tr className="bg-slate-50/60 border-b border-slate-200">
+              <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600">
                 Leave Period
               </th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-50">
+              <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600">
                 Reason & Category
               </th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-50 text-right">
-                Approval Status
+              <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 text-right">
+                Status
               </th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan="3" className="px-8 py-24 text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-8 h-8 border-2 border-slate-100 border-t-indigo-500 rounded-full animate-spin" />
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Synchronizing...</span>
+                <td colSpan="3" className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-700 rounded-full animate-spin" />
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+                      Synchronizing...
+                    </span>
                   </div>
                 </td>
               </tr>
             ) : leaves.length === 0 ? (
               <tr>
-                <td colSpan="3" className="px-8 py-24 text-center">
+                <td colSpan="3" className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center gap-2">
-                    <p className="text-slate-400 font-bold text-sm">No leave applications found</p>
-                    <p className="text-slate-300 text-xs">Your requested leaves will be listed here.</p>
+                    <p className="text-slate-500 font-semibold text-sm">
+                      No leave applications found
+                    </p>
+                    <p className="text-slate-400 text-xs">
+                      Your requested leaves will be listed here.
+                    </p>
                   </div>
                 </td>
               </tr>
@@ -52,37 +58,47 @@ export default function LeaveTable({ leaves, loading }) {
               leaves.map((leave) => (
                 <tr
                   key={leave.id}
-                  className="group hover:bg-slate-50/30 transition-all duration-300 cursor-default"
+                  className="group hover:bg-slate-50 transition-all duration-300 cursor-default"
                 >
-                  <td className="px-8 py-7">
+                  <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900 text-base tracking-tight leading-none mb-1.5">
-                        {new Date(leave.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <span className="font-semibold text-slate-900 text-sm">
+                        {new Date(leave.startDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </span>
-                      <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                        until {new Date(leave.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <span className="text-xs text-slate-500 mt-0.5">
+                        to{" "}
+                        {new Date(leave.endDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </span>
                     </div>
                   </td>
 
-                  <td className="px-8 py-7">
-                    <div className="max-w-md">
-                      <p className="text-sm font-medium text-slate-600 leading-relaxed truncate">
-                        {leave.reason}
-                      </p>
+                  <td className="px-6 py-4">
+                    <div className="max-w-xs">
+                      <p className="text-sm text-slate-700">{leave.reason}</p>
                     </div>
                   </td>
 
-                  <td className="px-8 py-7 text-right">
+                  <td className="px-6 py-4 text-right">
                     <span
-                      className={`inline-flex items-center px-5 py-2 rounded-2xl text-[10px] font-black tracking-[0.1em] border uppercase transition-all duration-300 group-hover:scale-105 ${getStatusStyle(
+                      className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${getStatusStyle(
                         leave.status,
                       )}`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full mr-2 ${
-                        leave.status === 'APPROVED' ? 'bg-emerald-500' : 
-                        leave.status === 'REJECTED' ? 'bg-rose-500' : 'bg-amber-500'
-                      }`} />
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full mr-2 ${
+                          leave.status === "APPROVED"
+                            ? "bg-emerald-600"
+                            : leave.status === "REJECTED"
+                              ? "bg-rose-600"
+                              : "bg-amber-600"
+                        }`}
+                      />
                       {leave.status}
                     </span>
                   </td>

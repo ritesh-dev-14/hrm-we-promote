@@ -1,8 +1,4 @@
-import {
-  Thermometer,
-  Umbrella,
-  TreePalm,
-} from "lucide-react";
+import { Thermometer, Umbrella, TreePalm } from "lucide-react";
 
 export default function LeaveStats({ stats }) {
   const leaveStats = [
@@ -10,59 +6,60 @@ export default function LeaveStats({ stats }) {
       label: "Sick Leave",
       count: stats?.sick || 0,
       icon: Thermometer,
-      // Using professional indigo/slate tones for your project
-      accentColor: "border-rose-500", 
-      iconBg: "bg-rose-50",
-      iconColor: "text-rose-600"
+      accentColor: "border-slate-700",
+      iconBg: "bg-slate-100",
+      iconColor: "text-slate-700",
     },
     {
       label: "Casual Leave",
       count: stats?.casual || 0,
       icon: Umbrella,
-      accentColor: "border-amber-500",
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-600"
+      accentColor: "border-slate-600",
+      iconBg: "bg-slate-100",
+      iconColor: "text-slate-600",
     },
     {
-      label: "Annual Leave",
+      label: "Leave Balance",
       count: stats?.annual || 0,
       icon: TreePalm,
-      accentColor: "border-indigo-500",
-      iconBg: "bg-indigo-50",
-      iconColor: "text-indigo-600"
+      accentColor: "border-slate-700",
+      iconBg: "bg-slate-100",
+      iconColor: "text-slate-700",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 font-sans">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6 font-sans">
       {leaveStats.map((stat, i) => (
         <div
           key={i}
-          className="relative flex items-center p-6 bg-white border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
+          className="relative flex items-center p-5 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
         >
           {/* Vertical Accent Border */}
           <div
-            className={`absolute left-0 top-0 bottom-0 w-[4px] ${stat.accentColor} border-l-[4px]`}
+            className={`absolute left-0 top-0 bottom-0 w-1 ${stat.accentColor}`}
           />
 
           {/* Icon Container */}
-          <div className={`w-12 h-12 rounded-xl ${stat.iconBg} flex items-center justify-center mr-4`}>
-            <stat.icon size={22} className={stat.iconColor} />
+          <div
+            className={`w-11 h-11 rounded-lg ${stat.iconBg} flex items-center justify-center mr-3 flex-shrink-0`}
+          >
+            <stat.icon size={20} className={stat.iconColor} />
           </div>
 
           {/* Text Content */}
           <div>
-            <p className="text-[13px] font-bold uppercase tracking-wider text-slate-400">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
               {stat.label}
             </p>
 
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-3xl font-black text-[#0F172A] tracking-tight">
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-2xl font-bold text-slate-900 tracking-tight">
                 {stat.count}
               </span>
 
-              <span className="text-[12px] text-slate-400 font-bold uppercase tracking-tighter">
-                Days Taken
+              <span className="text-xs text-slate-400 font-semibold uppercase tracking-tighter">
+                Days
               </span>
             </div>
           </div>
