@@ -8,7 +8,7 @@ import {
   Filter,
 } from "lucide-react";
 
-const HrEmployeeLeaves = () => {
+const HrLeaveManagement = () => {
   // Sample data following your existing "No leave applications found" structure
   const [leaveRequests] = useState([
     {
@@ -154,4 +154,4 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-export default HrEmployeeLeaves;
+export default HrLeaveManagement;

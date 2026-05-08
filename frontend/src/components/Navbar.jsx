@@ -30,10 +30,9 @@ const NAV_CONFIG = [
     label: "Attendance",
     icon: CalendarDays,
     path: "/attendance",
-    roles: ["EMPLOYEE", "MANAGER","HR"],
+    roles: ["EMPLOYEE", "MANAGER", "HR"],
   },
-    {
-
+  {
     id: "employee-attendance",
 
     label: "Employee Attendance",
@@ -43,8 +42,20 @@ const NAV_CONFIG = [
     path: "/hr/employees-attendance",
 
     roles: ["HR"],
-
   },
+  {
+
+  id: "employee-leaves",
+
+  label: "Employee Leaves",
+
+  icon: FileText,
+
+  path: "/hr/employees-leaves",
+
+  roles: ["HR"],
+
+},
   {
     id: "team",
     label: "Team Management",
