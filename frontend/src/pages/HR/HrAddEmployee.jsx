@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { X, AlertCircle, CheckCircle } from "lucide-react";
+import { X } from "lucide-react";
 import API from "../../services/api";
+import { notifySuccess, notifyError } from "../../utils/toast";
 
 function Field({
   label,
@@ -13,18 +14,72 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
+      <label className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
+
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className={`w-full bg-[#F8FAFC] border rounded-2xl px-4 py-3 outline-none focus:border-[#6366F1] focus:ring-2 focus:ring-indigo-500/10 transition-all ${error ? "border-red-500" : "border-[#E2E8F0]"}`}
+        className={`w-full h-12 sm:h-13 bg-[#F8FAFC] border rounded-2xl px-4 text-sm font-medium text-slate-700 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 ${
+          error ? "border-red-500" : "border-slate-200"
+        }`}
       />
+
       {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  );
+}
+import { ChevronDown } from "lucide-react";
+
+function SelectField({ label, value, onChange, children, disabled = false }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1">
+        {label}
+      </label>
+
+      <div className="relative">
+        <select
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className="
+            appearance-none
+            w-full
+            h-12 sm:h-13
+            bg-white
+            border
+            border-slate-200
+            rounded-2xl
+            px-4
+            pr-12
+            text-sm
+            font-semibold
+            text-slate-700
+            outline-none
+            transition-all
+            duration-200
+            hover:border-slate-300
+            focus:border-black
+            focus:ring-4
+            focus:ring-black/5
+            disabled:opacity-50
+            cursor-pointer
+            shadow-[0_1px_2px_rgba(0,0,0,0.02)]
+          "
+        >
+          {children}
+        </select>
+
+        {/* ICON */}
+        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+          <ChevronDown size={18} className="text-slate-400" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -47,20 +102,21 @@ export default function HrAddEmployee({
   const [managers, setManagers] = useState([]);
   const [fetchingManagers, setFetchingManagers] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [error, setError] = useState("");
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
-    if (error) setError(""); // Clear error when user types
+
+    if (error) setError("");
   };
 
-  // Fetch managers when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchManagers();
-      if (initialData) setForm(initialData);
-      else
+
+      if (initialData) {
+        setForm(initialData);
+      } else {
         setForm({
           name: "",
           email: "",
@@ -69,7 +125,8 @@ export default function HrAddEmployee({
           position: "",
           managerId: "",
         });
-      setSuccessMessage("");
+      }
+
       setError("");
     }
   }, [isOpen, initialData]);
@@ -77,23 +134,14 @@ export default function HrAddEmployee({
   const fetchManagers = async () => {
     try {
       setFetchingManagers(true);
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setError("Authentication token not found. Please log in.");
-        return;
-      }
 
       const res = await API.get("/api/hr/managers");
+
       setManagers(res.data.data || []);
     } catch (err) {
-      console.error(
-        "❌ Failed to fetch managers:",
-        err.response?.data || err.message,
-      );
-      setManagers([]);
-      setError(
-        `Failed to load managers: ${err.response?.data?.message || err.message}`,
-      );
+      console.error(err);
+
+      notifyError("Could not load managers list.");
     } finally {
       setFetchingManagers(false);
     }
@@ -101,9 +149,9 @@ export default function HrAddEmployee({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
     setError("");
-    setSuccessMessage("");
 
     try {
       const payload = {
@@ -116,10 +164,10 @@ export default function HrAddEmployee({
         ...(form.managerId && { managerId: form.managerId }),
       };
 
-      console.log("Submitting payload:", payload);
       const res = await API.post("/api/hr/employee", payload);
 
-      setSuccessMessage("Employee added successfully!");
+      notifySuccess("Employee added successfully!");
+
       setForm({
         name: "",
         email: "",
@@ -129,16 +177,15 @@ export default function HrAddEmployee({
         managerId: "",
       });
 
-      setTimeout(() => {
-        onClose();
-        if (onSave) onSave(res.data.data);
-      }, 1500);
+      onClose();
+
+      if (onSave) onSave(res.data.data);
     } catch (err) {
-      console.error(
-        "❌ Form submission failed:",
-        err.response?.data || err.message,
-      );
-      setError(err.response?.data?.message || "Failed to add employee");
+      const errorMsg = err.response?.data?.message || "Failed to add employee";
+
+      setError(errorMsg);
+
+      notifyError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -147,47 +194,31 @@ export default function HrAddEmployee({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F172A]/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-4xl shadow-2xl overflow-hidden animate-in zoom-in-95">
-        {/* Header */}
-        <div className="px-8 py-6 border-b border-[#F1F5F9] flex justify-between items-center">
+    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-slate-950/50 backdrop-blur-md p-0 sm:p-4">
+      <div className="w-full sm:max-w-2xl bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-screen overflow-y-auto">
+        {/* HEADER */}
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-start justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-[#1E293B]">Add Employee</h2>
-            <p className="text-[#64748B] font-medium text-sm">
-              Create a new employee account
+            <h2 className="text-2xl font-bold text-slate-900">Add Employee</h2>
+
+            <p className="text-sm text-slate-500 mt-1">
+              Create and manage employee account access.
             </p>
           </div>
+
           <button
             onClick={onClose}
-            className="p-2 hover:bg-[#F1F5F9] rounded-full text-slate-400"
+            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition-all"
           >
-            <X size={24} />
+            <X size={20} className="text-slate-500" />
           </button>
         </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="px-8 pt-6 pb-0">
-            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-2xl">
-              <CheckCircle size={20} className="text-green-600" />
-              <p className="text-sm text-green-700 font-medium">
-                {successMessage}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="px-8 pt-6 pb-0">
-            <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
-              <AlertCircle size={20} className="text-red-600" />
-              <p className="text-sm text-red-700 font-medium">{error}</p>
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="p-8 space-y-5">
+        {/* BODY */}
+        <form
+          onSubmit={handleSubmit}
+          className="p-5 sm:p-8 space-y-5 sm:space-y-6"
+        >
           <Field
             label="Full Name"
             value={form.name}
@@ -195,14 +226,16 @@ export default function HrAddEmployee({
             placeholder="John Doe"
             required
           />
+
           <Field
             label="Email"
             type="email"
             value={form.email}
             onChange={(v) => updateForm("email", v)}
-            placeholder="name@company.com"
+            placeholder="john@company.com"
             required
           />
+
           <Field
             label="Password"
             type="password"
@@ -212,68 +245,65 @@ export default function HrAddEmployee({
             required
           />
 
-          {/* Designation & Position */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
-                Department
-              </label>
-              <select
-                value={form.department}
-                onChange={(e) => updateForm("department", e.target.value)}
-                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-4 py-3 outline-none focus:border-[#6366F1] cursor-pointer"
-              >
-                <option>Engineering</option>
-                <option>Sales</option>
-                <option>Marketing</option>
-                <option>HR</option>
-                <option>Shoot</option>
-              </select>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <SelectField
+              label="Department"
+              value={form.department}
+              onChange={(e) => updateForm("department", e.target.value)}
+            >
+              <option>Engineering</option>
+              <option>Sales</option>
+              <option>Marketing</option>
+              <option>HR</option>
+              <option>Production</option>
+            </SelectField>
+
             <Field
               label="Position"
               value={form.position}
               onChange={(v) => updateForm("position", v)}
-              placeholder="Cameraman"
+              placeholder="Frontend Developer"
               required
             />
           </div>
 
-          {/* Manager Selection */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
-              Assign Manager (Optional)
-            </label>
-            <select
-              value={form.managerId}
-              onChange={(e) => updateForm("managerId", e.target.value)}
-              className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-4 py-3 outline-none focus:border-[#6366F1] cursor-pointer disabled:opacity-50"
-              disabled={fetchingManagers}
-            >
-              <option value="">
-                {fetchingManagers ? "Loading managers..." : "-- No Manager --"}
-              </option>
-              {managers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.name} ({manager.department})
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectField
+            label="Assign Manager"
+            value={form.managerId}
+            onChange={(e) => updateForm("managerId", e.target.value)}
+            disabled={fetchingManagers}
+          >
+            <option value="">
+              {fetchingManagers ? "Loading managers..." : "-- No Manager --"}
+            </option>
 
-          {/* Footer */}
-          <div className="flex gap-3 pt-4">
+            {managers.map((manager) => (
+              <option key={manager.id} value={manager.id}>
+                {manager.name} ({manager.department})
+              </option>
+            ))}
+          </SelectField>
+
+          {error && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {error}
+            </div>
+          )}
+
+          {/* FOOTER */}
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3.5 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+              className="w-full sm:flex-1 h-12 rounded-2xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-all"
             >
               Cancel
             </button>
+
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-[#6366F1] hover:bg-[#4F46E5] disabled:bg-slate-400 text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-indigo-100 transition-all active:scale-[0.98]"
+              className="w-full sm:flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold shadow-lg shadow-indigo-500/20 transition-all"
             >
               {loading ? "Creating..." : "Create Employee"}
             </button>

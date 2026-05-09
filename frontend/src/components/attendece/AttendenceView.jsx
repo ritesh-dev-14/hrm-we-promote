@@ -47,28 +47,27 @@ export default function AttendanceView({
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 lg:p-6">
+    <div className="min-h-screen bg-[#F8FAFC] p-3 sm:p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
         {/* HEADER */}
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+        <div className="flex flex-col gap-3 mb-6 sm:mb-8">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-slate-400 mb-2">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] font-bold text-slate-400 mb-2">
               Attendance
             </p>
 
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
               Attendance History
             </h1>
 
-            <p className="text-sm text-slate-500 mt-2">
+            <p className="text-sm text-slate-500 mt-2 max-w-xl">
               View your attendance records and working hours.
             </p>
           </div>
-
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6 sm:mb-8">
           {stats.map((stat, i) => (
             <motion.div
               key={i}
@@ -76,20 +75,20 @@ export default function AttendanceView({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: i * 0.05 }}
               whileHover={{ y: -2 }}
-              className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm transition-all"
+              className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm transition-all"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-2">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-2">
                     {stat.label}
                   </p>
 
-                  <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight wrap-break-words">
                     {stat.value}
                   </h2>
                 </div>
 
-                <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500">
+                <div className="shrink-0 w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500">
                   {getIcon(stat.label)}
                 </div>
               </div>
@@ -97,11 +96,11 @@ export default function AttendanceView({
           ))}
         </div>
 
-        {/* TABLE */}
+        {/* DESKTOP TABLE */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
+          className="hidden lg:block bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
         >
           {/* TABLE HEADER */}
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
@@ -173,8 +172,7 @@ export default function AttendanceView({
 
                       <td className="px-6 py-5 text-right">
                         <span
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide
-                          ${
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                             r.status === "PRESENT"
                               ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
                               : "bg-rose-50 text-rose-600 border border-rose-100"
@@ -203,6 +201,85 @@ export default function AttendanceView({
             </table>
           </div>
         </motion.div>
+
+        {/* MOBILE + TABLET CARDS */}
+        <div className="lg:hidden space-y-4">
+          {!loading && records?.length > 0 ? (
+            records.map((r, i) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm"
+              >
+                {/* TOP */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 mb-1">
+                      Date
+                    </p>
+
+                    <h3 className="text-sm font-semibold text-slate-800">
+                      {formatDate(r.date)}
+                    </h3>
+                  </div>
+
+                  <span
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                      r.status === "PRESENT"
+                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                        : "bg-rose-50 text-rose-600 border border-rose-100"
+                    }`}
+                  >
+                    {r.status}
+                  </span>
+                </div>
+
+                {/* DETAILS */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 rounded-xl p-3">
+                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
+                      Clock In
+                    </p>
+
+                    <p className="text-sm font-semibold text-slate-700">
+                      {formatTime(r.startTime)}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-xl p-3">
+                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
+                      Clock Out
+                    </p>
+
+                    <p className="text-sm font-semibold text-slate-700">
+                      {formatTime(r.endTime)}
+                    </p>
+                  </div>
+
+                  <div className="col-span-2 bg-slate-50 rounded-xl p-3">
+                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
+                      Working Hours
+                    </p>
+
+                    <p className="text-sm font-semibold text-slate-700">
+                      {formatHours(r.totalHours)}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+              <p className="text-sm font-medium text-slate-400">
+                {loading
+                  ? "Loading attendance..."
+                  : "No attendance records found."}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

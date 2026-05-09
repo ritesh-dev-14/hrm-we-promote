@@ -1,46 +1,91 @@
 import { useState } from "react";
-import { X, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
+import { X } from "lucide-react";
 import API from "../../services/api";
+import { notifySuccess, notifyError } from "../../utils/toast";
 
-function Field({ label, type = "text", value, onChange, placeholder, required = false }) {
+function Field({
+  label,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  required = false,
+}) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">
+      <label className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <input 
+
+      <input
         type={type}
-        value={value} 
+        value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-4 py-3 outline-none focus:border-[#6366F1] focus:ring-2 focus:ring-indigo-500/10 transition-all"
+        className="w-full h-12 sm:h-13 bg-[#F8FAFC] border border-slate-200 rounded-2xl px-4 text-sm font-medium text-slate-700 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
       />
     </div>
   );
 }
 
-export default function HrAddManager({ isOpen, onClose, onSave }) {
-  const [form, setForm] = useState({ name: "", email: "", password: "", department: "Engineering" });
+function SelectField({ label, value, onChange, children }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1">
+        {label}
+      </label>
+
+      <select
+        value={value}
+        onChange={onChange}
+        className="w-full h-12 sm:h-13 bg-[#F8FAFC] border border-slate-200 rounded-2xl px-4 text-sm font-medium text-slate-700 outline-none transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 cursor-pointer"
+      >
+        {children}
+      </select>
+    </div>
+  );
+}
+
+export default function HrAddManager({
+  isOpen,
+  onClose,
+  onSave,
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    department: "Engineering",
+  });
+
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
-    setMessage({ type: "", text: "" });
 
     try {
       const res = await API.post("/api/hr/manager", form);
-      setMessage({ type: "success", text: "Manager account created successfully!" });
-      
-      setTimeout(() => {
-        onClose();
-        if (onSave) onSave(res.data.data);
-        setForm({ name: "", email: "", password: "", department: "Engineering" });
-      }, 1500);
+
+      notifySuccess("Manager account created successfully!");
+
+      if (onSave) onSave(res.data.data);
+
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        department: "Engineering",
+      });
+
+      onClose();
     } catch (err) {
-      setMessage({ type: "error", text: err.response?.data?.message || "Failed to add manager" });
+      const errorMsg =
+        err.response?.data?.message || "Failed to add manager";
+
+      notifyError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -49,58 +94,98 @@ export default function HrAddManager({ isOpen, onClose, onSave }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F172A]/40 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="px-8 py-6 border-b border-[#F1F5F9] flex justify-between items-center bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                <ShieldCheck size={20} />
-            </div>
-            <div>
-                <h2 className="text-xl font-bold text-[#1E293B]">Add Manager</h2>
-                <p className="text-[#64748B] text-xs font-medium">Create administrative access</p>
-            </div>
+    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-slate-950/50 backdrop-blur-md p-0 sm:p-4">
+      <div className="w-full sm:max-w-xl bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-screen overflow-y-auto">
+        {/* HEADER */}
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Add Manager
+            </h2>
+
+            <p className="text-sm text-slate-500 mt-1">
+              Create manager-level access and permissions.
+            </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-full text-slate-400 transition-colors"><X size={20} /></button>
+
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition-all"
+          >
+            <X size={20} className="text-slate-500" />
+          </button>
         </div>
 
-        {message.text && (
-          <div className="px-8 pt-6">
-            <div className={`flex items-center gap-3 p-4 rounded-2xl border ${message.type === 'success' ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
-              {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-              <p className="text-sm font-bold">{message.text}</p>
-            </div>
-          </div>
-        )}
+        {/* BODY */}
+        <form
+          onSubmit={handleSubmit}
+          className="p-5 sm:p-8 space-y-5 sm:space-y-6"
+        >
+          <Field
+            label="Full Name"
+            value={form.name}
+            onChange={(v) =>
+              setForm({ ...form, name: v })
+            }
+            placeholder="Jane Smith"
+            required
+          />
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-5">
-          <Field label="Full Name" value={form.name} onChange={(v)=>setForm({...form, name: v})} placeholder="Jane Smith" required />
-          <Field label="Email Address" type="email" value={form.email} onChange={(v)=>setForm({...form, email: v})} placeholder="jane.manager@company.com" required />
-          <Field label="Password" type="password" value={form.password} onChange={(v)=>setForm({...form, password: v})} placeholder="••••••••" required />
+          <Field
+            label="Email Address"
+            type="email"
+            value={form.email}
+            onChange={(v) =>
+              setForm({ ...form, email: v })
+            }
+            placeholder="jane@company.com"
+            required
+          />
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 ml-1">Department</label>
-            <select 
-              value={form.department} 
-              onChange={(e)=>setForm({...form, department: e.target.value})}
-              className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-4 py-3 outline-none focus:border-[#6366F1] cursor-pointer font-medium"
+          <Field
+            label="Password"
+            type="password"
+            value={form.password}
+            onChange={(v) =>
+              setForm({ ...form, password: v })
+            }
+            placeholder="••••••••"
+            required
+          />
+
+          <SelectField
+            label="Department"
+            value={form.department}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                department: e.target.value,
+              })
+            }
+          >
+            <option>Engineering</option>
+            <option>Sales</option>
+            <option>Marketing</option>
+            <option>Production</option>
+            <option>HR</option>
+          </SelectField>
+
+          {/* FOOTER */}
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:flex-1 h-12 rounded-2xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-all"
             >
-              <option>Engineering</option>
-              <option>Sales</option>
-              <option>Marketing</option>
-              <option>Production</option>
-              <option>HR</option>
-            </select>
-          </div>
+              Cancel
+            </button>
 
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-6 py-3.5 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors">Discard</button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
-              className="flex-1 bg-slate-900 hover:bg-black disabled:bg-slate-400 text-white py-3.5 rounded-2xl font-bold shadow-xl transition-all active:scale-[0.98]"
+              className="w-full sm:flex-1 h-12 rounded-2xl bg-slate-900 hover:bg-black disabled:bg-slate-400 text-white font-bold shadow-xl transition-all"
             >
-              {loading ? "Authorizing..." : "Create Manager"}
+              {loading ? "Creating..." : "Create Manager"}
             </button>
           </div>
         </form>

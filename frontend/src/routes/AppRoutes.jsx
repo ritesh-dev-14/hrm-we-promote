@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import Login from "../auth/login";
 
 import AdminHomePage from "../pages/Admin/AdminHomePage";
+import AdminTaskCreation from "../pages/Admin/AdminTaskCreation";
 
 import HrHomePage from "../pages/HR/HrHomePage";
 import HrTeamPage from "../pages/HR/HrTeamPage";
@@ -15,18 +16,23 @@ import HrAttendance from "../pages/HR/HrAttendance.jsx";
 import HrLeaves from "../pages/HR/HrLeaves.jsx";
 import HrAllEmployeeAttendence from "../pages/HR/HrAllEmployeeAttendence.jsx";
 import EmployeeDetails from "../pages/HR/employeeDetailsHr/EmployeeDetails.jsx";
+import HrTaskCreation from "../pages/HR/HrTaskCreation";
 
 import EmployeHomePage from "../pages/Employee/EmployeeHomePage";
 import EmployeeAttendence from "../pages/Employee/EmployeeAttendence";
 import EmployeeLeave from "../pages/Employee/EmployeeLeave";
 import EmployeePayslips from "../pages/Employee/EmployeePayslips";
 import EmployeeSettings from "../pages/Employee/EmployeeSettings";
+import EmployeeTaskPage from "../pages/Employee/EmployeeTaskPage.jsx";
+import EmployeeTaskDetailsPage from "../pages/Employee/tasks/EmployeeTaskDetailsPage.jsx";
 
 import ManagerHomePage from "../pages/Manager/ManagerHomePage";
 import ManagerAttendence from "../pages/Manager/ManagerAttendence";
 import ManagerLeave from "../pages/Manager/ManagerLeave";
 import ManagerPayslips from "../pages/Manager/ManagerPayslips";
 import ManagerSettings from "../pages/Manager/ManagerSettings";
+import ManagerTaskPage from "../pages/Manager/ManagerTasksPage.jsx";
+import ManagerTaskDetailsPage from "../pages/Manager/tasks/ManagerTaskDetails.jsx";
 
 /**
  * ✅ CENTRAL ROUTE CONFIG
@@ -40,6 +46,31 @@ const ROUTES = [
       HR: <HrHomePage />,
       MANAGER: <ManagerHomePage />,
       EMPLOYEE: <EmployeHomePage />,
+    },
+  },
+  {
+    path: "/tasks",
+    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+    component: {
+      ADMIN: <AdminTaskCreation />,
+      HR: <HrTaskCreation />,
+      MANAGER: <ManagerTaskPage />,
+      EMPLOYEE: <EmployeeTaskPage />,
+    },
+  },
+
+  {
+    path: "/manager/tasks/:id",
+    roles: ["MANAGER"],
+    component: {
+      MANAGER: <ManagerTaskDetailsPage />,
+    },
+  },
+  {
+    path: "/employee/tasks/:id",
+    roles: ["EMPLOYEE"],
+    component: {
+      EMPLOYEE: <EmployeeTaskDetailsPage />,
     },
   },
   {
