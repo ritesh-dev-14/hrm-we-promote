@@ -5,46 +5,27 @@ import {
   Calendar,
   FileText,
   Plus,
+  ArrowUpRight,
 } from "lucide-react";
-
 import { motion } from "framer-motion";
 
 import HrAddEmployee from "./HrAddEmployee";
 import AttendanceCard from "../../components/attendece/AttendenceCard";
+import {useAuth} from "../../context/AuthContext"
 
 const HrHomePage = () => {
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
   const [employees, setEmployees] = useState([]);
+  const {user} = useAuth()
+  const Hrfirstname = user.name.split(' ')[0]
+
+  
 
   const stats = [
-    {
-      title: "Employees",
-      value: "48",
-      icon: Users,
-      bg: "bg-blue-50",
-      text: "text-blue-600",
-    },
-    {
-      title: "Departments",
-      value: "10",
-      icon: Building2,
-      bg: "bg-violet-50",
-      text: "text-violet-600",
-    },
-    {
-      title: "Attendance",
-      value: "42",
-      icon: Calendar,
-      bg: "bg-emerald-50",
-      text: "text-emerald-600",
-    },
-    {
-      title: "Leaves",
-      value: "03",
-      icon: FileText,
-      bg: "bg-amber-50",
-      text: "text-amber-600",
-    },
+    { title: "Employees", value: "48", icon: Users, accent: "text-blue-600", dot: "bg-blue-500" },
+    { title: "Departments", value: "10", icon: Building2, accent: "text-violet-600", dot: "bg-violet-500" },
+    { title: "Attendance", value: "42", icon: Calendar, accent: "text-emerald-600", dot: "bg-emerald-500" },
+    { title: "Leaves", value: "03", icon: FileText, accent: "text-amber-600", dot: "bg-amber-500" },
   ];
 
   const handleAddEmployee = (newEmployee) => {
@@ -52,45 +33,38 @@ const HrHomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC] p-4 lg:p-6">
+    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* HERO */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative overflow-hidden bg-white border border-slate-200/80 rounded-[34px] p-6 lg:p-8 mb-6 shadow-[0_10px_40px_rgba(15,23,42,0.04)]"
+          className="bg-white border border-slate-200 rounded-3xl p-6 lg:p-8 mb-6"
         >
-          {/* BLUR EFFECT */}
-          <div className="absolute -top-10 -right-10 w-52 h-52 bg-indigo-100/60 blur-3xl rounded-full" />
-
-          <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* LEFT */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-indigo-500 mb-3">
-                HR PANEL
-              </p>
+              <div className="inline-flex items-center gap-2 mb-3"> 
+              </div>
 
-              <h1 className="text-3xl lg:text-4xl font-black tracking-tight text-slate-900">
-                Welcome Back 👋
+              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-slate-900">
+                Welcome Back, {Hrfirstname}
               </h1>
 
-              <p className="mt-3 text-slate-500 text-sm lg:text-[15px] max-w-xl leading-relaxed">
-                Manage employee attendance and daily HR operations with a clean
-                and modern workspace.
+              <p className="mt-2 text-slate-500 text-sm lg:text-base max-w-xl">
+                Monitor teams, manage operations, and keep workflows running smoothly.
               </p>
             </div>
 
-            {/* BUTTON */}
             <motion.button
-              whileHover={{ y: -2, scale: 1.01 }}
+              whileHover={{ y: -2 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => setIsAddEmployeeOpen(true)}
-              className="group flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-slate-900 text-white text-sm font-semibold shadow-lg hover:bg-slate-800 transition-all duration-300"
+              className="group inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:shadow-lg hover:bg-slate-800 transition-all duration-200"
             >
               <Plus
                 size={18}
-                className="group-hover:rotate-90 transition-all duration-300"
+                className="transition-transform duration-300 group-hover:rotate-90"
               />
               Add Employee
             </motion.button>
@@ -98,141 +72,131 @@ const HrHomePage = () => {
         </motion.div>
 
         {/* STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           {stats.map((stat, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 18 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.08 }}
-              whileHover={{ y: -4 }}
-              className="group bg-white border border-slate-200/80 rounded-[28px] p-6 shadow-[0_10px_30px_rgba(15,23,42,0.04)] hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)] transition-all duration-300"
+              transition={{ delay: index * 0.06 }}
+              whileHover={{ y: -3 }}
+              className="group relative bg-white border border-slate-200 rounded-2xl p-5 cursor-pointer hover:border-slate-300 hover:shadow-md transition-all duration-300 overflow-hidden"
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 mb-2">
-                    {stat.title}
-                  </p>
+              {/* Subtle accent line on hover */}
+              <span className={`absolute top-0 left-0 h-0.5 w-0 ${stat.dot} group-hover:w-full transition-all duration-500`} />
 
-                  <h2 className="text-4xl font-black text-slate-900 tracking-tight">
-                    {stat.value}
-                  </h2>
+              <div className="flex items-start justify-between mb-4">
+                <div className={`w-10 h-10 rounded-xl bg-slate-50 ${stat.accent} flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
+                  <stat.icon size={20} strokeWidth={2} />
                 </div>
-
-                <motion.div
-                  whileHover={{ rotate: 6, scale: 1.05 }}
-                  className={`w-14 h-14 rounded-2xl ${stat.bg} ${stat.text} flex items-center justify-center`}
-                >
-                  <stat.icon size={24} strokeWidth={2} />
-                </motion.div>
+                <ArrowUpRight
+                  size={16}
+                  className="text-slate-300 group-hover:text-slate-900 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-300"
+                />
               </div>
+
+              <p className="text-xs font-medium text-slate-500 mb-1">{stat.title}</p>
+              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+                {stat.value}
+              </h2>
             </motion.div>
           ))}
         </div>
 
         {/* MAIN GRID */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
           {/* ATTENDANCE */}
           <motion.div
-            initial={{ opacity: 0, x: -15 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
             className="xl:col-span-7"
           >
-            <div className="bg-white border border-slate-200/80 rounded-[34px] p-6 shadow-[0_10px_40px_rgba(15,23,42,0.04)] h-full">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 h-full">
               <AttendanceCard />
             </div>
           </motion.div>
 
           {/* RIGHT SIDE */}
           <motion.div
-            initial={{ opacity: 0, x: 15 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.35 }}
-            className="xl:col-span-5 flex flex-col gap-5"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.05 }}
+            className="xl:col-span-5 flex flex-col gap-4"
           >
             {/* QUICK ACTIONS */}
-            <div className="bg-white border border-slate-200/80 rounded-[34px] p-6 shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
-              <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-indigo-500 mb-3">
-                QUICK ACTIONS
-              </p>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Quick Actions
+                </h3>
+                <span className="text-xs font-medium text-slate-400">
+                  HR Controls
+                </span>
+              </div>
 
-              <h3 className="text-2xl font-black tracking-tight text-slate-900 mb-6">
-                HR Controls
-              </h3>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  "Add Employee",
-                  "Attendance",
-                  "Departments",
-                  "Leave Requests",
+                  { label: "Add Employee", icon: Users },
+                  { label: "Attendance", icon: Calendar },
+                  { label: "Departments", icon: Building2 },
+                  { label: "Leave Requests", icon: FileText },
                 ].map((item, index) => (
                   <motion.button
                     key={index}
-                    whileHover={{ y: -3, scale: 1.01 }}
+                    whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.97 }}
-                    className="h-24 rounded-2xl border border-slate-200 bg-slate-50/80 hover:bg-white hover:border-slate-300 transition-all duration-300 text-sm font-semibold text-slate-700 shadow-sm hover:shadow-md"
+                    className="group relative h-24 rounded-xl border border-slate-200 bg-white hover:bg-slate-900 hover:border-slate-900 transition-all duration-300 p-4 text-left overflow-hidden"
                   >
-                    {item}
+                    <item.icon
+                      size={18}
+                      className="text-slate-400 group-hover:text-white transition-colors duration-300 mb-2"
+                    />
+                    <p className="text-sm font-semibold text-slate-700 group-hover:text-white transition-colors duration-300">
+                      {item.label}
+                    </p>
+                    <ArrowUpRight
+                      size={14}
+                      className="absolute top-3 right-3 text-slate-300 group-hover:text-white opacity-0 group-hover:opacity-100 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-300"
+                    />
                   </motion.button>
                 ))}
               </div>
             </div>
 
             {/* OVERVIEW */}
-            <div className="relative overflow-hidden bg-slate-900 rounded-[34px] p-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.14)]">
-              {/* GLOW */}
-              <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-500/20 blur-3xl rounded-full" />
+            <div className="bg-slate-900 rounded-2xl p-6 text-white">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-semibold">Workforce Overview</h3>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                  Today
+                </span>
+              </div>
 
-              <div className="relative">
-                <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-3">
-                  TODAY STATUS
-                </p>
-
-                <h3 className="text-3xl font-black tracking-tight mb-6">
-                  Workforce Overview
-                </h3>
-
-                <div className="space-y-4">
-                  {[
-                    {
-                      label: "Present Employees",
-                      value: "42",
-                    },
-                    {
-                      label: "On Leave",
-                      value: "03",
-                    },
-                    {
-                      label: "Departments Active",
-                      value: "10",
-                    },
-                    {
-                      label: "Attendance Rate",
-                      value: "92%",
-                      active: true,
-                    },
-                  ].map((item, index) => (
-                    <motion.div
-                      key={index}
-                      whileHover={{ x: 2 }}
-                      className="flex items-center justify-between border-b border-white/10 pb-3 last:border-none"
+              <div className="space-y-1">
+                {[
+                  { label: "Present Employees", value: "42" },
+                  { label: "On Leave", value: "03" },
+                  { label: "Departments Active", value: "10" },
+                  { label: "Attendance Rate", value: "92%", active: true },
+                ].map((item, index) => (
+                  <motion.div
+                    key={index}
+                    whileHover={{ x: 4 }}
+                    className="flex items-center justify-between border-b border-white/10 py-3 last:border-none cursor-pointer group"
+                  >
+                    <span className="text-slate-400 text-sm group-hover:text-slate-200 transition-colors">
+                      {item.label}
+                    </span>
+                    <span
+                      className={`font-semibold text-lg ${
+                        item.active ? "text-emerald-400" : "text-white"
+                      }`}
                     >
-                      <span className="text-slate-300 text-sm">
-                        {item.label}
-                      </span>
-
-                      <span
-                        className={`font-bold text-lg ${
-                          item.active ? "text-emerald-400" : "text-white"
-                        }`}
-                      >
-                        {item.value}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
+                      {item.value}
+                    </span>
+                  </motion.div>
+                ))}
               </div>
             </div>
           </motion.div>
@@ -250,3 +214,7 @@ const HrHomePage = () => {
 };
 
 export default HrHomePage;
+
+
+
+

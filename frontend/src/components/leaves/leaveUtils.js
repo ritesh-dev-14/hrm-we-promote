@@ -3,45 +3,64 @@ import API from "../../services/api";
 
 export default function useLeaves() {
   const [leaves, setLeaves] = useState([]);
+  const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // FETCH LEAVES
   const fetchLeaves = async () => {
     try {
-      setLoading(true);
-
       const res = await API.get("/api/employee/leaves");
-
       setLeaves(res.data?.data || []);
     } catch (err) {
       console.error(
         "Error fetching leaves:",
         err?.response?.data || err.message,
       );
-    } finally {
-      setLoading(false);
     }
   };
 
+  // FETCH LEAVE BALANCE
+  const fetchLeaveBalance = async () => {
+    try {
+      const res = await API.get("/api/employee/leave-balance");
+      setBalance(res.data?.data || null);
+    } catch (err) {
+      console.error(
+        "Error fetching leave balance:",
+        err?.response?.data || err.message,
+      );
+    }
+  };
+
+  // FETCH BOTH ON MOUNT
   useEffect(() => {
-    fetchLeaves();
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([fetchLeaves(), fetchLeaveBalance()]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  // STATS
+  // STATS - COMBINE LEAVES USED AND BALANCE
   const stats = useMemo(() => {
     return {
-      sick: leaves.filter((l) => l.type === "SICK" && l.status === "APPROVED")
-        .length,
-
-      casual: leaves.filter(
-        (l) => l.type === "CASUAL" && l.status === "APPROVED",
-      ).length,
-
-      annual: leaves.filter(
-        (l) => l.type === "ANNUAL" && l.status === "APPROVED",
-      ).length,
+      sick: {
+        total: balance?.sickTotal || 0,
+        used: balance?.sickUsed || 0,
+        left: balance?.sickLeft || 0,
+      },
+      casual: {
+        total: balance?.casualTotal || 0,
+        used: balance?.casualUsed || 0,
+        left: balance?.casualLeft || 0,
+      },
     };
-  }, [leaves]);
+  }, [balance]);
 
   // APPLY LEAVE
   const applyLeave = async (formData) => {
@@ -53,7 +72,7 @@ export default function useLeaves() {
         type: formData.type,
       });
 
-      await fetchLeaves();
+      await Promise.all([fetchLeaves(), fetchLeaveBalance()]);
 
       return true;
     } catch (err) {
@@ -70,9 +89,11 @@ export default function useLeaves() {
 
   return {
     leaves,
+    balance,
     stats,
     loading,
     applyLeave,
     fetchLeaves,
+    fetchLeaveBalance,
   };
 }

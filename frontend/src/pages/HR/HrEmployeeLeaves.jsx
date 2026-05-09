@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import {
   CheckCircle2,
   XCircle,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
+
 import API from "../../services/api";
 
 // ---------------- STATUS FILTER ----------------
@@ -39,27 +41,30 @@ const CustomStatusFilter = ({ value, onChange }) => {
   }, []);
 
   return (
-    <div ref={ref} className="relative min-w-55">
+    <div
+      ref={ref}
+      className="relative w-full md:w-[240px] lg:min-w-[240px]"
+    >
       <button
         onClick={() => setOpen(!open)}
-        className={`w-full h-13.5 flex items-center justify-between px-5 rounded-2xl border bg-white transition-all
+        className={`w-full h-12 sm:h-13 flex items-center justify-between px-4 sm:px-5 rounded-2xl border bg-white transition-all
         ${
           open
             ? "border-slate-300 shadow-sm"
             : "border-slate-200 hover:border-slate-300"
         }`}
       >
-        <div className="flex items-center gap-3">
-          <Filter size={17} className="text-slate-400" />
+        <div className="flex items-center gap-3 overflow-hidden">
+          <Filter size={17} className="text-slate-400 shrink-0" />
 
-          <span className="text-sm font-semibold text-slate-700">
+          <span className="text-sm font-semibold text-slate-700 truncate">
             {options.find((o) => o.value === value)?.label}
           </span>
         </div>
 
         <ChevronDown
           size={17}
-          className={`text-slate-400 transition-transform ${
+          className={`text-slate-400 transition-transform shrink-0 ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -83,7 +88,7 @@ const CustomStatusFilter = ({ value, onChange }) => {
                 className={`w-full flex items-center justify-between px-5 py-3 text-sm font-medium transition-all
                 ${
                   value === item.value
-                    ? "bg-slate-900 text-white"
+                    ? "bg-black text-white"
                     : "hover:bg-slate-50 text-slate-700"
                 }`}
               >
@@ -208,46 +213,50 @@ export default function HrLeaveManagement() {
       label: "Pending",
       count: stats.pending,
       icon: Clock3,
-      color: "text-amber-600 bg-amber-50",
+      color: "bg-slate-100 text-slate-700",
     },
     {
       label: "Approved",
       count: stats.approved,
       icon: CheckCircle2,
-      color: "text-emerald-600 bg-emerald-50",
+      color: "bg-slate-100 text-slate-700",
     },
     {
       label: "Rejected",
       count: stats.rejected,
       icon: XCircle,
-      color: "text-rose-600 bg-rose-50",
+      color: "bg-slate-100 text-slate-700",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-6 lg:p-10">
+    <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* HEADER */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+        <div className="mb-8 sm:mb-10">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
             Leave Management
           </h1>
 
-          <p className="text-slate-500 mt-1 text-sm">
+          <p className="text-slate-500 mt-2 text-sm">
             Review and manage employee leave requests
           </p>
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 mb-6 sm:mb-8">
           {cards.map((card, i) => (
-            <div
+            <motion.div
               key={i}
-              className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={{ y: -2 }}
+              className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
                     {card.label}
                   </p>
 
@@ -257,12 +266,12 @@ export default function HrLeaveManagement() {
                 </div>
 
                 <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.color}`}
+                  className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center ${card.color}`}
                 >
-                  <card.icon size={22} />
+                  <card.icon size={20} />
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
@@ -272,7 +281,7 @@ export default function HrLeaveManagement() {
           <div className="relative flex-1">
             <Search
               size={18}
-              className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
             />
 
             <input
@@ -280,7 +289,7 @@ export default function HrLeaveManagement() {
               placeholder="Search employee..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-13.5 pl-12 pr-4 rounded-2xl border border-slate-200 bg-white text-sm font-medium outline-none focus:border-slate-400 transition-all"
+              className="w-full h-12 sm:h-13 pl-11 pr-4 rounded-2xl border border-slate-200 bg-white text-sm font-medium outline-none focus:border-slate-400 transition-all"
             />
           </div>
 
@@ -290,8 +299,8 @@ export default function HrLeaveManagement() {
           />
         </div>
 
-        {/* TABLE */}
-        <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+        {/* DESKTOP TABLE */}
+        <div className="hidden lg:block bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50">
@@ -321,19 +330,13 @@ export default function HrLeaveManagement() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td
-                      colSpan="5"
-                      className="py-20 text-center"
-                    >
-                      <div className="w-7 h-7 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin mx-auto" />
+                    <td colSpan="5" className="py-20 text-center">
+                      <div className="w-7 h-7 border-2 border-slate-300 border-t-black rounded-full animate-spin mx-auto" />
                     </td>
                   </tr>
                 ) : filteredLeaves.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan="5"
-                      className="py-20 text-center"
-                    >
+                    <td colSpan="5" className="py-20 text-center">
                       <p className="text-sm font-medium text-slate-400">
                         No leave requests found
                       </p>
@@ -341,113 +344,270 @@ export default function HrLeaveManagement() {
                   </tr>
                 ) : (
                   filteredLeaves.map((leave) => (
-                    <tr
-                      key={leave.id}
-                      className="hover:bg-slate-50 transition-colors"
-                    >
-                      {/* EMPLOYEE */}
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700">
-                            {leave.user?.name
-                              ?.split(" ")
-                              ?.map((n) => n[0])
-                              ?.join("")
-                              ?.slice(0, 2)}
-                          </div>
+                    <>
+                      <tr
+                        key={leave.id}
+                        className="hover:bg-slate-50 transition-colors"
+                      >
+                        {/* EMPLOYEE */}
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700">
+                              {leave.user?.name
+                                ?.split(" ")
+                                ?.map((n) => n[0])
+                                ?.join("")
+                                ?.slice(0, 2)}
+                            </div>
 
+                            <div>
+                              <p className="font-semibold text-slate-900 text-sm">
+                                {leave.user?.name}
+                              </p>
+
+                              <p className="text-xs text-slate-400 mt-0.5">
+                                {leave.user?.employeeId}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* TYPE */}
+                        <td className="px-6 py-5">
                           <div>
-                            <p className="font-semibold text-slate-900 text-sm">
-                              {leave.user?.name}
+                            <p className="text-sm font-semibold text-slate-700">
+                              {leave.type}
                             </p>
 
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {leave.user?.employeeId}
+                            <p className="text-xs text-slate-400 mt-1 line-clamp-1">
+                              {leave.reason}
                             </p>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* TYPE */}
-                      <td className="px-6 py-5">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-700">
-                            {leave.type}
-                          </p>
+                        {/* DURATION */}
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
+                            <CalendarDays
+                              size={15}
+                              className="text-slate-400"
+                            />
 
-                          <p className="text-xs text-slate-400 mt-1 line-clamp-1">
-                            {leave.reason}
-                          </p>
-                        </div>
-                      </td>
+                            <span>
+                              {new Date(
+                                leave.startDate,
+                              ).toLocaleDateString()}
+                            </span>
 
-                      {/* DURATION */}
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
-                          <CalendarDays
-                            size={15}
-                            className="text-slate-400"
-                          />
+                            <span className="text-slate-300">
+                              —
+                            </span>
 
-                          <span>
-                            {new Date(
-                              leave.startDate,
-                            ).toLocaleDateString()}
-                          </span>
-
-                          <span className="text-slate-300">
-                            —
-                          </span>
-
-                          <span>
-                            {new Date(
-                              leave.endDate,
-                            ).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* STATUS */}
-                      <td className="px-6 py-5">
-                        <StatusBadge status={leave.status} />
-                      </td>
-
-                      {/* ACTIONS */}
-                      <td className="px-8 py-5">
-                        {leave.status === "PENDING" ? (
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() =>
-                                handleApprove(leave.id)
-                              }
-                              className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-all"
-                            >
-                              <CheckCircle2 size={18} />
-                            </button>
-
-                            <button
-                              onClick={() =>
-                                handleReject(leave.id)
-                              }
-                              className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-all"
-                            >
-                              <XCircle size={18} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="text-right">
-                            <span className="text-[11px] uppercase tracking-widest text-slate-300 font-bold">
-                              Processed
+                            <span>
+                              {new Date(
+                                leave.endDate,
+                              ).toLocaleDateString()}
                             </span>
                           </div>
+                        </td>
+
+                        {/* STATUS */}
+                        <td className="px-6 py-5">
+                          <StatusBadge
+                            status={leave.status}
+                          />
+                        </td>
+
+                        {/* ACTIONS */}
+                        <td className="px-8 py-5">
+                          {leave.status === "PENDING" ? (
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() =>
+                                  handleApprove(leave.id)
+                                }
+                                className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center hover:bg-slate-800 transition-all"
+                              >
+                                <CheckCircle2 size={18} />
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  handleReject(leave.id)
+                                }
+                                className="w-10 h-10 rounded-xl border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-100 transition-all"
+                              >
+                                <XCircle size={18} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-right">
+                              <span className="text-[11px] uppercase tracking-widest text-slate-300 font-bold">
+                                Processed
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* REJECTION NOTE */}
+                      {leave.status === "REJECTED" &&
+                        leave.reviewNote && (
+                          <tr className="bg-slate-50">
+                            <td
+                              colSpan="5"
+                              className="px-8 pb-5"
+                            >
+                              <div className="border-l-4 border-black pl-4 py-2">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                  Rejection Reason
+                                </p>
+
+                                <p className="text-sm text-slate-700 mt-1">
+                                  {leave.reviewNote}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
                         )}
-                      </td>
-                    </tr>
+                    </>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* MOBILE CARDS */}
+        <div className="lg:hidden space-y-4">
+          {loading ? (
+            <div className="bg-white border border-slate-200 rounded-3xl p-10 flex justify-center">
+              <div className="w-7 h-7 border-2 border-slate-300 border-t-black rounded-full animate-spin" />
+            </div>
+          ) : filteredLeaves.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center">
+              <p className="text-sm font-medium text-slate-400">
+                No leave requests found
+              </p>
+            </div>
+          ) : (
+            filteredLeaves.map((leave, index) => (
+              <motion.div
+                key={leave.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
+                className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm"
+              >
+                {/* TOP */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700 shrink-0">
+                      {leave.user?.name
+                        ?.split(" ")
+                        ?.map((n) => n[0])
+                        ?.join("")
+                        ?.slice(0, 2)}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-slate-900 truncate">
+                        {leave.user?.name}
+                      </h3>
+
+                      <p className="text-xs text-slate-400 mt-1">
+                        {leave.user?.employeeId}
+                      </p>
+                    </div>
+                  </div>
+
+                  <StatusBadge status={leave.status} />
+                </div>
+
+                {/* CONTENT */}
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-widest text-slate-400 font-bold mb-1">
+                      Leave Type
+                    </p>
+
+                    <p className="text-sm font-semibold text-slate-700">
+                      {leave.type}
+                    </p>
+
+                    <p className="text-xs text-slate-500 mt-1">
+                      {leave.reason}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] uppercase tracking-widest text-slate-400 font-bold mb-1">
+                      Duration
+                    </p>
+
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <CalendarDays
+                        size={15}
+                        className="text-slate-400"
+                      />
+
+                      <span>
+                        {new Date(
+                          leave.startDate,
+                        ).toLocaleDateString()}
+                      </span>
+
+                      <span>—</span>
+
+                      <span>
+                        {new Date(
+                          leave.endDate,
+                        ).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {leave.status === "REJECTED" &&
+                    leave.reviewNote && (
+                      <div className="border-l-4 border-black pl-4">
+                        <p className="text-[11px] uppercase tracking-widest text-slate-400 font-bold">
+                          Rejection Reason
+                        </p>
+
+                        <p className="text-sm text-slate-700 mt-1">
+                          {leave.reviewNote}
+                        </p>
+                      </div>
+                    )}
+                </div>
+
+                {/* ACTIONS */}
+                {leave.status === "PENDING" && (
+                  <div className="grid grid-cols-2 gap-3 mt-5">
+                    <button
+                      onClick={() =>
+                        handleApprove(leave.id)
+                      }
+                      className="h-11 rounded-2xl bg-black text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-slate-800 transition-all"
+                    >
+                      <CheckCircle2 size={17} />
+                      Approve
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        handleReject(leave.id)
+                      }
+                      className="h-11 rounded-2xl border border-slate-200 text-slate-700 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"
+                    >
+                      <XCircle size={17} />
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -458,13 +618,13 @@ export default function HrLeaveManagement() {
 function StatusBadge({ status }) {
   const styles = {
     PENDING:
-      "bg-amber-50 text-amber-700 border-amber-100",
+      "bg-slate-100 text-slate-700 border-slate-200",
 
     APPROVED:
-      "bg-emerald-50 text-emerald-700 border-emerald-100",
+      "bg-black text-white border-black",
 
     REJECTED:
-      "bg-rose-50 text-rose-700 border-rose-100",
+      "bg-slate-200 text-slate-800 border-slate-300",
   };
 
   return (
