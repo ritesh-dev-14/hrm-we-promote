@@ -19,6 +19,22 @@ app.use("/api/hr", require("./modules/hr/hr.routes"));
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/manager/tasks", require("./modules/task/task.routes"));
 app.use("/api/employee", require("./modules/employee/employee.routes"));
+app.use(
+  "/api/task-items",
+  require("./modules/task-item/task-item.routes")
+);
+app.use(
+  "/api/task-item-submission",
+  require(
+    "./modules/task-item-submission/task-item-submission.routes"
+  )
+);
+
+app.use(
+  "/api/employee-dashboard",
+  require("./modules/employee-dashboard/employee-dashboard.routes")
+);
+
 
 // Error handling middleware
 

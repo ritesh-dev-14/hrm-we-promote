@@ -8,39 +8,47 @@ generator client {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  employeeId  String   @unique
+  id         String @id @default(uuid())
+  employeeId String @unique
 
-  name        String
-  email       String   @unique
-  password    String
-  role        Role
+  name     String
+  email    String @unique
+  password String
+  role     Role
 
-  department  String?
-  position    String?     // ✅ NEW FIELD
+  department String?
+  position   String? // ✅ NEW FIELD
 
-  managerId   String?     // ✅ NEW FIELD
+  managerId String? // ✅ NEW FIELD
 
   // 🔥 SELF RELATION (manager ↔ employees)
-  manager     User?  @relation("UserManager", fields: [managerId], references: [id])
+  manager      User?  @relation("UserManager", fields: [managerId], references: [id])
   subordinates User[] @relation("UserManager")
 
   createdById String?
-  createdBy   User?  @relation("Hierarchy", fields: [createdById], references: [id])
-  children    User[] @relation("Hierarchy")
+  createdBy   User?   @relation("Hierarchy", fields: [createdById], references: [id])
+  children    User[]  @relation("Hierarchy")
 
-  leaves       Leave[]
+  leaves         Leave[]
   reviewedLeaves Leave[] @relation("LeaveReviewer")
+
+  managedGroups    TaskGroup[]
+  groupMemberships TaskGroupMember[]
 
   attendances Attendance[]
 
-  tasksCreated Task[] @relation("ManagerTasks")
-  assignments  TaskAssignment[]
+  // tasksCreated Task[] @relation("ManagerTasks")
+  createdTasks  Task[]           @relation("CreatedTasks")
+  assignments   TaskAssignment[]
   notifications Notification[]
+
+  taskItemAssignments TaskItemAssignment[]
 
   leaveBalance LeaveBalance[]
 
-  createdAt   DateTime @default(now())
+  taskEscalations TaskEscalation[]
+
+  createdAt DateTime @default(now())
 }
 
 enum Role {
@@ -51,21 +59,21 @@ enum Role {
 }
 
 model Attendance {
-  id         String   @id @default(uuid())
-  userId     String
-  date       DateTime
+  id     String   @id @default(uuid())
+  userId String
+  date   DateTime
 
-  startTime  DateTime?
-  endTime    DateTime?
+  startTime DateTime?
+  endTime   DateTime?
 
-  totalHours Float?      // 👈 already exists (final working hours)
-  breakHours Float?      // 👈 NEW (total break time)
+  totalHours Float? // 👈 already exists (final working hours)
+  breakHours Float? // 👈 NEW (total break time)
 
-  status     AttendanceStatus
+  status AttendanceStatus
 
   user User @relation(fields: [userId], references: [id])
 
-  breaks Break[]         // 👈 NEW RELATION
+  breaks Break[] // 👈 NEW RELATION
 
   createdAt DateTime @default(now())
 
@@ -73,11 +81,11 @@ model Attendance {
 }
 
 model Break {
-  id            String   @id @default(uuid())
-  attendanceId  String
+  id           String @id @default(uuid())
+  attendanceId String
 
-  startTime     DateTime
-  endTime       DateTime?
+  startTime DateTime
+  endTime   DateTime?
 
   attendance Attendance @relation(fields: [attendanceId], references: [id])
 
@@ -89,32 +97,106 @@ enum AttendanceStatus {
   HALF_DAY
   ABSENT
   HOLIDAY
-  LEAVE   // 🔥 ADD THIS (better clarity)
+  LEAVE // 🔥 ADD THIS (better clarity)
 }
-
 
 //Task Management Models
 
+// model Task {
+//   id          String   @id @default(uuid())
+
+//   title       String
+//   description String?
+
+//   date        DateTime   // 👈 IMPORTANT (schedule date)
+
+//   location    String?    // Google map link or manual
+//   setupType   SetupType  // 👈 ENUM
+
+//   theme        String?
+//   referenceUrl String?
+//   instructions String?
+
+//   managerId   String
+//   // manager     User @relation(fields: [managerId], references: [id])
+//   manager     User @relation("ManagerTasks", fields: [managerId], references: [id])
+
+//   status      TaskStatus @default(PENDING)
+
+//   assignments TaskAssignment[]
+
+//   createdAt   DateTime @default(now())
+// }
+
+// model Task {
+//   id          String   @id @default(uuid())
+
+//   title       String
+//   description String?
+
+//   // 🔥 NEW
+//   instructions String?
+//   referenceLink String?   // insta/video/google drive/etc
+
+//   date        DateTime
+
+//   location    String?
+//   setupType   SetupType
+
+//   managerId   String
+//   manager     User @relation("ManagerTasks", fields: [managerId], references: [id])
+
+//   // 🔥 NEW
+//   isGroupTask Boolean @default(false)
+
+//   // 🔥 NEW
+//   // priority    TaskPriority @default(MEDIUM)
+
+//   status      TaskStatus @default(PENDING)
+
+//   assignments TaskAssignment[]
+
+//   createdAt   DateTime @default(now())
+
+//   // 🔥 IMPORTANT
+//   @@index([managerId])
+//   @@index([date])
+// }
+
 model Task {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
   title       String
   description String?
 
-  date        DateTime   // 👈 IMPORTANT (schedule date)
+  instructions  String?
+  referenceLink String?
 
-  location    String?    // Google map link or manual
-  setupType   SetupType  // 👈 ENUM
+  date DateTime
 
-  managerId   String
-  // manager     User @relation(fields: [managerId], references: [id])
-  manager     User @relation("ManagerTasks", fields: [managerId], references: [id])
+  location  String?
+  setupType SetupType
 
-  status      TaskStatus @default(PENDING)
+  // 🔥 WHO CREATED TASK
+  createdById String
+  createdBy   User   @relation("CreatedTasks", fields: [createdById], references: [id])
+
+  // 🔥 WHO TASK IS FOR
+  assignedToRole Role
+
+  // 🔥 TASK TYPE
+  isGroupTask Boolean @default(false)
+
+  status TaskStatus @default(DRAFT)
 
   assignments TaskAssignment[]
 
-  createdAt   DateTime @default(now())
+  items TaskItem[]
+
+  createdAt DateTime @default(now())
+
+  @@index([createdById])
+  @@index([date])
 }
 
 enum SetupType {
@@ -124,52 +206,99 @@ enum SetupType {
 }
 
 enum TaskStatus {
-  PENDING
+  // PENDING
+  // ASSIGNED
+  // SUBMITTED
+  // VERIFIED
+
+  DRAFT
   ASSIGNED
+  IN_PROGRESS
   SUBMITTED
   VERIFIED
+  OVERDUE
+  CANCELLED
 }
 
+// model TaskAssignment {
+//   id        String @id @default(uuid())
 
+//   taskId    String
+//   userId    String   // 👈 renamed (important)
+
+//   groupId   String?
+
+//   task      Task @relation(fields: [taskId], references: [id])
+//   employee  User @relation(fields: [userId], references: [id])
+
+//   status    AssignmentStatus @default(ASSIGNED)
+
+//   submission TaskSubmission?
+
+//   createdAt DateTime @default(now())
+
+//   @@unique([taskId, userId])
+// }
 
 // model TaskAssignment {
-//   id          String   @id @default(uuid())
+//   id        String @id @default(uuid())
 
-//   taskId      String
-//   employeeId  String
+//   taskId    String
+//   userId    String
 
-//   groupId     String?   // 👈 for grouping employees
+//   // 🔥 GROUP SUPPORT
+//   groupId   String?
 
-//   task        Task @relation(fields: [taskId], references: [id])
-//   employee    User @relation(fields: [employeeId], references: [employeeId])
+//   task      Task @relation(fields: [taskId], references: [id])
 
-//   status      AssignmentStatus @default(ASSIGNED)
+//   employee  User @relation(fields: [userId], references: [id])
 
-//   submission  TaskSubmission?
+//   status    AssignmentStatus @default(ASSIGNED)
 
-//   createdAt   DateTime @default(now())
+//   // 🔥 DEADLINE REMINDER
+//   reminderSent Boolean @default(false)
 
-//   @@unique([taskId, employeeId]) // prevent duplicate assignment
+//   // 🔥 TRACK SUBMISSION
+//   submittedAt DateTime?
+
+//   submission TaskSubmission?
+
+//   createdAt DateTime @default(now())
+
+//   @@unique([taskId, userId])
+
+//   // 🔥 IMPORTANT INDEXES
+//   @@index([userId])
+//   @@index([groupId])
 // }
 
 model TaskAssignment {
-  id        String @id @default(uuid())
+  id String @id @default(uuid())
 
-  taskId    String
-  userId    String   // 👈 renamed (important)
+  taskId String
+  userId String
 
-  groupId   String?
+  // 🔥 OPTIONAL GROUP
+  groupId String?
 
-  task      Task @relation(fields: [taskId], references: [id])
-  employee  User @relation(fields: [userId], references: [id])
+  task Task @relation(fields: [taskId], references: [id])
 
-  status    AssignmentStatus @default(ASSIGNED)
+  employee User @relation(fields: [userId], references: [id])
+
+  status AssignmentStatus @default(ASSIGNED)
+
+  reminderSent Boolean @default(false)
+
+  submittedAt DateTime?
 
   submission TaskSubmission?
 
   createdAt DateTime @default(now())
 
   @@unique([taskId, userId])
+  @@index([userId])
+  @@index([groupId])
+  @@index([status])
 }
 
 enum AssignmentStatus {
@@ -178,131 +307,171 @@ enum AssignmentStatus {
   APPROVED
 }
 
+// model TaskSubmission {
+//   id             String   @id @default(uuid())
+
+//   assignmentId   String   @unique
+
+//   completedCount Int
+//   pendingCount   Int
+
+//   driveLink      String
+
+//   submittedAt    DateTime @default(now())
+
+//   assignment TaskAssignment @relation(fields: [assignmentId], references: [id])
+// }
 
 model TaskSubmission {
-  id             String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  assignmentId   String   @unique
+  assignmentId String @unique
 
   completedCount Int
   pendingCount   Int
 
-  driveLink      String
+  // 🔥 NEW
+  remarks String?
 
-  submittedAt    DateTime @default(now())
+  driveLink String
+
+  submittedAt DateTime @default(now())
 
   assignment TaskAssignment @relation(fields: [assignmentId], references: [id])
+
+  // 🔥 OPTIONAL
+  verifiedByManager Boolean @default(false)
 }
 
+// model Notification {
+//   id        String   @id @default(uuid())
+
+//   userId    String
+//   message   String
+
+//   type      NotificationType
+
+//   isRead    Boolean  @default(false)
+
+//   createdAt DateTime @default(now())
+
+//   user User @relation(fields: [userId], references: [id])
+// }
+
+// model Notification {
+//   id        String   @id @default(uuid())
+
+//   userId    String
+//   user      User @relation(fields: [userId], references: [id])
+
+//   title     String
+//   message   String
+
+//   type      NotificationType
+
+//   // 🔥 ESCALATION LEVEL
+//   level      NotificationLevel?
+
+//   isRead    Boolean  @default(false)
+
+//   createdAt DateTime @default(now())
+
+//   // 🔥 OPTIONAL DEEP LINK
+//   entityId   String?
+// }
 
 model Notification {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  userId    String
-  message   String
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  type      NotificationType
+  title   String
+  message String
 
-  isRead    Boolean  @default(false)
+  type NotificationType
+
+  level NotificationLevel?
+
+  isRead Boolean @default(false)
+
+  readAt DateTime?
+
+  entityId String?
 
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  @@index([userId])
+  @@index([isRead])
+}
+
+enum NotificationLevel {
+  INFO
+  WARNING
+  ESCALATION
+  CRITICAL
 }
 
 enum NotificationType {
+  // TASK_REMINDER
+  // ESCALATION
+
+  TASK_ASSIGNED
   TASK_REMINDER
-  ESCALATION
+  TASK_SUBMITTED
+  TASK_OVERDUE
+
+  MANAGER_REMINDER
+  HR_ESCALATION
+  ADMIN_ESCALATION
+
+  GENERAL
 }
 
-// model Leave {
-//   id          String   @id @default(uuid())
-
-//   userId      String
-//   user        User @relation(fields: [userId], references: [id])
-
-//   fromDate   DateTime
-//   toDate     DateTime
-
-//   reason      String
-
-//   status      LeaveStatus @default(PENDING)
-
-//   // HR action
-//   reviewedBy  String?
-//   reviewer    User? @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
-
-//   reviewNote  String?   // 👈 HR reason (reject/approve note)
-
-//   createdAt   DateTime @default(now())
-// }
-
-// model Leave {
-//   id          String   @id @default(uuid())
-
-//   userId      String
-//   user        User @relation(fields: [userId], references: [id])
-
-//   startDate   DateTime
-//   endDate     DateTime
-
-//   reason      String
-
-//   status      LeaveStatus @default(PENDING)
-
-//   reviewedBy  String?
-//   reviewer    User? @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
-
-//   reviewNote  String?
-
-//   createdAt   DateTime @default(now())
-
-//   @@index([userId])   // 🔥 add this
-// }
-
 model Leave {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  userId      String
-  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  startDate   DateTime
-  endDate     DateTime
+  startDate DateTime
+  endDate   DateTime
 
-  type        LeaveType   // 🔥 NEW
-  days        Int         // 🔥 NEW (important)
+  type LeaveType // 🔥 NEW
+  days Int // 🔥 NEW (important)
 
-  reason      String
+  reason String
 
-  status      LeaveStatus @default(PENDING)
+  status LeaveStatus @default(PENDING)
 
-  reviewedBy  String?
-  reviewer    User? @relation("LeaveReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reviewedBy String?
+  reviewer   User?   @relation("LeaveReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
 
-  reviewNote  String?
+  reviewNote String?
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([status])
 }
 
 model LeaveBalance {
-  id        String @id @default(uuid())
+  id String @id @default(uuid())
 
-  userId    String
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  casual    Int @default(14)
-  sick      Int @default(6)
+  casual Int @default(14)
+  sick   Int @default(6)
 
   usedCasual Int @default(0)
   usedSick   Int @default(0)
 
-  year      Int
+  year Int
 
   createdAt DateTime @default(now())
-  @@unique([userId, year])   // 🔥 IMPORTANT FIX
+
+  @@unique([userId, year]) // 🔥 IMPORTANT FIX
 }
 
 enum LeaveStatus {
@@ -314,4 +483,123 @@ enum LeaveStatus {
 enum LeaveType {
   CASUAL
   SICK
+}
+
+model TaskGroup {
+  id String @id @default(uuid())
+
+  name String
+
+  managerId String
+  manager   User   @relation(fields: [managerId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  members TaskGroupMember[]
+}
+
+model TaskGroupMember {
+  id String @id @default(uuid())
+
+  groupId String
+  userId  String
+
+  group TaskGroup @relation(fields: [groupId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([groupId, userId])
+}
+
+model TaskEscalation {
+  id String @id @default(uuid())
+
+  managerId String
+  manager   User   @relation(fields: [managerId], references: [id])
+
+  date DateTime
+
+  level1Sent Boolean @default(false) // 1 PM
+  level2Sent Boolean @default(false) // 2 PM
+  level3Sent Boolean @default(false) // 2:30 PM HR
+  level4Sent Boolean @default(false) // 4 PM ADMIN
+
+  createdAt DateTime @default(now())
+
+  @@unique([managerId, date])
+}
+
+model TaskItem {
+  id String @id @default(uuid())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  title String
+
+  description String?
+
+  theme String?
+
+  referenceLink String?
+
+  instructions String?
+
+  order Int?
+
+  status TaskItemStatus @default(PENDING)
+
+  assignments TaskItemAssignment[]
+
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+enum TaskItemStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  VERIFIED
+}
+
+model TaskItemAssignment {
+  id String @id @default(uuid())
+
+  taskItemId String
+  userId     String
+
+  taskItem TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+
+  employee User @relation(fields: [userId], references: [id])
+
+  status AssignmentStatus @default(ASSIGNED)
+
+  submittedAt DateTime?
+
+  submission TaskItemSubmission?
+
+  createdAt DateTime @default(now())
+
+  @@unique([taskItemId, userId])
+  @@index([userId])
+}
+
+model TaskItemSubmission {
+  id String @id @default(uuid())
+
+  assignmentId String @unique
+
+  driveLink String
+
+  remarks String?
+
+  submittedAt DateTime @default(now())
+
+  verifiedByManager Boolean @default(false)
+
+  assignment TaskItemAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 }
