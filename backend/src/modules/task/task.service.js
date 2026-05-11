@@ -29,7 +29,7 @@ exports.createTask = async (user, body) => {
 
       createdById: user.id,
 
-      assignedToRole: body.assignedToRole,
+      // assignedToRole: body.assignedToRole,
 
       isGroupTask: body.isGroupTask || false,
 
@@ -204,14 +204,74 @@ exports.assignTask = async (user, taskId, body) => {
   }
 
   // ✅ FIND USERS
+  // const employees = await prisma.user.findMany({
+  //   where: {
+  //     employeeId: {
+  //       in: employeeIds,
+  //     },
+
+  //     role: task.assignedToRole,
+  //   },
+  // });
+
+  //
+  // ✅ FIND USERS
+  //
   const employees = await prisma.user.findMany({
     where: {
       employeeId: {
         in: employeeIds,
       },
-
-      role: task.assignedToRole,
     },
+  });
+
+  //
+  // ✅ VALIDATE USERS EXIST
+  //
+  if (employees.length !== employeeIds.length) {
+    throw new ApiError(400, ERRORS.TASK.EMPLOYEE_NOT_FOUND);
+  }
+
+  //
+  // ✅ ROLE-BASED ASSIGNMENT RULES
+  //
+  employees.forEach((emp) => {
+    // 🔥 MANAGER
+    if (user.role === "MANAGER") {
+      // Explicitly prevent assigning to HR
+      if (emp.role === "HR") {
+        throw new ApiError(403, `Manager cannot assign task to HR`);
+      }
+      // manager can assign:
+      // - EMPLOYEE
+      // - itself
+
+      const allowed = emp.role === "EMPLOYEE" || emp.id === user.id;
+
+      if (!allowed) {
+        throw new ApiError(403, `Manager cannot assign task to ${emp.role}`);
+      }
+    }
+
+    // 🔥 HR
+    else if (user.role === "HR") {
+      // HR can assign:
+      // - EMPLOYEE
+      // - MANAGER
+      // - itself
+
+      const allowed =
+        ["EMPLOYEE", "MANAGER"].includes(emp.role) || emp.id === user.id;
+
+      if (!allowed) {
+        throw new ApiError(403, `HR cannot assign task to ${emp.role}`);
+      }
+    }
+
+    // 🔥 ADMIN
+    else if (user.role === "ADMIN") {
+      // admin can assign to anyone
+    }
   });
 
   // ✅ VALIDATE USERS
@@ -444,7 +504,8 @@ exports.getTasks = async (user) => {
           groupsMap[a.taskGroupId] = {
             taskGroupId: a.taskGroupId,
 
-            groupName: a.group?.name || null,
+            // groupName: a.group?.name || null,
+            groupName: a.taskGroup?.name || null,
 
             members: [],
           };

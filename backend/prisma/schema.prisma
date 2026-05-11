@@ -182,7 +182,7 @@ model Task {
   createdBy   User   @relation("CreatedTasks", fields: [createdById], references: [id])
 
   // 🔥 WHO TASK IS FOR
-  assignedToRole Role
+  // assignedToRole Role
 
   // 🔥 TASK TYPE
   isGroupTask Boolean @default(false)

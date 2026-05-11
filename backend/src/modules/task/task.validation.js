@@ -39,9 +39,9 @@ exports.createTaskSchema = Joi.object({
     )
     .required(),
 
-  assignedToRole: Joi.string()
-    .valid("MANAGER", "EMPLOYEE")
-    .required(),
+  // assignedToRole: Joi.string()
+  //   .valid("MANAGER", "EMPLOYEE")
+  //   .required(),
 
   isGroupTask: Joi.boolean().optional(),
 });
