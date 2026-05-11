@@ -1,32 +1,45 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import TaskStats from "../../components/taskCreation/TaskStats";
 import TaskGrid from "../../components/taskCreation/TaskGrid";
+import CreateTaskButton from "../../components/taskCreation/CreateTaskButton.jsx";
+import CreateTaskModal from "../../components/taskCreation/CreateTaskModal";
 
-import { managerTasks } from "./tasks/managerTask";
+import { dummyTasks } from "../../components/taskCreation/tasks";
 
-const ManagerTaskPage = () => {
-  const [tasks] = useState(managerTasks);
+const AdminTaskCreation = () => {
+  const [tasks, setTasks] = useState(dummyTasks);
 
-  const navigate = useNavigate();
+  const [openModal, setOpenModal] =
+    useState(false);
 
   const handleTaskClick = (task) => {
-    navigate(`/manager/tasks/${task.id}`);
+    console.log(task);
+  };
+
+  const handleTaskCreated = (newTask) => {
+    setTasks((prev) => [newTask, ...prev]);
   };
 
   return (
     <div className="min-h-screen bg-[#f5f7fb] p-4 lg:p-7">
       <div className="max-w-7xl mx-auto">
         {/* HEADER */}
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-            Assigned Tasks
-          </h1>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-6">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+              Managers Tasks
+            </h1>
 
-          <p className="text-slate-500 mt-2">
-            Manage team workflow and assign subtasks to employees.
-          </p>
+            <p className="text-slate-500 mt-2">
+              Assign production workflow tasks to Employees.
+            </p>
+          </div>
+
+          <CreateTaskButton
+            title="Create HR Task"
+            onClick={() => setOpenModal(true)}
+          />
         </div>
 
         {/* STATS */}
@@ -37,9 +50,16 @@ const ManagerTaskPage = () => {
           tasks={tasks}
           onTaskClick={handleTaskClick}
         />
+
+        {/* MODAL */}
+        <CreateTaskModal
+          open={openModal}
+          onClose={() => setOpenModal(false)}
+          onTaskCreated={handleTaskCreated}
+        />
       </div>
     </div>
   );
 };
 
-export default ManagerTaskPage;
+export default AdminTaskCreation;

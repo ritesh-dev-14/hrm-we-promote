@@ -2,19 +2,23 @@ import { useState } from "react";
 
 import TaskStats from "../../components/taskCreation/TaskStats";
 import TaskGrid from "../../components/taskCreation/TaskGrid";
-import CreateTaskButton from "../../components/taskCreation/CreateTaskButton";
+import CreateTaskButton from "../../components/taskCreation/CreateTaskButton.jsx";
+import CreateTaskModal from "../../components/taskCreation/CreateTaskModal";
 
 import { dummyTasks } from "../../components/taskCreation/tasks";
 
 const HrTaskCreation = () => {
   const [tasks, setTasks] = useState(dummyTasks);
 
-  const handleCreateTask = () => {
-    console.log("Create HR Task");
-  };
+  const [openModal, setOpenModal] =
+    useState(false);
 
   const handleTaskClick = (task) => {
     console.log(task);
+  };
+
+  const handleTaskCreated = (newTask) => {
+    setTasks((prev) => [newTask, ...prev]);
   };
 
   return (
@@ -34,7 +38,7 @@ const HrTaskCreation = () => {
 
           <CreateTaskButton
             title="Create HR Task"
-            onClick={handleCreateTask}
+            onClick={() => setOpenModal(true)}
           />
         </div>
 
@@ -45,6 +49,13 @@ const HrTaskCreation = () => {
         <TaskGrid
           tasks={tasks}
           onTaskClick={handleTaskClick}
+        />
+
+        {/* MODAL */}
+        <CreateTaskModal
+          open={openModal}
+          onClose={() => setOpenModal(false)}
+          onTaskCreated={handleTaskCreated}
         />
       </div>
     </div>

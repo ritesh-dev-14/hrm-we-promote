@@ -1,24 +1,22 @@
 import { Plus } from "lucide-react";
-import { motion } from "framer-motion";
 
 const CreateTaskButton = ({
-  title = "Create Task",
+  title,
   onClick,
 }) => {
   return (
-    <motion.button
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
+    <button
       onClick={onClick}
-      className="group h-12 px-5 rounded-2xl bg-slate-900 text-white text-sm font-semibold inline-flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300"
+      className="group relative overflow-hidden rounded-2xl bg-black px-6 py-3 text-white font-semibold shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
     >
-      <Plus
-        size={18}
-        className="group-hover:rotate-90 transition-transform duration-300"
-      />
+      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition" />
 
-      {title}
-    </motion.button>
+      <div className="relative flex items-center gap-2">
+        <Plus size={18} />
+
+        <span>{title}</span>
+      </div>
+    </button>
   );
 };
 

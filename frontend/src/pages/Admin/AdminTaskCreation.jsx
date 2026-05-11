@@ -2,19 +2,23 @@ import { useState } from "react";
 
 import TaskStats from "../../components/taskCreation/TaskStats";
 import TaskGrid from "../../components/taskCreation/TaskGrid";
-import CreateTaskButton from "../../components/taskCreation/CreateTaskButton";
+import CreateTaskButton from "../../components/taskCreation/CreateTaskButton.jsx";
+import CreateTaskModal from "../../components/taskCreation/CreateTaskModal";
 
 import { dummyTasks } from "../../components/taskCreation/tasks";
 
 const AdminTaskCreation = () => {
   const [tasks, setTasks] = useState(dummyTasks);
 
-  const handleCreateTask = () => {
-    console.log("Create Task");
-  };
+  const [openModal, setOpenModal] =
+    useState(false);
 
   const handleTaskClick = (task) => {
     console.log(task);
+  };
+
+  const handleTaskCreated = (newTask) => {
+    setTasks((prev) => [newTask, ...prev]);
   };
 
   return (
@@ -28,13 +32,13 @@ const AdminTaskCreation = () => {
             </h1>
 
             <p className="text-slate-500 mt-2">
-              Create and manage company workflow tasks.
+              Assign production workflow tasks to managers.
             </p>
           </div>
 
           <CreateTaskButton
-            title="Create Task"
-            onClick={handleCreateTask}
+            title="Create HR Task"
+            onClick={() => setOpenModal(true)}
           />
         </div>
 
@@ -45,6 +49,13 @@ const AdminTaskCreation = () => {
         <TaskGrid
           tasks={tasks}
           onTaskClick={handleTaskClick}
+        />
+
+        {/* MODAL */}
+        <CreateTaskModal
+          open={openModal}
+          onClose={() => setOpenModal(false)}
+          onTaskCreated={handleTaskCreated}
         />
       </div>
     </div>
