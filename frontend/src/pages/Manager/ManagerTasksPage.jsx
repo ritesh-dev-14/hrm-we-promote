@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import TaskStats from "../../components/taskCreation/TaskStats";
 import TaskGrid from "../../components/taskCreation/TaskGrid";
@@ -9,11 +10,10 @@ import { fetchAllTasks } from "../../components/taskCreation/tasks";
 
 const ManagerTaskPage = () => {
   const [tasks, setTasks] = useState([]);
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [openModal, setOpenModal] =
-    useState(false);
+  const navigate = useNavigate();
+  const [openModal, setOpenModal] = useState(false);
 
   const loadData = async () => {
     try {
@@ -34,7 +34,7 @@ const ManagerTaskPage = () => {
   }, []);
 
   const handleTaskClick = (task) => {
-    console.log("Selected Task:", task);
+    navigate(`/manager/tasks/${task.id}`);
   };
 
   const handleTaskCreated = (newTask) => {
@@ -44,10 +44,8 @@ const ManagerTaskPage = () => {
   return (
     <div className="min-h-screen bg-[#f6f8fc] p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-
         {/* HEADER */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-6">
-
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
               Manager Tasks

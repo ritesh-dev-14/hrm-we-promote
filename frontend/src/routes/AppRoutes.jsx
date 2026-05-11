@@ -7,6 +7,8 @@ import Login from "../auth/login";
 import AdminHomePage from "../pages/Admin/AdminHomePage";
 import AdminTaskCreation from "../pages/Admin/AdminTaskCreation";
 
+import TaskDescription from "../components/taskCreation/TaskDescription.jsx";
+
 import HrHomePage from "../pages/HR/HrHomePage";
 import HrTeamPage from "../pages/HR/HrTeamPage";
 import HrLeaveManagement from "../pages/HR/HrEmployeeLeaves";
@@ -56,6 +58,17 @@ const ROUTES = [
       HR: <HrTaskCreation />,
       MANAGER: <ManagerTaskPage />,
       EMPLOYEE: <EmployeeTaskPage />,
+    },
+  },
+
+  {
+    path: "/task/description/:id",
+    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+    component: {
+      ADMIN: <TaskDescription />,
+      HR: <TaskDescription />,
+      MANAGER: <TaskDescription />,
+      EMPLOYEE: <TaskDescription />,
     },
   },
 
