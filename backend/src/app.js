@@ -40,6 +40,10 @@ app.use(
   require("./modules/task-group/task-group.routes")
 );
 
+app.use(
+  "/api/team",
+  require("./modules/team/team.routes")
+);
 // Error handling middleware
 
 app.use(errorMiddleware);
