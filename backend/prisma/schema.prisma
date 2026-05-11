@@ -272,18 +272,55 @@ enum TaskStatus {
 //   @@index([groupId])
 // }
 
+
+
+
+
+
+
+
+// model TaskAssignment {
+//   id String @id @default(uuid())
+
+//   taskId String
+//   userId String
+
+//   // 🔥 OPTIONAL GROUP
+//   groupId String?
+
+//   task Task @relation(fields: [taskId], references: [id])
+
+//   employee User @relation(fields: [userId], references: [id])
+
+//   status AssignmentStatus @default(ASSIGNED)
+
+//   reminderSent Boolean @default(false)
+
+//   submittedAt DateTime?
+
+//   submission TaskSubmission?
+
+//   createdAt DateTime @default(now())
+
+//   @@unique([taskId, userId])
+//   @@index([userId])
+//   @@index([groupId])
+//   @@index([status])
+// }
+
 model TaskAssignment {
   id String @id @default(uuid())
 
   taskId String
   userId String
 
-  // 🔥 OPTIONAL GROUP
-  groupId String?
+  taskGroupId String?
 
   task Task @relation(fields: [taskId], references: [id])
 
   employee User @relation(fields: [userId], references: [id])
+
+  taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
 
   status AssignmentStatus @default(ASSIGNED)
 
@@ -296,8 +333,9 @@ model TaskAssignment {
   createdAt DateTime @default(now())
 
   @@unique([taskId, userId])
+
   @@index([userId])
-  @@index([groupId])
+  @@index([taskGroupId])
   @@index([status])
 }
 
@@ -485,18 +523,41 @@ enum LeaveType {
   SICK
 }
 
+// model TaskGroup {
+//   id String @id @default(uuid())
+
+//   name String
+
+//   managerId String
+//   manager   User   @relation(fields: [managerId], references: [id])
+
+//   createdAt DateTime @default(now())
+
+//   members TaskGroupMember[]
+// }
+
+
+
 model TaskGroup {
   id String @id @default(uuid())
 
   name String
 
   managerId String
-  manager   User   @relation(fields: [managerId], references: [id])
+  manager User @relation(fields: [managerId], references: [id])
 
   createdAt DateTime @default(now())
 
   members TaskGroupMember[]
+
+  taskAssignments TaskAssignment[]
+
+  taskItemAssignments TaskItemAssignment[]
 }
+
+
+
+
 
 model TaskGroupMember {
   id String @id @default(uuid())
@@ -566,15 +627,47 @@ enum TaskItemStatus {
   VERIFIED
 }
 
+
+
+
+
+
+// model TaskItemAssignment {
+//   id String @id @default(uuid())
+
+//   taskItemId String
+//   userId     String
+
+//   taskItem TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+
+//   employee User @relation(fields: [userId], references: [id])
+
+//   status AssignmentStatus @default(ASSIGNED)
+
+//   submittedAt DateTime?
+
+//   submission TaskItemSubmission?
+
+//   createdAt DateTime @default(now())
+
+//   @@unique([taskItemId, userId])
+//   @@index([userId])
+// }
+
+
 model TaskItemAssignment {
   id String @id @default(uuid())
 
   taskItemId String
-  userId     String
+  userId String
+
+  taskGroupId String?
 
   taskItem TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
 
   employee User @relation(fields: [userId], references: [id])
+
+  taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
 
   status AssignmentStatus @default(ASSIGNED)
 
@@ -585,8 +678,14 @@ model TaskItemAssignment {
   createdAt DateTime @default(now())
 
   @@unique([taskItemId, userId])
+
   @@index([userId])
+  @@index([taskGroupId])
 }
+
+
+
+
 
 model TaskItemSubmission {
   id String @id @default(uuid())

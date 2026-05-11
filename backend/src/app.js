@@ -35,6 +35,10 @@ app.use(
   require("./modules/employee-dashboard/employee-dashboard.routes")
 );
 
+app.use(
+  "/api/task-groups",
+  require("./modules/task-group/task-group.routes")
+);
 
 // Error handling middleware
 
