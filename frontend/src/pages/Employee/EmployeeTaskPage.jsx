@@ -5,9 +5,13 @@ import TaskStats from "../../components/taskCreation/TaskStats";
 import TaskGrid from "../../components/taskCreation/TaskGrid";
 
 import { employeeTasks } from "./tasks/employeeTasks";
+// import { fetchAllTasks } from "../../components/taskCreation/tasks";
+
 
 const EmployeeTaskPage = () => {
   const [tasks] = useState(employeeTasks);
+  // const [tasks] = useState(fetchAllTasks);
+
 
   const navigate = useNavigate();
 
