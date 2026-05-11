@@ -7,7 +7,8 @@ import Login from "../auth/login";
 import AdminHomePage from "../pages/Admin/AdminHomePage";
 import AdminTaskCreation from "../pages/Admin/AdminTaskCreation";
 
-import TaskDescription from "../components/taskCreation/TaskDescription.jsx";
+// Unified Task Detail Component
+import TaskDetailPage from "../components/taskCreation/TaskDetailPage.jsx";
 
 import HrHomePage from "../pages/HR/HrHomePage";
 import HrTeamPage from "../pages/HR/HrTeamPage";
@@ -35,134 +36,6 @@ import ManagerPayslips from "../pages/Manager/ManagerPayslips";
 import ManagerSettings from "../pages/Manager/ManagerSettings";
 import ManagerTaskPage from "../pages/Manager/ManagerTasksPage.jsx";
 import ManagerTaskDetailsPage from "../pages/Manager/tasks/ManagerTaskDetails.jsx";
-
-/**
- * ✅ CENTRAL ROUTE CONFIG
- */
-const ROUTES = [
-  {
-    path: "/dashboard",
-    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
-    component: {
-      ADMIN: <AdminHomePage />,
-      HR: <HrHomePage />,
-      MANAGER: <ManagerHomePage />,
-      EMPLOYEE: <EmployeHomePage />,
-    },
-  },
-  {
-    path: "/tasks",
-    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
-    component: {
-      ADMIN: <AdminTaskCreation />,
-      HR: <HrTaskCreation />,
-      MANAGER: <ManagerTaskPage />,
-      EMPLOYEE: <EmployeeTaskPage />,
-    },
-  },
-
-  {
-    path: "/task/description/:id",
-    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
-    component: {
-      ADMIN: <TaskDescription />,
-      HR: <TaskDescription />,
-      MANAGER: <TaskDescription />,
-      EMPLOYEE: <TaskDescription />,
-    },
-  },
-
-  {
-    path: "/manager/tasks/:id",
-    roles: ["MANAGER"],
-    component: {
-      MANAGER: <ManagerTaskDetailsPage />,
-    },
-  },
-  {
-    path: "/employee/tasks/:id",
-    roles: ["EMPLOYEE"],
-    component: {
-      EMPLOYEE: <EmployeeTaskDetailsPage />,
-    },
-  },
-  {
-    path: "/attendance",
-    roles: ["EMPLOYEE", "MANAGER", "HR"],
-    component: {
-      EMPLOYEE: <EmployeeAttendence />,
-      MANAGER: <ManagerAttendence />,
-      HR: <HrAttendance />,
-    },
-  },
-  {
-    path: "/leave",
-    roles: ["EMPLOYEE", "MANAGER", "HR"],
-    component: {
-      EMPLOYEE: <EmployeeLeave />,
-      MANAGER: <ManagerLeave />,
-      HR: <HrLeaves />,
-    },
-  },
-
-  {
-    path: "/payslips",
-    roles: ["EMPLOYEE", "MANAGER", "HR"],
-    component: {
-      EMPLOYEE: <EmployeePayslips />,
-      MANAGER: <ManagerPayslips />,
-      HR: <HrPayslips />,
-    },
-  },
-  {
-    path: "/hr/employees-attendance",
-
-    roles: ["HR"],
-
-    component: {
-      HR: <HrAllEmployeeAttendence />,
-    },
-  },
-  {
-    path: "/hr/team/:id",
-    roles: ["HR"],
-    component: {
-      HR: <EmployeeDetails />,
-    },
-  },
-  {
-    path: "/hr/employees-leaves",
-
-    roles: ["HR"],
-
-    component: {
-      HR: <HrLeaveManagement />,
-    },
-  },
-  {
-    path: "/settings",
-    roles: ["EMPLOYEE", "MANAGER", "HR"],
-    component: {
-      EMPLOYEE: <EmployeeSettings />,
-      MANAGER: <ManagerSettings />,
-      HR: <HrSettings />,
-    },
-  },
-  {
-    path: "/hr/team",
-    roles: ["HR"],
-    component: {
-      HR: <HrTeamPage />,
-    },
-  },
-  {
-    path: "/admin/settings",
-    roles: ["ADMIN"],
-    component: {
-      ADMIN: <AdminHomePage />,
-    },
-  },
-];
 
 /**
  * ✅ FINAL ROUTES
@@ -193,17 +66,138 @@ export const AppRoutes = () => {
       {/* Protected routes - require authentication */}
       {isAuthenticated && role && (
         <>
-          {ROUTES.map((route) => {
-            if (!route.roles.includes(role)) return null;
+          {/* Dashboard */}
+          <Route
+            path="/dashboard"
+            element={
+              role === "ADMIN" ? (
+                <AdminHomePage />
+              ) : role === "HR" ? (
+                <HrHomePage />
+              ) : role === "MANAGER" ? (
+                <ManagerHomePage />
+              ) : (
+                <EmployeHomePage />
+              )
+            }
+          />
 
-            return (
+          {/* Tasks */}
+          <Route
+            path="/tasks"
+            element={
+              role === "ADMIN" ? (
+                <AdminTaskCreation />
+              ) : role === "HR" ? (
+                <HrTaskCreation />
+              ) : role === "MANAGER" ? (
+                <ManagerTaskPage />
+              ) : (
+                <EmployeeTaskPage />
+              )
+            }
+          />
+
+          {/* Task Description - All roles */}
+          <Route path="/task/description/:id" element={<TaskDetailPage />} />
+
+          {/* Manager Task Details */}
+          {role === "MANAGER" && (
+            <Route path="/manager/tasks/:id" element={<ManagerTaskDetailsPage />} />
+          )}
+
+          {/* HR Task Details */}
+          {role === "HR" && (
+            <Route path="/manager/tasks/:id" element={<TaskDetailPage />} />
+          )}
+
+          {/* Employee Task Details */}
+          {role === "EMPLOYEE" && (
+            <Route
+              path="/employee/tasks/:id"
+              element={<EmployeeTaskDetailsPage />}
+            />
+          )}
+
+          {/* Attendance */}
+          <Route
+            path="/attendance"
+            element={
+              role === "EMPLOYEE" ? (
+                <EmployeeAttendence />
+              ) : role === "MANAGER" ? (
+                <ManagerAttendence />
+              ) : role === "HR" ? (
+                <HrAttendance />
+              ) : null
+            }
+          />
+
+          {/* Leave */}
+          <Route
+            path="/leave"
+            element={
+              role === "EMPLOYEE" ? (
+                <EmployeeLeave />
+              ) : role === "MANAGER" ? (
+                <ManagerLeave />
+              ) : role === "HR" ? (
+                <HrLeaves />
+              ) : null
+            }
+          />
+
+          {/* Payslips */}
+          <Route
+            path="/payslips"
+            element={
+              role === "EMPLOYEE" ? (
+                <EmployeePayslips />
+              ) : role === "MANAGER" ? (
+                <ManagerPayslips />
+              ) : role === "HR" ? (
+                <HrPayslips />
+              ) : null
+            }
+          />
+
+          {/* Settings */}
+          <Route
+            path="/settings"
+            element={
+              role === "EMPLOYEE" ? (
+                <EmployeeSettings />
+              ) : role === "MANAGER" ? (
+                <ManagerSettings />
+              ) : role === "HR" ? (
+                <HrSettings />
+              ) : null
+            }
+          />
+
+          {/* HR Routes */}
+          {role === "HR" && (
+            <>
               <Route
-                key={route.path}
-                path={route.path}
-                element={route.component[role]}
+                path="/hr/employees-attendance"
+                element={<HrAllEmployeeAttendence />}
               />
-            );
-          })}
+              <Route path="/hr/team/:id" element={<EmployeeDetails />} />
+              <Route
+                path="/hr/employees-leaves"
+                element={<HrLeaveManagement />}
+              />
+              <Route path="/hr/team" element={<HrTeamPage />} />
+            </>
+          )}
+
+          {/* Admin Routes */}
+          {role === "ADMIN" && (
+            <Route path="/admin/settings" element={<AdminHomePage />} />
+          )}
+
+          {/* Catch-all Task Route for any role */}
+          <Route path="/tasks/:id" element={<TaskDetailPage />} />
 
           {/* Default Redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

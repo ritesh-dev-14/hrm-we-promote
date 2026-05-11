@@ -21,3 +21,52 @@ export const fetchTaskById = async (id) => {
     throw error;
   }
 };
+
+export const createTaskItem = async (
+  taskId,
+  payload
+) => {
+  try {
+    const response = await API.post(
+      `/api/task-items/${taskId}`,
+      payload
+    );
+
+    return response.data.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
+export const assignTaskItem = async (
+  subtaskId,
+  employeeIds = []
+) => {
+  try {
+    const payload = {
+      assignments:
+        employeeIds.map((id) => ({
+          employeeId: id,
+        })),
+    };
+
+    const response = await API.post(
+      `/api/task-items/${subtaskId}/assign`,
+      payload
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+export const fetchTaskItems =
+  async (taskId) => {
+    const response = await API.get(
+      `/api/task-items/${taskId}`
+    );
+
+    return response.data.data || [];
+  };

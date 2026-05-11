@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import TaskStats from "../../components/taskCreation/TaskStats";
 import TaskGrid from "../../components/taskCreation/TaskGrid";
@@ -11,6 +12,7 @@ const AdminTaskPage = () => {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const navigate = useNavigate();
   const [openModal, setOpenModal] = useState(false);
 
   const loadData = async () => {
@@ -32,7 +34,7 @@ const AdminTaskPage = () => {
   }, []);
 
   const handleTaskClick = (task) => {
-    console.log("Selected Task:", task);
+    navigate(`/manager/tasks/${task.id}`);
   };
 
   const handleTaskCreated = (newTask) => {
