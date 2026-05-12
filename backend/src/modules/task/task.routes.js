@@ -30,6 +30,18 @@ router.post(
 );
 
 //
+// 🔥 GET MY ASSIGNED TASKS
+//
+router.get(
+  "/my-tasks",
+
+  auth,
+
+  controller.getMyAssignedTasks
+);
+
+
+//
 // 🔥 ASSIGN TASK
 //
 router.post(

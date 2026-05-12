@@ -596,3 +596,86 @@ exports.getTaskById = async (user, taskId) => {
 
   return task;
 };
+
+//
+// 🔥 GET MY ASSIGNED TASKS
+//
+exports.getMyAssignedTasks = async (user) => {
+  const assignments =
+    await prisma.taskAssignment.findMany({
+      where: {
+        userId: user.id,
+      },
+
+      include: {
+        task: {
+          include: {
+            createdBy: {
+              select: {
+                id: true,
+                employeeId: true,
+                name: true,
+                role: true,
+              },
+            },
+
+            items: true,
+          },
+        },
+
+        submission: true,
+
+        taskGroup: true,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+  return assignments.map((a) => ({
+    assignmentId: a.id,
+
+    status: a.status,
+
+    submitted: !!a.submission,
+
+    submittedAt: a.submittedAt,
+
+    taskGroup: a.taskGroup
+      ? {
+          id: a.taskGroup.id,
+          name: a.taskGroup.name,
+        }
+      : null,
+
+    task: {
+      id: a.task.id,
+
+      title: a.task.title,
+
+      description: a.task.description,
+
+      instructions: a.task.instructions,
+
+      referenceLink:
+        a.task.referenceLink,
+
+      date: a.task.date,
+
+      location: a.task.location,
+
+      setupType: a.task.setupType,
+
+      status: a.task.status,
+
+      isGroupTask:
+        a.task.isGroupTask,
+
+      totalItems:
+        a.task.items.length,
+
+      createdBy: a.task.createdBy,
+    },
+  }));
+};

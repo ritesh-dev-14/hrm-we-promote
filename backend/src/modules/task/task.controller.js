@@ -93,3 +93,26 @@ exports.getTaskById = async (
     next(err);
   }
 };
+
+//
+// 🔥 GET MY ASSIGNED TASKS
+//
+exports.getMyAssignedTasks = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const data =
+      await service.getMyAssignedTasks(
+        req.user
+      );
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
