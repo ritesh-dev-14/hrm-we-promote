@@ -33,8 +33,14 @@ const AdminTaskPage = () => {
     loadData();
   }, []);
 
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  const role = (user?.role || user?.data?.role || user?.user?.role || "")
+    .trim()
+    .toLowerCase();
+
   const handleTaskClick = (task) => {
-    navigate(`/manager/tasks/${task.id}`);
+    navigate(`/${role}/tasks/${task.id}`);
   };
 
   const handleTaskCreated = (newTask) => {

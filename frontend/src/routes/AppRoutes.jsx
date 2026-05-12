@@ -7,7 +7,7 @@ import Login from "../auth/login";
 import AdminHomePage from "../pages/Admin/AdminHomePage";
 import AdminTaskCreation from "../pages/Admin/AdminTaskCreation";
 
-// Unified Task Detail Component
+// Shared Task Detail
 import TaskDetailPage from "../components/taskCreation/TaskDetailPage.jsx";
 
 import HrHomePage from "../pages/HR/HrHomePage";
@@ -37,21 +37,18 @@ import ManagerSettings from "../pages/Manager/ManagerSettings";
 import ManagerTaskPage from "../pages/Manager/ManagerTasksPage.jsx";
 import ManagerTaskDetailsPage from "../pages/Manager/tasks/ManagerTaskDetails.jsx";
 
-/**
- * ✅ FINAL ROUTES
- */
 export const AppRoutes = () => {
   const { role, user, token, isLoading } = useAuth();
 
-  // Check if user is authenticated (has both user and token)
   const isAuthenticated = user && token;
 
-  // Show loading screen while checking localStorage
+  // LOADER
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen w-full">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <div className="h-12 w-12 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mx-auto mb-4"></div>
+
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -60,13 +57,13 @@ export const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Login route - accessible without authentication */}
+      {/* LOGIN */}
       <Route path="/login" element={<Login />} />
 
-      {/* Protected routes - require authentication */}
+      {/* AUTH ROUTES */}
       {isAuthenticated && role && (
         <>
-          {/* Dashboard */}
+          {/* HOME */}
           <Route
             path="/dashboard"
             element={
@@ -82,7 +79,7 @@ export const AppRoutes = () => {
             }
           />
 
-          {/* Tasks */}
+          {/* TASKS */}
           <Route
             path="/tasks"
             element={
@@ -98,28 +95,21 @@ export const AppRoutes = () => {
             }
           />
 
-          {/* Task Description - All roles */}
-          <Route path="/task/description/:id" element={<TaskDetailPage />} />
+          {/* DYNAMIC TASK DETAILS */}
+          <Route
+            path="/:role/tasks/:id"
+            element={
+              role === "MANAGER" ? (
+                <ManagerTaskDetailsPage />
+              ) : role === "EMPLOYEE" ? (
+                <EmployeeTaskDetailsPage />
+              ) : (
+                <TaskDetailPage />
+              )
+            }
+          />
 
-          {/* Manager Task Details */}
-          {role === "MANAGER" && (
-            <Route path="/manager/tasks/:id" element={<ManagerTaskDetailsPage />} />
-          )}
-
-          {/* HR Task Details */}
-          {role === "HR" && (
-            <Route path="/manager/tasks/:id" element={<TaskDetailPage />} />
-          )}
-
-          {/* Employee Task Details */}
-          {role === "EMPLOYEE" && (
-            <Route
-              path="/employee/tasks/:id"
-              element={<EmployeeTaskDetailsPage />}
-            />
-          )}
-
-          {/* Attendance */}
+          {/* ATTENDANCE */}
           <Route
             path="/attendance"
             element={
@@ -133,7 +123,7 @@ export const AppRoutes = () => {
             }
           />
 
-          {/* Leave */}
+          {/* LEAVE */}
           <Route
             path="/leave"
             element={
@@ -147,7 +137,7 @@ export const AppRoutes = () => {
             }
           />
 
-          {/* Payslips */}
+          {/* PAYSLIPS */}
           <Route
             path="/payslips"
             element={
@@ -161,7 +151,7 @@ export const AppRoutes = () => {
             }
           />
 
-          {/* Settings */}
+          {/* SETTINGS */}
           <Route
             path="/settings"
             element={
@@ -175,42 +165,69 @@ export const AppRoutes = () => {
             }
           />
 
-          {/* HR Routes */}
+          {/* HR */}
           {role === "HR" && (
             <>
               <Route
                 path="/hr/employees-attendance"
                 element={<HrAllEmployeeAttendence />}
               />
-              <Route path="/hr/team/:id" element={<EmployeeDetails />} />
+
+              <Route
+                path="/hr/team/:id"
+                element={<EmployeeDetails />}
+              />
+
               <Route
                 path="/hr/employees-leaves"
                 element={<HrLeaveManagement />}
               />
-              <Route path="/hr/team" element={<HrTeamPage />} />
+
+              <Route
+                path="/hr/team"
+                element={<HrTeamPage />}
+              />
             </>
           )}
 
-          {/* Admin Routes */}
+          {/* ADMIN */}
           {role === "ADMIN" && (
-            <Route path="/admin/settings" element={<AdminHomePage />} />
+            <Route
+              path="/admin/settings"
+              element={<AdminHomePage />}
+            />
           )}
 
-          {/* Catch-all Task Route for any role */}
-          <Route path="/tasks/:id" element={<TaskDetailPage />} />
+          {/* ROOT */}
+          <Route
+            path="/"
+            element={<Navigate to="/dashboard" replace />}
+          />
 
-          {/* Default Redirect */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* FALLBACK */}
+          <Route
+            path="*"
+            element={<Navigate to="/dashboard" replace />}
+          />
         </>
       )}
 
-      {/* Redirect to login if not authenticated */}
+      {/* UNAUTH */}
       {!isAuthenticated && (
         <>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/"
+            element={<Navigate to="/login" replace />}
+          />
+
+          <Route
+            path="*"
+            element={<Navigate to="/login" replace />}
+          />
         </>
       )}
     </Routes>
   );
 };
+
+export default AppRoutes;
