@@ -9,8 +9,7 @@ const INITIAL_STATE = {
   referenceLink: "",
   location: "",
   date: "",
-  setupType: "PREMIUM",
-  assignedToRole: "EMPLOYEE",
+  setupType: "PREMIUM"
 };
 
 const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
@@ -171,11 +170,11 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="label">Assign Role</label>
+                    {/* <label className="label">Assign Role</label>
                     <select name="assignedToRole" value={formData.assignedToRole} onChange={handleChange} className="input">
                       <option value="EMPLOYEE">Employee</option>
                       <option value="MANAGER">Manager</option>
-                    </select>
+                    </select> */}
                   </div>
                 </div>
 
