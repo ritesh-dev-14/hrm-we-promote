@@ -97,17 +97,17 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
     try {
       notifyInfo("Loading users...");
 
-      const [empRes, mgrRes] = await Promise.all([
-        API.get("http://localhost:8000/api/hr/employees", {
-          headers,
-        }),
+      const [ mgrRes] = await Promise.all([
+        // API.get("http://localhost:8000/api/hr/employees", {
+        //   headers,
+        // }),
 
         API.get("http://localhost:8000/api/hr/managers", {
           headers,
         }),
       ]);
 
-      setEmployees(empRes.data?.data || []);
+      // setEmployees(empRes.data?.data || []);
 
       setManagers(mgrRes.data?.data || []);
     } catch (err) {

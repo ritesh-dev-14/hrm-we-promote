@@ -223,7 +223,6 @@ const ManagerTaskDetailPage = () => {
           <ArrowLeft size={16} />
           Back
         </button>
-        qZ
         {/* MAIN TASK */}
         <div className="bg-white border border-slate-200 rounded-4xl p-6 md:p-8 shadow-sm">
           {/* BADGES */}
