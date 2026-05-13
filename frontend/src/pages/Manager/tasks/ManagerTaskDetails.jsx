@@ -6,12 +6,18 @@ import {
   Calendar,
   MapPin,
   Link2,
-  ClipboardList,
-  Plus,
   Users,
+  Plus,
   X,
   Loader2,
+  ClipboardList,
+  CheckCircle2,
+  Clock3,
+  ShieldCheck,
+  ExternalLink,
 } from "lucide-react";
+
+import API from "../../../services/api";
 
 import {
   fetchTaskById,
@@ -21,6 +27,16 @@ import {
   fetchMyEmployees,
 } from "./taskDetails";
 
+import { notifySuccess, notifyError, notifyInfo } from "../../../utils/toast";
+
+const statusStyles = {
+  DRAFT: "bg-slate-100 text-slate-700",
+  ASSIGNED: "bg-blue-100 text-blue-700",
+  COMPLETED: "bg-emerald-100 text-emerald-700",
+  PENDING: "bg-orange-100 text-orange-700",
+  SUBMITTED: "bg-violet-100 text-violet-700",
+};
+
 const ManagerTaskDetailPage = () => {
   const { id } = useParams();
 
@@ -28,21 +44,23 @@ const ManagerTaskDetailPage = () => {
 
   const [task, setTask] = useState(null);
 
-  const [loading, setLoading] = useState(true);
-
   const [subtasks, setSubtasks] = useState([]);
 
   const [employees, setEmployees] = useState([]);
+
+  const [loading, setLoading] = useState(true);
 
   const [creatingSubtask, setCreatingSubtask] = useState(false);
 
   const [assigning, setAssigning] = useState(false);
 
+  const [verifyingId, setVerifyingId] = useState(null);
+
+  const [openAssignModal, setOpenAssignModal] = useState(false);
+
   const [selectedSubtask, setSelectedSubtask] = useState(null);
 
   const [selectedEmployees, setSelectedEmployees] = useState([]);
-
-  const [openAssignModal, setOpenAssignModal] = useState(false);
 
   const [subtaskForm, setSubtaskForm] = useState({
     title: "",
@@ -50,24 +68,13 @@ const ManagerTaskDetailPage = () => {
     instructions: "",
   });
 
-  const statusStyles = {
-    DRAFT: "bg-slate-100 text-slate-700 border-slate-200",
-
-    ASSIGNED: "bg-blue-100 text-blue-700 border-blue-200",
-
-    COMPLETED: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  };
-
-  // LOAD
   const loadPage = async () => {
     try {
       setLoading(true);
 
       const [taskData, subtaskData, employeeData] = await Promise.all([
-        fetchTaskById(id, `/api/manager/tasks/${id}`),
-
+        fetchTaskById(id),
         fetchTaskItems(id),
-
         fetchMyEmployees(),
       ]);
 
@@ -78,6 +85,8 @@ const ManagerTaskDetailPage = () => {
       setEmployees(employeeData || []);
     } catch (error) {
       console.error(error);
+
+      notifyError("Failed to load task");
     } finally {
       setLoading(false);
     }
@@ -87,32 +96,39 @@ const ManagerTaskDetailPage = () => {
     loadPage();
   }, [id]);
 
-  // CREATE SUBTASK
   const handleCreateSubtask = async () => {
     try {
-      if (!subtaskForm.title) return alert("Title required");
+      if (!subtaskForm.title.trim()) {
+        notifyError("Title is required");
+        return;
+      }
 
       setCreatingSubtask(true);
 
+      notifyInfo("Creating subtask...");
+
       await createTaskItem(task.id, subtaskForm);
 
-      const data = await fetchTaskItems(id);
+      const updated = await fetchTaskItems(id);
 
-      setSubtasks(data || []);
+      setSubtasks(updated || []);
 
       setSubtaskForm({
         title: "",
         description: "",
         instructions: "",
       });
+
+      notifySuccess("Subtask created");
     } catch (error) {
       console.error(error);
+
+      notifyError(error?.response?.data?.message || "Failed to create subtask");
     } finally {
       setCreatingSubtask(false);
     }
   };
 
-  // OPEN ASSIGN
   const handleOpenAssignModal = (subtask) => {
     setSelectedSubtask(subtask);
 
@@ -121,7 +137,6 @@ const ManagerTaskDetailPage = () => {
     setOpenAssignModal(true);
   };
 
-  // TOGGLE EMPLOYEE
   const toggleEmployee = (employeeId) => {
     setSelectedEmployees((prev) =>
       prev.includes(employeeId)
@@ -130,14 +145,16 @@ const ManagerTaskDetailPage = () => {
     );
   };
 
-  // ASSIGN
   const handleAssign = async () => {
     try {
       if (!selectedEmployees.length) {
-        return alert("Select at least one employee");
+        notifyError("Select employees");
+        return;
       }
 
       setAssigning(true);
+
+      notifyInfo("Assigning employees...");
 
       await assignTaskItem(selectedSubtask.id, selectedEmployees);
 
@@ -146,19 +163,46 @@ const ManagerTaskDetailPage = () => {
       setSubtasks(updated || []);
 
       setOpenAssignModal(false);
+
+      notifySuccess("Employees assigned");
     } catch (error) {
       console.error(error);
+
+      notifyError(error?.response?.data?.message || "Assignment failed");
     } finally {
       setAssigning(false);
     }
   };
 
-  // LOADING
+  // VERIFY SUBMISSION
+  const handleVerifySubmission = async (assignmentId) => {
+    try {
+      setVerifyingId(assignmentId);
+
+      notifyInfo("Verifying submission...");
+
+      await API.patch(`/api/task-item-submission/${assignmentId}/verify`);
+
+      notifySuccess("Submission verified");
+
+      loadPage();
+    } catch (error) {
+      console.error(error);
+
+      notifyError(error?.response?.data?.message || "Verification failed");
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f6f8fc] flex items-center justify-center">
+      <div className="min-h-screen bg-[#f4f7fb] flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="animate-spin mx-auto mb-4" size={34} />
+          <Loader2
+            className="animate-spin mx-auto mb-4 text-slate-700"
+            size={36}
+          />
 
           <p className="text-sm text-slate-500">Loading task...</p>
         </div>
@@ -166,87 +210,89 @@ const ManagerTaskDetailPage = () => {
     );
   }
 
+  if (!task) return null;
+
   return (
-    <div className="min-h-screen bg-[#f6f8fc] p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#f4f7fb] p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
         {/* BACK */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-black transition mb-5"
+          className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-black transition mb-5"
         >
           <ArrowLeft size={16} />
           Back
         </button>
-
-        {/* TASK CARD */}
-        <div className="bg-white border border-slate-200 rounded-[30px] p-6 md:p-8 shadow-sm">
+        qZ
+        {/* MAIN TASK */}
+        <div className="bg-white border border-slate-200 rounded-4xl p-6 md:p-8 shadow-sm">
           {/* BADGES */}
           <div className="flex flex-wrap gap-3 mb-5">
             <span
-              className={`px-4 py-1 rounded-full text-xs font-semibold border ${
+              className={`px-4 py-1 rounded-full text-xs font-bold ${
                 statusStyles[task.status]
               }`}
             >
               {task.status}
             </span>
 
-            <span className="px-4 py-1 rounded-full bg-black text-white text-xs font-semibold">
+            <span className="px-4 py-1 rounded-full bg-black text-white text-xs font-bold">
               {task.setupType}
             </span>
           </div>
 
           {/* TITLE */}
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+          <h1 className="text-3xl md:text-5xl font-black text-slate-900">
             {task.title}
           </h1>
 
           {/* DESC */}
-          <p className="text-slate-600 leading-relaxed mb-8 max-w-3xl">
+          <p className="text-slate-600 mt-5 leading-8 max-w-4xl">
             {task.description}
           </p>
 
           {/* INFO */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
             <div className="border border-slate-200 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-2 text-slate-500 text-sm">
-                <Calendar size={15} />
-                Date
+              <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <Calendar size={16} />
+                Due Date
               </div>
 
-              <p className="font-semibold text-slate-900">
+              <p className="font-bold text-slate-900">
                 {new Date(task.date).toLocaleDateString()}
               </p>
             </div>
 
             <div className="border border-slate-200 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-2 text-slate-500 text-sm">
-                <MapPin size={15} />
+              <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <MapPin size={16} />
                 Location
               </div>
 
-              <p className="font-semibold text-slate-900">{task.location}</p>
+              <p className="font-bold text-slate-900">{task.location}</p>
             </div>
 
             <div className="border border-slate-200 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-2 text-slate-500 text-sm">
-                <Users size={15} />
+              <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <Users size={16} />
                 Assigned Role
               </div>
 
-              <p className="font-semibold text-slate-900">
-                {task.assignedToRole}
-              </p>
+              <p className="font-bold text-slate-900">{task.assignedToRole}</p>
             </div>
           </div>
 
           {/* INSTRUCTIONS */}
           {task.instructions && (
             <div className="mt-8">
-              <h3 className="font-bold text-lg mb-2">Instructions</h3>
+              <h2 className="text-xl font-bold text-slate-900 mb-3">
+                Instructions
+              </h2>
 
-              <p className="text-slate-600 leading-relaxed">
+              <div className="border border-slate-200 rounded-2xl p-5 text-slate-700 leading-8">
                 {task.instructions}
-              </p>
+              </div>
             </div>
           )}
 
@@ -256,33 +302,34 @@ const ManagerTaskDetailPage = () => {
               href={task.referenceLink}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 mt-6 text-sm font-semibold text-black"
+              className="inline-flex items-center gap-2 mt-6 text-sm font-bold text-blue-600"
             >
-              <Link2 size={15} />
+              <Link2 size={16} />
               Open Reference Link
             </a>
           )}
         </div>
-
         {/* SUBTASKS */}
-        <div className="bg-white border border-slate-200 rounded-[30px] p-6 md:p-8 shadow-sm mt-6">
+        <div className="bg-white border border-slate-200 rounded-4xl p-6 md:p-8 shadow-sm mt-6">
           {/* TOP */}
           <div className="flex items-center justify-between mb-7">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Sub Tasks</h2>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900">
+                Sub Tasks
+              </h2>
 
               <p className="text-sm text-slate-500 mt-1">
-                Manage and assign subtasks
+                Create and manage subtasks
               </p>
             </div>
 
-            <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center">
+            <div className="h-12 w-12 rounded-2xl bg-black text-white flex items-center justify-center">
               <Plus size={18} />
             </div>
           </div>
 
-          {/* CREATE */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* FORM */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
               placeholder="Subtask title"
@@ -293,7 +340,7 @@ const ManagerTaskDetailPage = () => {
                   title: e.target.value,
                 })
               }
-              className="input"
+              className="h-12 border border-slate-200 rounded-2xl px-4 outline-none focus:border-black"
             />
 
             <input
@@ -306,7 +353,7 @@ const ManagerTaskDetailPage = () => {
                   description: e.target.value,
                 })
               }
-              className="input"
+              className="h-12 border border-slate-200 rounded-2xl px-4 outline-none focus:border-black"
             />
           </div>
 
@@ -319,82 +366,218 @@ const ManagerTaskDetailPage = () => {
                 instructions: e.target.value,
               })
             }
-            className="textarea mb-4"
+            className="w-full min-h-30 border border-slate-200 rounded-2xl p-4 outline-none mt-4 resize-none focus:border-black"
           />
 
           <button
             onClick={handleCreateSubtask}
             disabled={creatingSubtask}
-            className="h-11 px-5 rounded-xl bg-black text-white text-sm font-semibold"
+            className="h-11 px-5 rounded-2xl bg-black text-white text-sm font-bold mt-4"
           >
             {creatingSubtask ? "Creating..." : "Create Subtask"}
           </button>
 
-          {/* LIST */}
-          <div className="space-y-4 mt-8">
+          {/* SUBTASK LIST */}
+          <div className="space-y-6 mt-10">
             {subtasks.map((item) => (
               <div
                 key={item.id}
-                className="border border-slate-200 rounded-3xl p-5"
+                className="border border-slate-200 rounded-[30px] p-6"
               >
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">
-                      {item.title}
-                    </h3>
+                {/* TOP */}
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                      <h3 className="text-2xl font-black text-slate-900">
+                        {item.title}
+                      </h3>
 
-                    <p className="text-sm text-slate-500 mt-1">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          statusStyles[item.status]
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+
+                    <p className="text-slate-600 leading-7">
                       {item.description}
                     </p>
 
                     {item.instructions && (
-                      <p className="text-sm text-slate-600 mt-4 leading-relaxed">
-                        {item.instructions}
-                      </p>
+                      <div className="mt-5 bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                        <p className="text-sm font-semibold text-slate-900 mb-2">
+                          Instructions
+                        </p>
+
+                        <p className="text-sm text-slate-700 leading-7 whitespace-pre-line">
+                          {item.instructions}
+                        </p>
+                      </div>
                     )}
                   </div>
 
-                  <span className="px-3 py-1 rounded-full bg-slate-100 text-xs font-semibold text-slate-700 w-fit">
-                    {item.status}
-                  </span>
+                  <button
+                    onClick={() => handleOpenAssignModal(item)}
+                    className="h-11 px-5 rounded-2xl border border-slate-200 hover:bg-slate-50 text-sm font-semibold transition"
+                  >
+                    Assign Employees
+                  </button>
                 </div>
 
-                {/* ASSIGNED */}
+                {/* ASSIGNMENTS */}
                 {item.assignments?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-5">
-                    {item.assignments.map((assignment, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 rounded-full bg-black text-white text-xs"
-                      >
-                        {assignment.employeeId}
-                      </span>
-                    ))}
+                  <div className="mt-8 space-y-5">
+                    <h4 className="text-lg font-bold text-slate-900">
+                      Assigned Employees
+                    </h4>
+
+                    {item.assignments.map((assignment) => {
+                      const submission = assignment.submission;
+
+                      return (
+                        <div
+                          key={assignment.id}
+                          className="border border-slate-200 rounded-[26px] p-5 bg-slate-50"
+                        >
+                          {/* EMPLOYEE TOP */}
+                          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+                            <div>
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <h5 className="text-lg font-bold text-slate-900">
+                                  {assignment?.employee?.name}
+                                </h5>
+
+                                <span className="px-3 py-1 rounded-full bg-black text-white text-xs font-semibold">
+                                  {assignment?.employee?.employeeId}
+                                </span>
+
+                                <span
+                                  className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                    statusStyles[assignment?.status]
+                                  }`}
+                                >
+                                  {assignment?.status}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 mt-3 text-sm text-slate-500">
+                                <Clock3 size={15} />
+                                Assigned on{" "}
+                                {new Date(
+                                  assignment.createdAt,
+                                ).toLocaleDateString()}
+                              </div>
+                            </div>
+
+                            {/* VERIFY BUTTON */}
+                            {submission && !submission.verifiedByManager && (
+                              <button
+                                onClick={() =>
+                                  handleVerifySubmission(assignment.id)
+                                }
+                                disabled={verifyingId === submission.id}
+                                className="h-11 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition flex items-center gap-2"
+                              >
+                                <ShieldCheck size={16} />
+
+                                {verifyingId === submission.id
+                                  ? "Verifying..."
+                                  : "Verify Submission"}
+                              </button>
+                            )}
+
+                            {submission?.verifiedByManager && (
+                              <div className="h-11 px-5 rounded-2xl bg-emerald-100 text-emerald-700 text-sm font-bold flex items-center gap-2">
+                                <CheckCircle2 size={16} />
+                                Verified
+                              </div>
+                            )}
+                          </div>
+
+                          {/* SUBMISSION DETAILS */}
+                          {submission ? (
+                            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                              {/* DRIVE LINK */}
+                              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                                  Drive Link
+                                </p>
+
+                                <a
+                                  href={submission.driveLink}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-2 text-blue-600 font-semibold break-all"
+                                >
+                                  <ExternalLink size={16} />
+
+                                  {submission.driveLink}
+                                </a>
+                              </div>
+
+                              {/* SUBMITTED DATE */}
+                              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                                  Submitted At
+                                </p>
+
+                                <p className="font-bold text-slate-900">
+                                  {new Date(
+                                    submission.submittedAt,
+                                  ).toLocaleString()}
+                                </p>
+                              </div>
+
+                              {/* REMARKS */}
+                              <div className="bg-white border border-slate-200 rounded-2xl p-5 lg:col-span-2">
+                                <p className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                                  Employee Remarks
+                                </p>
+
+                                <p className="text-slate-700 leading-7">
+                                  {submission.remarks}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-6 border border-dashed border-slate-300 rounded-2xl p-6 bg-white">
+                              <p className="text-sm font-semibold text-slate-700">
+                                Task not submitted yet
+                              </p>
+
+                              <p className="text-xs text-slate-500 mt-1">
+                                Waiting for employee submission
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
-                {/* BUTTON */}
-                <button
-                  onClick={() => handleOpenAssignModal(item)}
-                  className="mt-5 h-10 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm font-semibold"
-                >
-                  Assign Users
-                </button>
+                {!item.assignments?.length && (
+                  <div className="mt-5 border border-dashed border-slate-300 rounded-2xl p-5 text-sm text-slate-500">
+                    No employees assigned yet
+                  </div>
+                )}
               </div>
             ))}
 
             {!subtasks.length && (
-              <div className="border border-dashed border-slate-300 rounded-3xl p-12 text-center">
+              <div className="border border-dashed border-slate-300 rounded-[30px] p-14 text-center">
                 <ClipboardList
-                  size={36}
+                  size={40}
                   className="mx-auto text-slate-400 mb-4"
                 />
 
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-xl font-bold text-slate-900">
                   No Subtasks Yet
                 </h3>
 
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-slate-500 mt-2">
                   Create your first subtask
                 </p>
               </div>
@@ -405,8 +588,8 @@ const ManagerTaskDetailPage = () => {
 
       {/* ASSIGN MODAL */}
       {openAssignModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-[28px] shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-4xl shadow-2xl">
             {/* HEADER */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <div>
@@ -421,14 +604,14 @@ const ManagerTaskDetailPage = () => {
 
               <button
                 onClick={() => setOpenAssignModal(false)}
-                className="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center"
+                className="h-10 w-10 rounded-xl hover:bg-slate-100 flex items-center justify-center"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* EMPLOYEES */}
-            <div className="p-5 max-h-[400px] overflow-y-auto space-y-3">
+            {/* BODY */}
+            <div className="p-5 max-h-105 overflow-y-auto space-y-3">
               {employees.map((employee) => {
                 const checked = selectedEmployees.includes(employee.employeeId);
 
@@ -436,15 +619,14 @@ const ManagerTaskDetailPage = () => {
                   (assignment) => assignment.employeeId === employee.employeeId,
                 );
 
-                // HIDE ALREADY ASSIGNED USERS
                 if (alreadyAssigned) return null;
 
                 return (
                   <label
                     key={employee.id}
-                    className={`flex items-center gap-3 border rounded-2xl p-4 cursor-pointer transition ${
+                    className={`flex items-center gap-4 border rounded-2xl p-4 cursor-pointer transition ${
                       checked
-                        ? "border-black bg-black text-white"
+                        ? "bg-black text-white border-black"
                         : "border-slate-200"
                     }`}
                   >
@@ -470,7 +652,7 @@ const ManagerTaskDetailPage = () => {
             <div className="p-5 border-t border-slate-100 flex justify-end gap-3">
               <button
                 onClick={() => setOpenAssignModal(false)}
-                className="h-11 px-5 rounded-xl border border-slate-200 text-sm font-medium"
+                className="h-11 px-5 rounded-2xl border border-slate-200 text-sm font-semibold"
               >
                 Cancel
               </button>
@@ -478,7 +660,7 @@ const ManagerTaskDetailPage = () => {
               <button
                 onClick={handleAssign}
                 disabled={assigning}
-                className="h-11 px-5 rounded-xl bg-black text-white text-sm font-semibold"
+                className="h-11 px-5 rounded-2xl bg-black text-white text-sm font-bold"
               >
                 {assigning ? "Assigning..." : "Assign Users"}
               </button>
@@ -486,40 +668,6 @@ const ManagerTaskDetailPage = () => {
           </div>
         </div>
       )}
-
-      {/* STYLES */}
-      <style>{`
-        .input {
-          width: 100%;
-          height: 48px;
-          border-radius: 16px;
-          border: 1px solid #e2e8f0;
-          padding: 0 16px;
-          outline: none;
-          font-size: 14px;
-          transition: 0.2s;
-          background: white;
-        }
-
-        .textarea {
-          width: 100%;
-          min-height: 110px;
-          border-radius: 18px;
-          border: 1px solid #e2e8f0;
-          padding: 14px 16px;
-          outline: none;
-          font-size: 14px;
-          resize: none;
-          transition: 0.2s;
-          background: white;
-        }
-
-        .input:focus,
-        .textarea:focus {
-          border-color: black;
-          box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
-        }
-      `}</style>
     </div>
   );
 };
