@@ -78,23 +78,56 @@ model Task {
   assignments   TaskAssignment[]
   items         TaskItem[]
 
+  progress Int @default(0)
+
   @@index([createdById])
   @@index([date])
 }
 
 model TaskAssignment {
-  id           String           @id @default(uuid())
-  taskId       String
-  userId       String
-  status       AssignmentStatus @default(ASSIGNED)
-  createdAt    DateTime         @default(now())
-  reminderSent Boolean          @default(false)
-  submittedAt  DateTime?
-  taskGroupId  String?
-  taskGroup    TaskGroup?       @relation(fields: [taskGroupId], references: [id])
-  task         Task             @relation(fields: [taskId], references: [id])
-  employee     User             @relation(fields: [userId], references: [id])
-  submission   TaskSubmission?
+  id String @id @default(uuid())
+
+  taskId String
+  userId String
+
+  // 🔥 GROUP
+  taskGroupId String?
+
+  // 🔥 STATUS
+  status AssignmentStatus @default(ASSIGNED)
+
+  // 🔥 PROGRESS %
+  progress Int @default(0)
+
+  // 🔥 STARTED TIME
+  startedAt DateTime?
+
+  // 🔥 SUBMITTED TIME
+  submittedAt DateTime?
+
+  // 🔥 COMPLETED TIME
+  completedAt DateTime?
+
+  acceptedAt DateTime?
+
+  verifiedAt DateTime?
+
+  rejectedAt DateTime?
+
+  // 🔥 REJECTION REASON
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+
+  reminderSent Boolean @default(false)
+
+  task Task @relation(fields: [taskId], references: [id])
+
+  employee User @relation(fields: [userId], references: [id])
+
+  taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
+
+  submission TaskSubmission?
 
   @@unique([taskId, userId])
   @@index([userId])
@@ -209,30 +242,14 @@ model TaskItem {
   referenceLink String?
   instructions  String?
   order         Int?
-  status        TaskItemStatus       @default(PENDING)
+  status        TaskItemStatus       @default(DRAFT)
   createdAt     DateTime             @default(now())
   task          Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
   assignments   TaskItemAssignment[]
 
+  progress Int @default(0)
+
   @@index([taskId])
-}
-
-model TaskItemAssignment {
-  id          String              @id @default(uuid())
-  taskItemId  String
-  userId      String
-  status      AssignmentStatus    @default(ASSIGNED)
-  submittedAt DateTime?
-  createdAt   DateTime            @default(now())
-  taskGroupId String?
-  taskGroup   TaskGroup?          @relation(fields: [taskGroupId], references: [id])
-  taskItem    TaskItem            @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
-  employee    User                @relation(fields: [userId], references: [id])
-  submission  TaskItemSubmission?
-
-  @@unique([taskItemId, userId])
-  @@index([userId])
-  @@index([taskGroupId])
 }
 
 model TaskItemSubmission {
@@ -266,20 +283,36 @@ enum SetupType {
   PHONE
 }
 
+// enum TaskStatus {
+//   DRAFT
+//   ASSIGNED
+//   IN_PROGRESS
+//   SUBMITTED
+//   VERIFIED
+//   OVERDUE
+//   CANCELLED
+// }
+
 enum TaskStatus {
   DRAFT
   ASSIGNED
   IN_PROGRESS
   SUBMITTED
   VERIFIED
+  REJECTED
+  COMPLETED
   OVERDUE
   CANCELLED
 }
 
 enum AssignmentStatus {
+  PENDING
   ASSIGNED
+  IN_PROGRESS
   SUBMITTED
-  APPROVED
+  VERIFIED
+  REJECTED
+  COMPLETED
 }
 
 enum NotificationLevel {
@@ -312,9 +345,201 @@ enum LeaveType {
 }
 
 enum TaskItemStatus {
+  // PENDING
+  // ASSIGNED
+  // IN_PROGRESS
+  // SUBMITTED
+  // VERIFIED
+
   PENDING
+  DRAFT
   ASSIGNED
   IN_PROGRESS
   SUBMITTED
   VERIFIED
+  REJECTED
+  COMPLETED
 }
+
+model TaskItemAssignment {
+  id String @id @default(uuid())
+
+  taskItemId String
+  userId     String
+
+  status AssignmentStatus @default(ASSIGNED)
+
+  progress Int @default(0)
+
+  // startedAt DateTime?
+
+  // submittedAt DateTime?
+
+  // completedAt DateTime?
+
+  acceptedAt DateTime?
+
+  startedAt DateTime?
+
+  submittedAt DateTime?
+
+  verifiedAt DateTime?
+
+  completedAt DateTime?
+
+  rejectedAt DateTime?
+
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+
+  taskGroupId String?
+
+  taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
+
+  taskItem TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+
+  employee User @relation(fields: [userId], references: [id])
+
+  submission TaskItemSubmission?
+
+  @@unique([taskItemId, userId])
+  @@index([userId])
+  @@index([taskGroupId])
+}
+
+// model TaskAssignment {
+//   id String @id @default(uuid())
+
+//   taskId String
+//   userId String
+
+//   // 🔥 GROUP TASK SUPPORT
+//   taskGroupId String?
+
+//   // 🔥 LIVE STATUS
+//   status AssignmentStatus @default(PENDING)
+
+//   // 🔥 PROGRESS %
+//   progress Int @default(0)
+
+//   // 🔥 TIMESTAMPS
+//   acceptedAt DateTime?
+//   startedAt DateTime?
+//   submittedAt DateTime?
+//   verifiedAt DateTime?
+//   completedAt DateTime?
+//   rejectedAt DateTime?
+
+//   // 🔥 REJECTION
+//   rejectionReason String?
+
+//   createdAt DateTime @default(now())
+
+//   reminderSent Boolean @default(false)
+
+//   // 🔥 RELATIONS
+//   task Task @relation(fields: [taskId], references: [id])
+
+//   employee User @relation(fields: [userId], references: [id])
+
+//   taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
+
+//   submission TaskSubmission?
+
+//   @@unique([taskId, userId])
+
+//   @@index([userId])
+//   @@index([taskGroupId])
+//   @@index([status])
+// }
+
+// model TaskAssignment {
+//   id           String           @id @default(uuid())
+//   taskId       String
+//   userId       String
+//   status       AssignmentStatus @default(ASSIGNED)
+//   createdAt    DateTime         @default(now())
+//   reminderSent Boolean          @default(false)
+//   submittedAt  DateTime?
+//   taskGroupId  String?
+//   taskGroup    TaskGroup?       @relation(fields: [taskGroupId], references: [id])
+//   task         Task             @relation(fields: [taskId], references: [id])
+//   employee     User             @relation(fields: [userId], references: [id])
+//   submission   TaskSubmission?
+
+//   @@unique([taskId, userId])
+//   @@index([userId])
+//   @@index([taskGroupId])
+//   @@index([status])
+// }
+
+// model TaskItemAssignment {
+//   id          String              @id @default(uuid())
+//   taskItemId  String
+//   userId      String
+//   status      AssignmentStatus    @default(ASSIGNED)
+//   submittedAt DateTime?
+//   createdAt   DateTime            @default(now())
+//   taskGroupId String?
+//   taskGroup   TaskGroup?          @relation(fields: [taskGroupId], references: [id])
+//   taskItem    TaskItem            @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+//   employee    User                @relation(fields: [userId], references: [id])
+//   submission  TaskItemSubmission?
+
+//   @@unique([taskItemId, userId])
+//   @@index([userId])
+//   @@index([taskGroupId])
+// }
+
+// model TaskAssignment {
+//   id String @id @default(uuid())
+
+//   taskId String
+//   userId String
+
+//   // 🔥 GROUP
+//   taskGroupId String?
+
+//   // 🔥 STATUS
+//   status AssignmentStatus @default(PENDING)
+
+//   // 🔥 PROGRESS %
+//   progress Int @default(0)
+
+//   // 🔥 STARTED TIME
+//   startedAt DateTime?
+
+//   // 🔥 SUBMITTED TIME
+//   submittedAt DateTime?
+
+//   // 🔥 COMPLETED TIME
+//   completedAt DateTime?
+
+//   // 🔥 REJECTION REASON
+//   rejectionReason String?
+
+//   createdAt DateTime @default(now())
+
+//   reminderSent Boolean @default(false)
+
+//   task Task @relation(fields: [taskId], references: [id])
+
+//   employee User @relation(fields: [userId], references: [id])
+
+//   taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
+
+//   submission TaskSubmission?
+
+//   @@unique([taskId, userId])
+
+//   @@index([userId])
+//   @@index([taskGroupId])
+//   @@index([status])
+// }
+
+// enum AssignmentStatus {
+//   ASSIGNED
+//   SUBMITTED
+//   APPROVED
+// }

@@ -76,3 +76,58 @@ exports.verifySubmission =
       next(err);
     }
   };
+
+
+
+  exports.rejectSubmission =
+  async (
+    req,
+    res,
+    next
+  ) => {
+    try {
+
+      const data =
+        await service.rejectSubmission(
+          req.user,
+          req.params.assignmentId,
+          req.body
+        );
+
+      res.json({
+        success: true,
+        data,
+      });
+
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  //
+// 🔥 UPDATE ITEM PROGRESS
+//
+exports.updateItemProgress =
+  async (
+    req,
+    res,
+    next
+  ) => {
+    try {
+
+      const data =
+        await service.updateItemProgress(
+          req.user,
+          req.params.assignmentId,
+          req.body
+        );
+
+      res.json({
+        success: true,
+        data,
+      });
+
+    } catch (err) {
+      next(err);
+    }
+  };

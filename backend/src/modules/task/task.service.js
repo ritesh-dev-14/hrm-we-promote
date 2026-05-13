@@ -1,53 +1,49 @@
-const prisma = require("../../config/prisma");
-const ApiError = require("../../utils/ApiError");
-const ERRORS = require("../../utils/errors");
+// const prisma = require("../../config/prisma");
+// const ApiError = require("../../utils/ApiError");
+// const ERRORS = require("../../utils/errors");
 
-//
-// 🔥 CREATE TASK
-//
-exports.createTask = async (user, body) => {
-  // ✅ ONLY ADMIN / HR / MANAGER
-  if (!["ADMIN", "HR", "MANAGER"].includes(user.role)) {
-    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
-  }
+// //
+// // 🔥 CREATE TASK
+// //
+// exports.createTask = async (user, body) => {
+//   // ✅ ONLY ADMIN / HR / MANAGER
+//   if (!["ADMIN", "HR", "MANAGER"].includes(user.role)) {
+//     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+//   }
 
-  const task = await prisma.task.create({
-    data: {
-      title: body.title,
+//   const task = await prisma.task.create({
+//     data: {
+//       title: body.title,
 
-      description: body.description || null,
+//       description: body.description || null,
 
-      instructions: body.instructions || null,
+//       instructions: body.instructions || null,
 
-      referenceLink: body.referenceLink || null,
+//       referenceLink: body.referenceLink || null,
 
-      date: new Date(body.date),
+//       date: new Date(body.date),
 
-      location: body.location || null,
+//       location: body.location || null,
 
-      setupType: body.setupType,
+//       setupType: body.setupType,
 
-      createdById: user.id,
+//       createdById: user.id,
 
-      // assignedToRole: body.assignedToRole,
+//       // assignedToRole: body.assignedToRole,
 
-      isGroupTask: body.isGroupTask || false,
+//       isGroupTask: body.isGroupTask || false,
 
-      status: "DRAFT",
-    },
-  });
+//       status: "DRAFT",
+//     },
+//   });
 
-  return task;
-};
+//   return task;
+// };
 
-//
-// 🔥 ASSIGN TASK
-//
-// exports.assignTask = async (
-//   user,
-//   taskId,
-//   body
-// ) => {
+// //
+// // 🔥 ASSIGN TASK
+// //
+// exports.assignTask = async (user, taskId, body) => {
 //   // ✅ FIND TASK
 //   const task = await prisma.task.findUnique({
 //     where: {
@@ -56,33 +52,22 @@ exports.createTask = async (user, body) => {
 //   });
 
 //   if (!task) {
-//     throw new ApiError(
-//       404,
-//       ERRORS.TASK.NOT_FOUND
-//     );
+//     throw new ApiError(404, ERRORS.TASK.NOT_FOUND);
 //   }
 
 //   // ✅ ONLY CREATOR CAN ASSIGN
 //   if (task.createdById !== user.id) {
-//     throw new ApiError(
-//       403,
-//       ERRORS.AUTH.ACCESS_DENIED
-//     );
+//     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
 //   }
 
 //   // ✅ GET EMPLOYEE IDS
-//   const employeeIds = body.assignments.map(
-//     (a) => a.employeeId
-//   );
+//   const employeeIds = body.assignments.map((a) => a.employeeId);
 
 //   // ✅ CHECK DUPLICATES
 //   const uniqueIds = new Set(employeeIds);
 
 //   if (uniqueIds.size !== employeeIds.length) {
-//     throw new ApiError(
-//       400,
-//       ERRORS.TASK.DUPLICATE_ASSIGNMENT
-//     );
+//     throw new ApiError(400, ERRORS.TASK.DUPLICATE_ASSIGNMENT);
 //   }
 
 //   // ✅ FIND USERS
@@ -96,41 +81,83 @@ exports.createTask = async (user, body) => {
 //   //   },
 //   // });
 
-// const employees = await prisma.user.findMany({
-//   where: {
-//     employeeId: {
-//       in: employeeIds,
+//   //
+//   // ✅ FIND USERS
+//   //
+//   const employees = await prisma.user.findMany({
+//     where: {
+//       employeeId: {
+//         in: employeeIds,
+//       },
 //     },
+//   });
 
-//     role: task.assignedToRole,
-//   },
-// });
+//   //
+//   // ✅ VALIDATE USERS EXIST
+//   //
+//   if (employees.length !== employeeIds.length) {
+//     throw new ApiError(400, ERRORS.TASK.EMPLOYEE_NOT_FOUND);
+//   }
+
+//   //
+//   // ✅ ROLE-BASED ASSIGNMENT RULES
+//   //
+//   employees.forEach((emp) => {
+//     // 🔥 MANAGER
+//     if (user.role === "MANAGER") {
+//       // Explicitly prevent assigning to HR
+//       if (emp.role === "HR") {
+//         throw new ApiError(403, `Manager cannot assign task to HR`);
+//       }
+//       // manager can assign:
+//       // - EMPLOYEE
+//       // - itself
+
+//       const allowed = emp.role === "EMPLOYEE" || emp.id === user.id;
+
+//       if (!allowed) {
+//         throw new ApiError(403, `Manager cannot assign task to ${emp.role}`);
+//       }
+//     }
+
+//     // 🔥 HR
+//     else if (user.role === "HR") {
+//       // HR can assign:
+//       // - EMPLOYEE
+//       // - MANAGER
+//       // - itself
+
+//       const allowed =
+//         ["EMPLOYEE", "MANAGER"].includes(emp.role) || emp.id === user.id;
+
+//       if (!allowed) {
+//         throw new ApiError(403, `HR cannot assign task to ${emp.role}`);
+//       }
+//     }
+
+//     // 🔥 ADMIN
+//     else if (user.role === "ADMIN") {
+//       // admin can assign to anyone
+//     }
+//   });
 
 //   // ✅ VALIDATE USERS
 //   if (employees.length !== employeeIds.length) {
-//     throw new ApiError(
-//       400,
-//       ERRORS.TASK.EMPLOYEE_NOT_FOUND
-//     );
+//     throw new ApiError(400, ERRORS.TASK.EMPLOYEE_NOT_FOUND);
 //   }
 
 //   // ✅ CREATE ASSIGNMENTS
-//   const assignments = body.assignments.map(
-//     (a) => {
-//       const emp = employees.find(
-//         (e) =>
-//           e.employeeId === a.employeeId
-//       );
+//   const assignments = body.assignments.map((a) => {
+//     const emp = employees.find((e) => e.employeeId === a.employeeId);
 
-//       return {
-//         taskId: task.id,
+//     return {
+//       taskId: task.id,
 
-//         userId: emp.id,
+//       userId: emp.id,
 
-//         groupId: a.groupId || null,
-//       };
-//     }
-//   );
+//       taskGroupId: a.taskGroupId || null,
+//     };
+//   });
 
 //   await prisma.taskAssignment.createMany({
 //     data: assignments,
@@ -173,173 +200,234 @@ exports.createTask = async (user, body) => {
 //   };
 // };
 
-//
-// 🔥 ASSIGN TASK
-//
-exports.assignTask = async (user, taskId, body) => {
-  // ✅ FIND TASK
-  const task = await prisma.task.findUnique({
-    where: {
-      id: taskId,
-    },
-  });
+// //
+// // 🔥 GET TASKS CREATED BY USER
+// //
+// // exports.getTasks = async (user) => {
+// //   const tasks = await prisma.task.findMany({
+// //     where: {
+// //       createdById: user.id,
+// //     },
 
-  if (!task) {
-    throw new ApiError(404, ERRORS.TASK.NOT_FOUND);
-  }
+// //     include: {
+// //       assignments: {
+// //         include: {
+// //           employee: {
+// //             select: {
+// //               id: true,
 
-  // ✅ ONLY CREATOR CAN ASSIGN
-  if (task.createdById !== user.id) {
-    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
-  }
+// //               employeeId: true,
 
-  // ✅ GET EMPLOYEE IDS
-  const employeeIds = body.assignments.map((a) => a.employeeId);
+// //               name: true,
 
-  // ✅ CHECK DUPLICATES
-  const uniqueIds = new Set(employeeIds);
+// //               role: true,
+// //             },
+// //           },
 
-  if (uniqueIds.size !== employeeIds.length) {
-    throw new ApiError(400, ERRORS.TASK.DUPLICATE_ASSIGNMENT);
-  }
+// //           submission: true,
+// //         },
+// //       },
 
-  // ✅ FIND USERS
-  // const employees = await prisma.user.findMany({
-  //   where: {
-  //     employeeId: {
-  //       in: employeeIds,
-  //     },
+// //       items: true,
+// //     },
 
-  //     role: task.assignedToRole,
-  //   },
-  // });
+// //     orderBy: {
+// //       date: "asc",
+// //     },
+// //   });
 
-  //
-  // ✅ FIND USERS
-  //
-  const employees = await prisma.user.findMany({
-    where: {
-      employeeId: {
-        in: employeeIds,
-      },
-    },
-  });
+// //   return tasks.map((task) => {
+// //     const groupsMap = {};
 
-  //
-  // ✅ VALIDATE USERS EXIST
-  //
-  if (employees.length !== employeeIds.length) {
-    throw new ApiError(400, ERRORS.TASK.EMPLOYEE_NOT_FOUND);
-  }
+// //     const individuals = [];
 
-  //
-  // ✅ ROLE-BASED ASSIGNMENT RULES
-  //
-  employees.forEach((emp) => {
-    // 🔥 MANAGER
-    if (user.role === "MANAGER") {
-      // Explicitly prevent assigning to HR
-      if (emp.role === "HR") {
-        throw new ApiError(403, `Manager cannot assign task to HR`);
-      }
-      // manager can assign:
-      // - EMPLOYEE
-      // - itself
+// //     task.assignments.forEach((a) => {
+// //       const emp = {
+// //         employeeId:
+// //           a.employee.employeeId,
 
-      const allowed = emp.role === "EMPLOYEE" || emp.id === user.id;
+// //         name: a.employee.name,
 
-      if (!allowed) {
-        throw new ApiError(403, `Manager cannot assign task to ${emp.role}`);
-      }
-    }
+// //         role: a.employee.role,
 
-    // 🔥 HR
-    else if (user.role === "HR") {
-      // HR can assign:
-      // - EMPLOYEE
-      // - MANAGER
-      // - itself
+// //         status: a.status,
 
-      const allowed =
-        ["EMPLOYEE", "MANAGER"].includes(emp.role) || emp.id === user.id;
+// //         submitted: !!a.submission,
+// //       };
 
-      if (!allowed) {
-        throw new ApiError(403, `HR cannot assign task to ${emp.role}`);
-      }
-    }
+// //       // ✅ GROUP TASK
+// //       if (a.groupId) {
+// //         if (!groupsMap[a.groupId]) {
+// //           groupsMap[a.groupId] = {
+// //             groupId: a.groupId,
 
-    // 🔥 ADMIN
-    else if (user.role === "ADMIN") {
-      // admin can assign to anyone
-    }
-  });
+// //             members: [],
+// //           };
+// //         }
 
-  // ✅ VALIDATE USERS
-  if (employees.length !== employeeIds.length) {
-    throw new ApiError(400, ERRORS.TASK.EMPLOYEE_NOT_FOUND);
-  }
+// //         groupsMap[a.groupId].members.push(
+// //           emp
+// //         );
+// //       }
 
-  // ✅ CREATE ASSIGNMENTS
-  const assignments = body.assignments.map((a) => {
-    const emp = employees.find((e) => e.employeeId === a.employeeId);
+// //       // ✅ INDIVIDUAL TASK
+// //       else {
+// //         individuals.push(emp);
+// //       }
+// //     });
 
-    return {
-      taskId: task.id,
+// //     return {
+// //       id: task.id,
 
-      userId: emp.id,
+// //       title: task.title,
 
-      taskGroupId: a.taskGroupId || null,
-    };
-  });
+// //       description: task.description,
 
-  await prisma.taskAssignment.createMany({
-    data: assignments,
+// //       instructions: task.instructions,
 
-    skipDuplicates: true,
-  });
+// //       referenceLink: task.referenceLink,
 
-  // ✅ UPDATE TASK STATUS
-  await prisma.task.update({
-    where: {
-      id: taskId,
-    },
+// //       date: task.date,
 
-    data: {
-      status: "ASSIGNED",
-    },
-  });
+// //       location: task.location,
 
-  // ✅ SEND NOTIFICATIONS
-  await prisma.notification.createMany({
-    data: employees.map((emp) => ({
-      userId: emp.id,
+// //       setupType: task.setupType,
 
-      title: "New Task Assigned",
+// //       assignedToRole:
+// //         task.assignedToRole,
 
-      message: `You have been assigned task: ${task.title}`,
+// //       status: task.status,
 
-      type: "TASK_ASSIGNED",
+// //       isGroupTask: task.isGroupTask,
 
-      level: "INFO",
+// //       totalEmployees:
+// //         task.assignments.length,
 
-      entityId: task.id,
-    })),
-  });
+// //       totalItems: task.items.length,
 
-  return {
-    success: true,
+// //       groups: Object.values(groupsMap),
 
-    message: "Task assigned successfully",
-  };
-};
+// //       individuals,
+// //     };
+// //   });
+// // };
 
-//
-// 🔥 GET TASKS CREATED BY USER
-//
-// exports.getTasks = async (user) => {
-//   const tasks = await prisma.task.findMany({
+// //
+// // 🔥 GET TASKS CREATED BY USER
+// //
+// // exports.getTasks = async (user) => {
+// //   const tasks = await prisma.task.findMany({
+// //     where: {
+// //       createdById: user.id,
+// //     },
+
+// //     include: {
+// //       assignments: {
+// //         include: {
+// //           employee: {
+// //             select: {
+// //               id: true,
+// //               employeeId: true,
+// //               name: true,
+// //               role: true,
+// //             },
+// //           },
+
+// //           submission: true,
+
+// //           taskGroup: true,
+// //         },
+// //       },
+
+// //       items: true,
+// //     },
+
+// //     orderBy: {
+// //       date: "asc",
+// //     },
+// //   });
+
+// //   return tasks.map((task) => {
+// //     const groupsMap = {};
+
+// //     const individuals = [];
+
+// //     task.assignments.forEach((a) => {
+// //       const emp = {
+// //         employeeId: a.employee.employeeId,
+
+// //         name: a.employee.name,
+
+// //         role: a.employee.role,
+
+// //         status: a.status,
+
+// //         submitted: !!a.submission,
+// //       };
+
+// //       // ✅ GROUP TASK
+// //       if (a.taskGroupId) {
+// //         if (!groupsMap[a.taskGroupId]) {
+// //           groupsMap[a.taskGroupId] = {
+// //             taskGroupId: a.taskGroupId,
+
+// //             // groupName: a.group?.name || null,
+// //             groupName: a.taskGroup?.name || null,
+
+// //             members: [],
+// //           };
+// //         }
+
+// //         groupsMap[a.taskGroupId].members.push(emp);
+// //       }
+
+// //       // ✅ INDIVIDUAL TASK
+// //       else {
+// //         individuals.push(emp);
+// //       }
+// //     });
+
+// //     return {
+// //       id: task.id,
+
+// //       title: task.title,
+
+// //       description: task.description,
+
+// //       instructions: task.instructions,
+
+// //       referenceLink: task.referenceLink,
+
+// //       date: task.date,
+
+// //       location: task.location,
+
+// //       setupType: task.setupType,
+
+// //       assignedToRole: task.assignedToRole,
+
+// //       status: task.status,
+
+// //       isGroupTask: task.isGroupTask,
+
+// //       totalEmployees: task.assignments.length,
+
+// //       totalItems: task.items.length,
+
+// //       groups: Object.values(groupsMap),
+
+// //       individuals,
+// //     };
+// //   });
+// // };
+
+// //
+// // 🔥 GET SINGLE TASK
+// //
+// exports.getTaskById = async (user, taskId) => {
+//   const task = await prisma.task.findUnique({
 //     where: {
-//       createdById: user.id,
+//       id: taskId,
 //     },
 
 //     include: {
@@ -363,6 +451,353 @@ exports.assignTask = async (user, taskId, body) => {
 
 //       items: true,
 //     },
+//   });
+
+//   if (!task) {
+//     throw new ApiError(404, ERRORS.TASK.NOT_FOUND);
+//   }
+
+//   // Allow access if the user is the creator, an assignee, or an admin
+//   const isCreator = task.createdById === user.id;
+//   const isAdmin = user.role === "ADMIN";
+
+//   const assignment = await prisma.taskAssignment.findFirst({
+//     where: {
+//       taskId: task.id,
+//       userId: user.id,
+//     },
+//   });
+
+//   const isAssigned = !!assignment;
+
+//   if (!isCreator && !isAssigned && !isAdmin) {
+//     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+//   }
+
+//   return task;
+// };
+
+
+// exports.getMyAssignedTasks =
+//   async (user) => {
+//     // Allow manager to fetch only tasks assigned by HR (tasks created by HR).
+//     const whereClause = {
+//       userId: user.id,
+//     };
+
+//     if (user.role === "MANAGER") {
+//       // Manager's "my-tasks" should show tasks assigned by HR by default
+//       whereClause.task = {
+//         createdBy: {
+//           role: "HR",
+//         },
+//       };
+//     }
+
+//     const assignments = await prisma.taskAssignment.findMany({
+//       where: whereClause,
+
+//       include: {
+//           task: {
+//             include: {
+//               createdBy: {
+//                 select: {
+//                   id: true,
+//                   employeeId: true,
+//                   name: true,
+//                   role: true,
+//                 },
+//               },
+
+//               items: true,
+//             },
+//           },
+
+//           submission: true,
+
+//           taskGroup: true,
+//         },
+
+//         orderBy: {
+//           createdAt: "desc",
+//         },
+//       });
+
+//     return assignments.map(
+//       (a) => ({
+//         assignmentId: a.id,
+
+//         status: a.status,
+
+//         progress:
+//           a.progress || 0,
+
+//         submitted:
+//           !!a.submission,
+
+//         startedAt:
+//           a.startedAt,
+
+//         submittedAt:
+//           a.submittedAt,
+
+//         verifiedAt:
+//           a.verifiedAt,
+
+//         completedAt:
+//           a.completedAt,
+
+//         rejectedAt:
+//           a.rejectedAt,
+
+//         rejectionReason:
+//           a.rejectionReason,
+
+//         taskGroup:
+//           a.taskGroup
+//             ? {
+//                 id:
+//                   a.taskGroup.id,
+
+//                 name:
+//                   a.taskGroup
+//                     .name,
+//               }
+//             : null,
+
+//         task: {
+//           id: a.task.id,
+
+//           title:
+//             a.task.title,
+
+//           description:
+//             a.task.description,
+
+//           date: a.task.date,
+
+//           location:
+//             a.task.location,
+
+//           setupType:
+//             a.task.setupType,
+
+//           status:
+//             a.task.status,
+
+//           totalItems:
+//             a.task.items.length,
+
+//           createdBy:
+//             a.task.createdBy,
+//         },
+//       })
+//     );
+//   };
+
+// exports.updateTaskAssignmentStatus =
+//   async (
+//     user,
+//     assignmentId,
+//     body
+//   ) => {
+//     const assignment =
+//       await prisma.taskAssignment.findUnique({
+//         where: {
+//           id: assignmentId,
+//         },
+
+//         include: {
+//           task: true,
+//         },
+//       });
+
+//     if (!assignment) {
+//       throw new ApiError(
+//         404,
+//         "Assignment not found"
+//       );
+//     }
+
+//     if (
+//       assignment.userId !==
+//       user.id
+//     ) {
+//       throw new ApiError(
+//         403,
+//         ERRORS.AUTH.ACCESS_DENIED
+//       );
+//     }
+
+//     const updateData = {
+//       status: body.status,
+//     };
+
+//     if (
+//       body.progress !==
+//       undefined
+//     ) {
+//       updateData.progress =
+//         body.progress;
+//     }
+
+//     if (
+//       body.status ===
+//       "IN_PROGRESS"
+//     ) {
+//       updateData.startedAt =
+//         new Date();
+//     }
+
+//     if (
+//       body.status ===
+//       "SUBMITTED"
+//     ) {
+//       updateData.submittedAt =
+//         new Date();
+
+//       updateData.progress = 100;
+//     }
+
+//     if (
+//       body.status ===
+//       "VERIFIED"
+//     ) {
+//       updateData.verifiedAt =
+//         new Date();
+//     }
+
+//     if (
+//       body.status ===
+//       "COMPLETED"
+//     ) {
+//       updateData.completedAt =
+//         new Date();
+
+//       updateData.progress = 100;
+//     }
+
+//     if (
+//       body.status ===
+//       "REJECTED"
+//     ) {
+//       updateData.rejectedAt =
+//         new Date();
+
+//       updateData.rejectionReason =
+//         body.rejectionReason ||
+//         null;
+//     }
+
+//     const updated =
+//       await prisma.taskAssignment.update({
+//         where: {
+//           id: assignmentId,
+//         },
+
+//         data: updateData,
+//       });
+
+//     //
+//     // 🔥 UPDATE MAIN TASK STATUS
+//     //
+
+//     const allAssignments =
+//       await prisma.taskAssignment.findMany({
+//         where: {
+//           taskId:
+//             assignment.taskId,
+//         },
+//       });
+
+//     const statuses =
+//       allAssignments.map(
+//         (a) => a.status
+//       );
+
+//     let taskStatus =
+//       "PENDING";
+
+//     if (
+//       statuses.every(
+//         (s) =>
+//           s ===
+//           "COMPLETED"
+//       )
+//     ) {
+//       taskStatus =
+//         "COMPLETED";
+//     } else if (
+//       statuses.some(
+//         (s) =>
+//           s ===
+//           "IN_PROGRESS"
+//       )
+//     ) {
+//       taskStatus =
+//         "IN_PROGRESS";
+//     } else if (
+//       statuses.some(
+//         (s) =>
+//           s ===
+//           "SUBMITTED"
+//       )
+//     ) {
+//       taskStatus =
+//         "SUBMITTED";
+//     } else if (
+//       statuses.some(
+//         (s) =>
+//           s ===
+//           "VERIFIED"
+//       )
+//     ) {
+//       taskStatus =
+//         "VERIFIED";
+//     }
+
+//     await prisma.task.update({
+//       where: {
+//         id: assignment.taskId,
+//       },
+
+//       data: {
+//         status: taskStatus,
+//       },
+//     });
+
+//     return updated;
+//   };
+
+// exports.getTasks = async (user) => {
+//   const tasks = await prisma.task.findMany({
+//     where: {
+//       OR: [
+//         { createdById: user.id },
+//         { assignments: { some: { userId: user.id } } },
+//       ],
+//     },
+
+//     include: {
+//       assignments: {
+//         include: {
+//           employee: {
+//             select: {
+//               id: true,
+//               employeeId: true,
+//               name: true,
+//               role: true,
+//             },
+//           },
+
+//           submission: true,
+
+//           taskGroup: true,
+//         },
+//       },
+
+//       items: true,
+//     },
 
 //     orderBy: {
 //       date: "asc",
@@ -374,10 +809,21 @@ exports.assignTask = async (user, taskId, body) => {
 
 //     const individuals = [];
 
+//     const completedAssignments = task.assignments.filter(
+//       (a) => a.status === "COMPLETED",
+//     ).length;
+
+//     const progress =
+//       task.assignments.length > 0
+//         ? Math.round(
+//             task.assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+//               task.assignments.length,
+//           )
+//         : 0;
+
 //     task.assignments.forEach((a) => {
 //       const emp = {
-//         employeeId:
-//           a.employee.employeeId,
+//         employeeId: a.employee.employeeId,
 
 //         name: a.employee.name,
 
@@ -385,26 +831,30 @@ exports.assignTask = async (user, taskId, body) => {
 
 //         status: a.status,
 
+//         progress: a.progress || 0,
+
 //         submitted: !!a.submission,
+
+//         submittedAt: a.submittedAt,
+
+//         verifiedAt: a.verifiedAt,
+
+//         completedAt: a.completedAt,
 //       };
 
-//       // ✅ GROUP TASK
-//       if (a.groupId) {
-//         if (!groupsMap[a.groupId]) {
-//           groupsMap[a.groupId] = {
-//             groupId: a.groupId,
+//       if (a.taskGroupId) {
+//         if (!groupsMap[a.taskGroupId]) {
+//           groupsMap[a.taskGroupId] = {
+//             taskGroupId: a.taskGroupId,
+
+//             groupName: a.taskGroup?.name || null,
 
 //             members: [],
 //           };
 //         }
 
-//         groupsMap[a.groupId].members.push(
-//           emp
-//         );
-//       }
-
-//       // ✅ INDIVIDUAL TASK
-//       else {
+//         groupsMap[a.taskGroupId].members.push(emp);
+//       } else {
 //         individuals.push(emp);
 //       }
 //     });
@@ -426,15 +876,13 @@ exports.assignTask = async (user, taskId, body) => {
 
 //       setupType: task.setupType,
 
-//       assignedToRole:
-//         task.assignedToRole,
-
 //       status: task.status,
 
-//       isGroupTask: task.isGroupTask,
+//       progress,
 
-//       totalEmployees:
-//         task.assignments.length,
+//       totalEmployees: task.assignments.length,
+
+//       completedAssignments,
 
 //       totalItems: task.items.length,
 
@@ -445,153 +893,412 @@ exports.assignTask = async (user, taskId, body) => {
 //   });
 // };
 
+
+
+
+const prisma = require("../../config/prisma");
+const ApiError = require("../../utils/ApiError");
+const ERRORS = require("../../utils/errors");
+
 //
-// 🔥 GET TASKS CREATED BY USER
+// 🔥 CREATE TASK
 //
-exports.getTasks = async (user) => {
-  const tasks = await prisma.task.findMany({
-    where: {
+exports.createTask = async (user, body) => {
+  //
+  // ✅ ONLY ADMIN / HR / MANAGER
+  //
+  if (!["ADMIN", "HR", "MANAGER"].includes(user.role)) {
+    throw new ApiError(
+      403,
+      ERRORS.AUTH.ACCESS_DENIED
+    );
+  }
+
+  //
+  // ✅ MANAGER CAN CREATE TASK ONLY FOR HIMSELF
+  //
+  // Task creator itself becomes owner of task.
+  // HR can create for herself/manager later via assignment.
+  //
+
+  const task = await prisma.task.create({
+    data: {
+      title: body.title,
+
+      description:
+        body.description || null,
+
+      instructions:
+        body.instructions || null,
+
+      referenceLink:
+        body.referenceLink || null,
+
+      date: new Date(body.date),
+
+      location:
+        body.location || null,
+
+      setupType: body.setupType,
+
       createdById: user.id,
-    },
 
-    include: {
-      assignments: {
-        include: {
-          employee: {
-            select: {
-              id: true,
-              employeeId: true,
-              name: true,
-              role: true,
-            },
-          },
+      isGroupTask:
+        body.isGroupTask || false,
 
-          submission: true,
-
-          taskGroup: true,
-        },
-      },
-
-      items: true,
-    },
-
-    orderBy: {
-      date: "asc",
+      status: "DRAFT",
     },
   });
 
-  return tasks.map((task) => {
-    const groupsMap = {};
+  return task;
+};
 
-    const individuals = [];
-
-    task.assignments.forEach((a) => {
-      const emp = {
-        employeeId: a.employee.employeeId,
-
-        name: a.employee.name,
-
-        role: a.employee.role,
-
-        status: a.status,
-
-        submitted: !!a.submission,
-      };
-
-      // ✅ GROUP TASK
-      if (a.taskGroupId) {
-        if (!groupsMap[a.taskGroupId]) {
-          groupsMap[a.taskGroupId] = {
-            taskGroupId: a.taskGroupId,
-
-            // groupName: a.group?.name || null,
-            groupName: a.taskGroup?.name || null,
-
-            members: [],
-          };
-        }
-
-        groupsMap[a.taskGroupId].members.push(emp);
-      }
-
-      // ✅ INDIVIDUAL TASK
-      else {
-        individuals.push(emp);
-      }
+//
+// 🔥 ASSIGN MAIN TASK
+//
+// RULES:
+//
+// HR:
+// - can assign to MANAGER
+// - can assign to herself
+//
+// MANAGER:
+// - can assign ONLY to himself
+//
+// EMPLOYEE:
+// - cannot receive MAIN TASK
+// - employees receive TASK ITEMS only
+//
+exports.assignTask = async (
+  user,
+  taskId,
+  body
+) => {
+  //
+  // ✅ FIND TASK
+  //
+  const task =
+    await prisma.task.findUnique({
+      where: {
+        id: taskId,
+      },
     });
 
-    return {
-      id: task.id,
+  if (!task) {
+    throw new ApiError(
+      404,
+      ERRORS.TASK.NOT_FOUND
+    );
+  }
 
-      title: task.title,
+  //
+  // ✅ ONLY CREATOR CAN ASSIGN
+  //
+  if (task.createdById !== user.id) {
+    throw new ApiError(
+      403,
+      ERRORS.AUTH.ACCESS_DENIED
+    );
+  }
 
-      description: task.description,
+  //
+  // ✅ GET EMPLOYEE IDS
+  //
+  const employeeIds =
+    body.assignments.map(
+      (a) => a.employeeId
+    );
 
-      instructions: task.instructions,
+  //
+  // ✅ CHECK DUPLICATES
+  //
+  const uniqueIds =
+    new Set(employeeIds);
 
-      referenceLink: task.referenceLink,
+  if (
+    uniqueIds.size !==
+    employeeIds.length
+  ) {
+    throw new ApiError(
+      400,
+      ERRORS.TASK
+        .DUPLICATE_ASSIGNMENT
+    );
+  }
 
-      date: task.date,
+  //
+  // ✅ FIND USERS
+  //
+  const employees =
+    await prisma.user.findMany({
+      where: {
+        employeeId: {
+          in: employeeIds,
+        },
+      },
+    });
 
-      location: task.location,
+  //
+  // ✅ VALIDATE USERS
+  //
+  if (
+    employees.length !==
+    employeeIds.length
+  ) {
+    throw new ApiError(
+      400,
+      ERRORS.TASK
+        .EMPLOYEE_NOT_FOUND
+    );
+  }
 
-      setupType: task.setupType,
+  //
+  // ✅ ROLE-BASED RULES
+  //
+  employees.forEach((emp) => {
+    //
+    // 🔥 MANAGER
+    //
+    if (user.role === "MANAGER") {
+      //
+      // Manager can assign
+      // ONLY to himself
+      //
+      const allowed =
+        emp.id === user.id;
 
-      assignedToRole: task.assignedToRole,
+      if (!allowed) {
+        throw new ApiError(
+          403,
+          "Manager can assign main task only to himself"
+        );
+      }
+    }
 
-      status: task.status,
+    //
+    // 🔥 HR
+    //
+    else if (
+      user.role === "HR"
+    ) {
+      //
+      // HR can assign ONLY:
+      // - MANAGER
+      // - herself
+      //
+      const allowed =
+        emp.role ===
+          "MANAGER" ||
+        emp.id === user.id;
 
-      isGroupTask: task.isGroupTask,
+      if (!allowed) {
+        throw new ApiError(
+          403,
+          `HR cannot assign main task to ${emp.role}`
+        );
+      }
+    }
 
-      totalEmployees: task.assignments.length,
+    //
+    // 🔥 ADMIN
+    //
+    else if (
+      user.role === "ADMIN"
+    ) {
+      //
+      // Admin can assign to:
+      // - HR
+      // - MANAGER
+      //
+      if (
+        ![
+          "HR",
+          "MANAGER",
+        ].includes(emp.role)
+      ) {
+        throw new ApiError(
+          403,
+          `Admin cannot assign main task to ${emp.role}`
+        );
+      }
+    }
 
-      totalItems: task.items.length,
-
-      groups: Object.values(groupsMap),
-
-      individuals,
-    };
+    //
+    // ❌ EMPLOYEE CANNOT RECEIVE MAIN TASK
+    //
+    if (
+      emp.role === "EMPLOYEE"
+    ) {
+      throw new ApiError(
+        403,
+        "Employees cannot receive main tasks. Create task items for employees."
+      );
+    }
   });
+
+  //
+  // ✅ CREATE ASSIGNMENTS
+  //
+  const assignments =
+    body.assignments.map(
+      (a) => {
+        const emp =
+          employees.find(
+            (e) =>
+              e.employeeId ===
+              a.employeeId
+          );
+
+        return {
+          taskId: task.id,
+
+          userId: emp.id,
+
+          taskGroupId:
+            a.taskGroupId ||
+            null,
+        };
+      }
+    );
+
+  await prisma.taskAssignment.createMany(
+    {
+      data: assignments,
+
+      skipDuplicates: true,
+    }
+  );
+
+  //
+  // ✅ UPDATE TASK STATUS
+  //
+  await prisma.task.update({
+    where: {
+      id: taskId,
+    },
+
+    data: {
+      status: "ASSIGNED",
+    },
+  });
+
+  //
+  // ✅ SEND NOTIFICATIONS
+  //
+  await prisma.notification.createMany(
+    {
+      data: employees.map(
+        (emp) => ({
+          userId: emp.id,
+
+          title:
+            "New Main Task Assigned",
+
+          message: `You have been assigned main task: ${task.title}`,
+
+          type:
+            "TASK_ASSIGNED",
+
+          level: "INFO",
+
+          entityId: task.id,
+        })
+      ),
+    }
+  );
+
+  return {
+    success: true,
+
+    message:
+      "Main task assigned successfully",
+  };
 };
 
 //
 // 🔥 GET SINGLE TASK
 //
-exports.getTaskById = async (user, taskId) => {
-  const task = await prisma.task.findUnique({
-    where: {
-      id: taskId,
-    },
-
-    include: {
-      assignments: {
-        include: {
-          employee: {
-            select: {
-              id: true,
-
-              employeeId: true,
-
-              name: true,
-
-              role: true,
-            },
-          },
-
-          submission: true,
-        },
+exports.getTaskById = async (
+  user,
+  taskId
+) => {
+  const task =
+    await prisma.task.findUnique({
+      where: {
+        id: taskId,
       },
 
-      items: true,
-    },
-  });
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            employeeId: true,
+            name: true,
+            role: true,
+          },
+        },
+
+        assignments: {
+          include: {
+            employee: {
+              select: {
+                id: true,
+
+                employeeId: true,
+
+                name: true,
+
+                role: true,
+              },
+            },
+
+            submission: true,
+          },
+        },
+
+        items: true,
+      },
+    });
 
   if (!task) {
-    throw new ApiError(404, ERRORS.TASK.NOT_FOUND);
+    throw new ApiError(
+      404,
+      ERRORS.TASK.NOT_FOUND
+    );
   }
 
-  if (task.createdById !== user.id) {
-    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  //
+  // ✅ ACCESS RULES
+  //
+  const isCreator =
+    task.createdById === user.id;
+
+  const isAdmin =
+    user.role === "ADMIN";
+
+  const assignment =
+    await prisma.taskAssignment.findFirst(
+      {
+        where: {
+          taskId: task.id,
+
+          userId: user.id,
+        },
+      }
+    );
+
+  const isAssigned =
+    !!assignment;
+
+  if (
+    !isCreator &&
+    !isAssigned &&
+    !isAdmin
+  ) {
+    throw new ApiError(
+      403,
+      ERRORS.AUTH.ACCESS_DENIED
+    );
   }
 
   return task;
@@ -600,82 +1307,556 @@ exports.getTaskById = async (user, taskId) => {
 //
 // 🔥 GET MY ASSIGNED TASKS
 //
-exports.getMyAssignedTasks = async (user) => {
-  const assignments =
-    await prisma.taskAssignment.findMany({
+exports.getMyAssignedTasks =
+  async (user) => {
+    const whereClause = {
+      userId: user.id,
+    };
+
+    //
+    // ✅ MANAGER
+    // show tasks assigned by HR
+    //
+    if (
+      user.role ===
+      "MANAGER"
+    ) {
+      whereClause.task = {
+        createdBy: {
+          role: "HR",
+        },
+      };
+    }
+
+    //
+    // ✅ HR
+    // show tasks assigned by ADMIN
+    //
+    if (
+      user.role === "HR"
+    ) {
+      whereClause.task = {
+        createdBy: {
+          role: "ADMIN",
+        },
+      };
+    }
+
+    const assignments =
+      await prisma.taskAssignment.findMany(
+        {
+          where: whereClause,
+
+          include: {
+            task: {
+              include: {
+                createdBy: {
+                  select: {
+                    id: true,
+
+                    employeeId: true,
+
+                    name: true,
+
+                    role: true,
+                  },
+                },
+
+                items: true,
+              },
+            },
+
+            submission: true,
+
+            taskGroup: true,
+          },
+
+          orderBy: {
+            createdAt: "desc",
+          },
+        }
+      );
+
+    return assignments.map(
+      (a) => ({
+        assignmentId: a.id,
+
+        status: a.status,
+
+        progress:
+          a.progress || 0,
+
+        submitted:
+          !!a.submission,
+
+        startedAt:
+          a.startedAt,
+
+        submittedAt:
+          a.submittedAt,
+
+        verifiedAt:
+          a.verifiedAt,
+
+        completedAt:
+          a.completedAt,
+
+        rejectedAt:
+          a.rejectedAt,
+
+        rejectionReason:
+          a.rejectionReason,
+
+        taskGroup:
+          a.taskGroup
+            ? {
+                id:
+                  a.taskGroup.id,
+
+                name:
+                  a.taskGroup
+                    .name,
+              }
+            : null,
+
+        task: {
+          id: a.task.id,
+
+          title:
+            a.task.title,
+
+          description:
+            a.task.description,
+
+          instructions:
+            a.task
+              .instructions,
+
+          referenceLink:
+            a.task
+              .referenceLink,
+
+          date: a.task.date,
+
+          location:
+            a.task.location,
+
+          setupType:
+            a.task
+              .setupType,
+
+          status:
+            a.task.status,
+
+          totalItems:
+            a.task.items
+              .length,
+
+          createdBy:
+            a.task
+              .createdBy,
+        },
+      })
+    );
+  };
+
+//
+// 🔥 UPDATE TASK ASSIGNMENT STATUS
+//
+exports.updateTaskAssignmentStatus =
+  async (
+    user,
+    assignmentId,
+    body
+  ) => {
+    const assignment =
+      await prisma.taskAssignment.findUnique(
+        {
+          where: {
+            id: assignmentId,
+          },
+
+          include: {
+            task: true,
+          },
+        }
+      );
+
+    if (!assignment) {
+      throw new ApiError(
+        404,
+        "Assignment not found"
+      );
+    }
+
+    //
+    // ✅ ONLY ASSIGNED USER
+    //
+    if (
+      assignment.userId !==
+      user.id
+    ) {
+      throw new ApiError(
+        403,
+        ERRORS.AUTH.ACCESS_DENIED
+      );
+    }
+
+    const updateData = {
+      status: body.status,
+    };
+
+    //
+    // ✅ PROGRESS
+    //
+    if (
+      body.progress !==
+      undefined
+    ) {
+      updateData.progress =
+        body.progress;
+    }
+
+    //
+    // ✅ STATUS LOGIC
+    //
+    if (
+      body.status ===
+      "IN_PROGRESS"
+    ) {
+      updateData.startedAt =
+        new Date();
+    }
+
+    if (
+      body.status ===
+      "SUBMITTED"
+    ) {
+      updateData.submittedAt =
+        new Date();
+
+      updateData.progress = 100;
+    }
+
+    if (
+      body.status ===
+      "VERIFIED"
+    ) {
+      updateData.verifiedAt =
+        new Date();
+    }
+
+    if (
+      body.status ===
+      "COMPLETED"
+    ) {
+      updateData.completedAt =
+        new Date();
+
+      updateData.progress = 100;
+    }
+
+    if (
+      body.status ===
+      "REJECTED"
+    ) {
+      updateData.rejectedAt =
+        new Date();
+
+      updateData.rejectionReason =
+        body.rejectionReason ||
+        null;
+    }
+
+    //
+    // ✅ UPDATE ASSIGNMENT
+    //
+    const updated =
+      await prisma.taskAssignment.update(
+        {
+          where: {
+            id: assignmentId,
+          },
+
+          data: updateData,
+        }
+      );
+
+    //
+    // ✅ UPDATE MAIN TASK STATUS
+    //
+    const allAssignments =
+      await prisma.taskAssignment.findMany(
+        {
+          where: {
+            taskId:
+              assignment.taskId,
+          },
+        }
+      );
+
+    const statuses =
+      allAssignments.map(
+        (a) => a.status
+      );
+
+    let taskStatus =
+      "PENDING";
+
+    if (
+      statuses.every(
+        (s) =>
+          s ===
+          "COMPLETED"
+      )
+    ) {
+      taskStatus =
+        "COMPLETED";
+    } else if (
+      statuses.some(
+        (s) =>
+          s ===
+          "IN_PROGRESS"
+      )
+    ) {
+      taskStatus =
+        "IN_PROGRESS";
+    } else if (
+      statuses.some(
+        (s) =>
+          s ===
+          "SUBMITTED"
+      )
+    ) {
+      taskStatus =
+        "SUBMITTED";
+    } else if (
+      statuses.some(
+        (s) =>
+          s ===
+          "VERIFIED"
+      )
+    ) {
+      taskStatus =
+        "VERIFIED";
+    }
+
+    await prisma.task.update({
       where: {
-        userId: user.id,
+        id: assignment.taskId,
+      },
+
+      data: {
+        status: taskStatus,
+      },
+    });
+
+    return updated;
+  };
+
+//
+// 🔥 GET ALL TASKS
+//
+exports.getTasks = async (
+  user
+) => {
+  const tasks =
+    await prisma.task.findMany({
+      where: {
+        OR: [
+          {
+            createdById:
+              user.id,
+          },
+
+          {
+            assignments: {
+              some: {
+                userId:
+                  user.id,
+              },
+            },
+          },
+        ],
       },
 
       include: {
-        task: {
+        createdBy: {
+          select: {
+            id: true,
+            employeeId: true,
+            name: true,
+            role: true,
+          },
+        },
+
+        assignments: {
           include: {
-            createdBy: {
+            employee: {
               select: {
                 id: true,
+
                 employeeId: true,
+
                 name: true,
+
                 role: true,
               },
             },
 
-            items: true,
+            submission: true,
+
+            taskGroup: true,
           },
         },
 
-        submission: true,
-
-        taskGroup: true,
+        items: true,
       },
 
       orderBy: {
-        createdAt: "desc",
+        date: "asc",
       },
     });
 
-  return assignments.map((a) => ({
-    assignmentId: a.id,
+  return tasks.map((task) => {
+    const groupsMap = {};
 
-    status: a.status,
+    const individuals = [];
 
-    submitted: !!a.submission,
+    const completedAssignments =
+      task.assignments.filter(
+        (a) =>
+          a.status ===
+          "COMPLETED"
+      ).length;
 
-    submittedAt: a.submittedAt,
+    const progress =
+      task.assignments.length >
+      0
+        ? Math.round(
+            task.assignments.reduce(
+              (sum, a) =>
+                sum +
+                (a.progress ||
+                  0),
+              0
+            ) /
+              task.assignments
+                .length
+          )
+        : 0;
 
-    taskGroup: a.taskGroup
-      ? {
-          id: a.taskGroup.id,
-          name: a.taskGroup.name,
+    task.assignments.forEach(
+      (a) => {
+        const emp = {
+          employeeId:
+            a.employee
+              .employeeId,
+
+          name: a.employee.name,
+
+          role: a.employee.role,
+
+          status: a.status,
+
+          progress:
+            a.progress || 0,
+
+          submitted:
+            !!a.submission,
+
+          submittedAt:
+            a.submittedAt,
+
+          verifiedAt:
+            a.verifiedAt,
+
+          completedAt:
+            a.completedAt,
+        };
+
+        //
+        // ✅ GROUP
+        //
+        if (a.taskGroupId) {
+          if (
+            !groupsMap[
+              a.taskGroupId
+            ]
+          ) {
+            groupsMap[
+              a.taskGroupId
+            ] = {
+              taskGroupId:
+                a.taskGroupId,
+
+              groupName:
+                a.taskGroup
+                  ?.name ||
+                null,
+
+              members: [],
+            };
+          }
+
+          groupsMap[
+            a.taskGroupId
+          ].members.push(emp);
         }
-      : null,
 
-    task: {
-      id: a.task.id,
+        //
+        // ✅ INDIVIDUAL
+        //
+        else {
+          individuals.push(emp);
+        }
+      }
+    );
 
-      title: a.task.title,
+    return {
+      id: task.id,
 
-      description: a.task.description,
+      title: task.title,
 
-      instructions: a.task.instructions,
+      description:
+        task.description,
+
+      instructions:
+        task.instructions,
 
       referenceLink:
-        a.task.referenceLink,
+        task.referenceLink,
 
-      date: a.task.date,
+      date: task.date,
 
-      location: a.task.location,
+      location:
+        task.location,
 
-      setupType: a.task.setupType,
+      setupType:
+        task.setupType,
 
-      status: a.task.status,
+      status: task.status,
 
-      isGroupTask:
-        a.task.isGroupTask,
+      progress,
+
+      createdBy:
+        task.createdBy,
+
+      totalEmployees:
+        task.assignments
+          .length,
+
+      completedAssignments,
 
       totalItems:
-        a.task.items.length,
+        task.items.length,
 
-      createdBy: a.task.createdBy,
-    },
-  }));
+      groups:
+        Object.values(
+          groupsMap
+        ),
+
+      individuals,
+    };
+  });
 };

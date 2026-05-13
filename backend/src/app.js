@@ -19,6 +19,7 @@ app.use("/api/hr", require("./modules/hr/hr.routes"));
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/manager/tasks", require("./modules/task/task.routes"));
 app.use("/api/employee", require("./modules/employee/employee.routes"));
+app.use("/api/manager", require("./modules/manager/manager.routes"));
 app.use(
   "/api/task-items",
   require("./modules/task-item/task-item.routes")
@@ -42,6 +43,17 @@ app.use(
 app.use(
   "/api/team",
   require("./modules/team/team.routes")
+);
+
+app.use(
+  "/manager",
+  require("./modules/project-tracker/project-tracker.routes")
+);
+
+// Backwards-compatible path for Postman / frontend
+app.use(
+  "/api/project-tracker",
+  require("./modules/project-tracker/project-tracker.routes")
 );
 // Error handling middleware
 

@@ -10,5 +10,14 @@ router.post("/employee", auth, role("MANAGER"), controller.createEmployee);
 router.get("/employees", auth, role("MANAGER"), controller.getEmployees);
 router.put("/employee/:id", auth, role("MANAGER"), controller.updateEmployee);
 router.delete("/employee/:id", auth, role("MANAGER"), controller.deleteEmployee);
+router.get(
+  "/my-employees",
+
+  auth,
+
+  role("MANAGER"),
+
+  controller.getMyEmployees
+);
 
 module.exports = router;

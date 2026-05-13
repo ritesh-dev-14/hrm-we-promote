@@ -44,16 +44,17 @@ const role = require("../../middlewares/role.middleware");
 
 const validate = require("../../middlewares/validate.middleware");
 
-const controller = require(
-  "./task-item-submission.controller"
-);
-
 const {
   submitSchema,
+  rejectSchema,
+  updateProgressSchema,
 } = require(
   "./task-item-submission.validation"
 );
 
+const controller = require(
+  "./task-item-submission.controller"
+);
 // 🔥 GET MY ASSIGNED ITEMS
 router.get(
   "/my-items",
@@ -91,6 +92,61 @@ router.patch(
   ),
 
   controller.verifySubmission
+);
+
+// router.patch(
+//   "/:assignmentId/reject",
+
+//   auth,
+
+//   role(
+//     "ADMIN",
+//     "HR",
+//     "MANAGER"
+//   ),
+
+//   controller.rejectSubmission
+// );
+
+router.patch(
+  "/:assignmentId/reject",
+
+  auth,
+
+  role(
+    "ADMIN",
+    "HR",
+    "MANAGER"
+  ),
+
+  validate(rejectSchema),
+
+  controller.rejectSubmission
+);
+
+//
+// 🔥 UPDATE ITEM PROGRESS
+//
+// router.patch(
+//   "/:assignmentId/progress",
+
+//   auth,
+
+//   role("EMPLOYEE"),
+
+//   controller.updateItemProgress
+// );
+
+router.patch(
+  "/:assignmentId/progress",
+
+  auth,
+
+  role("EMPLOYEE"),
+
+  validate(updateProgressSchema),
+
+  controller.updateItemProgress
 );
 
 module.exports = router;

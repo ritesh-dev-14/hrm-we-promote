@@ -35,3 +35,26 @@ exports.deleteEmployee = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getMyEmployees =
+  async (
+    req,
+    res,
+    next
+  ) => {
+    try {
+
+      const data =
+        await service.getMyEmployees(
+          req.user
+        );
+
+      res.json({
+        success: true,
+        data,
+      });
+
+    } catch (err) {
+      next(err);
+    }
+  };

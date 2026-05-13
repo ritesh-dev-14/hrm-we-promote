@@ -61,3 +61,36 @@ exports.deleteEmployee = async (id) => {
     where: { id },
   });
 };
+
+exports.getMyEmployees =
+  async (user) => {
+
+    const employees =
+      await prisma.user.findMany({
+        where: {
+          managerId: user.id,
+
+          role: "EMPLOYEE",
+        },
+
+        select: {
+          id: true,
+
+          employeeId: true,
+
+          name: true,
+
+          email: true,
+
+          department: true,
+
+          position: true,
+        },
+
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+    return employees;
+  };
