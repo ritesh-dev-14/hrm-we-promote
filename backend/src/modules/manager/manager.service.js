@@ -22,7 +22,14 @@ exports.createEmployee = async (user, body) => {
       email: body.email,
       password: hashed,
       role: "EMPLOYEE",
-      department: body.department,
+      ...(body.department && {
+        department: {
+          connectOrCreate: {
+            where: { name: body.department },
+            create: { name: body.department },
+          },
+        },
+      }),
       position: body.position,
       managerId: user.id,
       createdById: user.id,
@@ -47,7 +54,17 @@ exports.updateEmployee = async (id, body) => {
 
   return prisma.user.update({
     where: { id },
-    data: body,
+    data: {
+      ...body,
+      ...(body.department && {
+        department: {
+          connectOrCreate: {
+            where: { name: body.department },
+            create: { name: body.department },
+          },
+        },
+      }),
+    },
   });
 };
 

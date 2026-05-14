@@ -23,7 +23,14 @@ exports.createManager = async (user, body) => {
       email: body.email,
       password: hashed,
       role: "MANAGER",
-      department: body.department,
+      ...(body.department && {
+        department: {
+          connectOrCreate: {
+            where: { name: body.department },
+            create: { name: body.department },
+          },
+        },
+      }),
       createdById: user.id,
     },
     select: {
@@ -80,20 +87,90 @@ exports.getManager = async (employeeId) => {
   return manager;
 };
 
-exports.updateManager = async (employeeId, body) => {
-  const manager = await prisma.user.findUnique({ where: { employeeId } });
+// exports.updateManager = async (employeeId, body) => {
+//   const manager = await prisma.user.findUnique({ where: { employeeId } });
   
+//   if (!manager) {
+//     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
+//   }
+
+//   if (manager.role !== "MANAGER") {
+//     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
+//   }
+
+//   return prisma.user.update({
+//     where: { employeeId },
+//     data: body,
+//     select: {
+//       id: true,
+//       employeeId: true,
+//       name: true,
+//       email: true,
+//       role: true,
+//       department: true,
+//       createdAt: true,
+//     },
+//   });
+// };
+
+exports.updateManager = async (
+  employeeId,
+  body
+) => {
+  const manager =
+    await prisma.user.findUnique({
+      where: { employeeId },
+    });
+
   if (!manager) {
-    throw new ApiError(404, ERRORS.USER.NOT_FOUND);
+    throw new ApiError(
+      404,
+      ERRORS.USER.NOT_FOUND
+    );
   }
 
   if (manager.role !== "MANAGER") {
-    throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
+    throw new ApiError(
+      400,
+      ERRORS.HR.INVALID_USER_TYPE
+    );
+  }
+
+  //
+  // 🔥 HASH PASSWORD
+  //
+  let hashedPassword;
+
+  if (body.password) {
+    hashedPassword =
+      await bcrypt.hash(
+        body.password,
+        10
+      );
   }
 
   return prisma.user.update({
     where: { employeeId },
-    data: body,
+
+    data: {
+      name: body.name,
+      email: body.email,
+      ...(body.department && {
+        department: {
+          connectOrCreate: {
+            where: { name: body.department },
+            create: { name: body.department },
+          },
+        },
+      }),
+      position: body.position,
+      role: body.role,
+
+      ...(hashedPassword && {
+        password: hashedPassword,
+      }),
+    },
+
     select: {
       id: true,
       employeeId: true,
@@ -101,6 +178,7 @@ exports.updateManager = async (employeeId, body) => {
       email: true,
       role: true,
       department: true,
+      position: true,
       createdAt: true,
     },
   });
@@ -220,7 +298,14 @@ exports.createEmployee = async (user, body) => {
       password: hashed,
 
       role: body.role,
-      department: body.department,
+      ...(body.department && {
+        department: {
+          connectOrCreate: {
+            where: { name: body.department },
+            create: { name: body.department },
+          },
+        },
+      }),
       position: body.position,
 
       managerId: managerId, // ✅ clean
@@ -305,20 +390,129 @@ exports.getEmployee = async (employeeId) => {
   return employee;
 };
 
-exports.updateEmployee = async (employeeId, body) => {
-  const employee = await prisma.user.findUnique({ where: { employeeId } });
+// exports.updateEmployee = async (employeeId, body) => {
+//   const employee = await prisma.user.findUnique({ where: { employeeId } });
   
+//   if (!employee) {
+//     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
+//   }
+
+//   if (employee.role !== "EMPLOYEE") {
+//     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
+//   }
+
+//   return prisma.user.update({
+//     where: { employeeId },
+//     data: body,
+//     select: {
+//       id: true,
+//       employeeId: true,
+//       name: true,
+//       email: true,
+//       role: true,
+//       department: true,
+//       position: true,
+//       managerId: true,
+//       createdAt: true,
+//     },
+//   });
+// };
+
+exports.updateEmployee = async (
+  employeeId,
+  body
+) => {
+  const employee =
+    await prisma.user.findUnique({
+      where: { employeeId },
+    });
+
   if (!employee) {
-    throw new ApiError(404, ERRORS.USER.NOT_FOUND);
+    throw new ApiError(
+      404,
+      ERRORS.USER.NOT_FOUND
+    );
   }
 
   if (employee.role !== "EMPLOYEE") {
-    throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
+    throw new ApiError(
+      400,
+      ERRORS.HR.INVALID_USER_TYPE
+    );
+  }
+
+  //
+  // 🔥 HASH PASSWORD
+  //
+  let hashedPassword;
+
+  if (body.password) {
+    hashedPassword =
+      await bcrypt.hash(
+        body.password,
+        10
+      );
+  }
+
+  //
+  // 🔥 VALIDATE MANAGER
+  //
+  let managerId =
+    employee.managerId;
+
+  if (body.managerId) {
+    const manager =
+      await prisma.user.findUnique({
+        where: {
+          id: body.managerId,
+        },
+      });
+
+    if (!manager) {
+      throw new ApiError(
+        404,
+        ERRORS.HR.MANAGER_NOT_FOUND
+      );
+    }
+
+    if (manager.role !== "MANAGER") {
+      throw new ApiError(
+        400,
+        ERRORS.HR.INVALID_USER_TYPE
+      );
+    }
+
+    managerId = manager.id;
   }
 
   return prisma.user.update({
     where: { employeeId },
-    data: body,
+
+    data: {
+      name: body.name,
+      email: body.email,
+      ...(body.department && {
+        department: {
+          connectOrCreate: {
+            where: { name: body.department },
+            create: { name: body.department },
+          },
+        },
+      }),
+      position: body.position,
+      role: body.role,
+      // manager: update only when caller provided `managerId` in the body
+      ...(Object.prototype.hasOwnProperty.call(body, "managerId")
+        ? body.managerId
+          ? { manager: { connect: { id: managerId } } }
+          : { manager: { disconnect: true } }
+        : {}),
+
+      ...(hashedPassword && {
+        password: hashedPassword,
+      }),
+    },
+
     select: {
       id: true,
       employeeId: true,
@@ -328,6 +522,15 @@ exports.updateEmployee = async (employeeId, body) => {
       department: true,
       position: true,
       managerId: true,
+
+      manager: {
+        select: {
+          id: true,
+          name: true,
+          employeeId: true,
+        },
+      },
+
       createdAt: true,
     },
   });

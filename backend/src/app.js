@@ -55,6 +55,14 @@ app.use(
   "/api/project-tracker",
   require("./modules/project-tracker/project-tracker.routes")
 );
+
+app.use(
+  "/api/departments",
+  require(
+    "./modules/department/department.routes"
+  )
+);
+
 // Error handling middleware
 
 app.use(errorMiddleware);
