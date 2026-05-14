@@ -1,44 +1,56 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import API from "../../services/api";
-import { notifySuccess, notifyError, notifyInfo } from "../../utils/toast";
-
 import {
-  Calendar,
-  MapPin,
-  ClipboardList,
-  X,
-  Link2,
-  Clock3,
-  Sparkles,
-  Send,
-  CheckCircle2,
-} from "lucide-react";
+  notifyError,
+  notifyInfo,
+  notifySuccess,
+} from "../../utils/toast";
+
+const statusStyles = {
+  VERIFIED:
+    "bg-emerald-50 text-emerald-700 border border-emerald-200",
+
+  REJECTED:
+    "bg-red-50 text-red-700 border border-red-200",
+
+  SUBMITTED:
+    "bg-blue-50 text-blue-700 border border-blue-200",
+
+  ASSIGNED:
+    "bg-slate-100 text-slate-700 border border-slate-200",
+
+  PENDING:
+    "bg-amber-50 text-amber-700 border border-amber-200",
+};
 
 const EmployeeTaskPage = () => {
   const [tasks, setTasks] = useState([]);
+
   const [loading, setLoading] = useState(true);
 
   const [selectedTask, setSelectedTask] = useState(null);
 
+  const [progressValue, setProgressValue] = useState(0);
+
   const [driveLink, setDriveLink] = useState("");
+
   const [remarks, setRemarks] = useState("");
+
+  const [savingProgress, setSavingProgress] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
 
-  // LOAD TASKS
   const loadTasks = async () => {
     try {
       setLoading(true);
 
-      const response = await API.get("/api/employee-dashboard/items");
-
-      setTasks(response.data.data || []);
-    } catch (error) {
-      console.error(error);
-
-      notifyError(
-        error?.response?.data?.message || "Failed to load tasks",
+      const response = await API.get(
+        "/api/task-item-submission/my-items",
       );
+
+      setTasks(response?.data?.data || []);
+    } catch (error) {
+      notifyError("Failed to load tasks");
     } finally {
       setLoading(false);
     }
@@ -48,450 +60,419 @@ const EmployeeTaskPage = () => {
     loadTasks();
   }, []);
 
-  // OPEN TASK MODAL
   const handleOpenTask = (task) => {
     setSelectedTask(task);
 
-    setDriveLink("");
-    setRemarks("");
+    setProgressValue(task.progress || 0);
+
+    setDriveLink(task.submission?.driveLink || "");
+
+    setRemarks(task.submission?.remarks || "");
   };
 
-  // SUBMIT TASK
+  const handleSaveProgress = async () => {
+    try {
+      setSavingProgress(true);
+
+      await API.patch(
+        `/api/task-item-submission/${selectedTask.assignmentId}/progress`,
+        {
+          progress: progressValue,
+        },
+      );
+
+      notifySuccess("Progress updated");
+
+      loadTasks();
+    } catch (error) {
+      notifyError("Failed to update progress");
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
   const handleSubmitTask = async () => {
     try {
-      if (!selectedTask?.id) {
-        return notifyError("Assignment id missing");
-      }
-
-      if (!driveLink) {
-        return notifyInfo("Please enter drive link");
+      if (!driveLink.trim()) {
+        notifyInfo("Drive link is required");
+        return;
       }
 
       setSubmitting(true);
 
       await API.post(
-        `/api/task-item-submission/${selectedTask.id}/submit`,
+        `/api/task-item-submission/${selectedTask.assignmentId}/submit`,
         {
           driveLink,
           remarks,
         },
       );
 
-      notifySuccess("Task submitted successfully");
+      notifySuccess("Task submitted");
 
       setSelectedTask(null);
 
       loadTasks();
     } catch (error) {
-      console.error(error);
-
-      notifyError(
-        error?.response?.data?.message || "Submission failed",
-      );
+      notifyError("Submission failed");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // STATUS COLORS
-  const statusStyles = {
-    ASSIGNED:
-      "bg-blue-100 text-blue-700 border-blue-200",
+  const stats = useMemo(() => {
+    const total = tasks.length;
 
-    COMPLETED:
-      "bg-emerald-100 text-emerald-700 border-emerald-200",
+    const verified = tasks.filter(
+      (task) => task.status === "VERIFIED",
+    ).length;
 
-    PENDING:
-      "bg-orange-100 text-orange-700 border-orange-200",
+    const pending = tasks.filter(
+      (task) =>
+        task.status === "PENDING" ||
+        task.status === "SUBMITTED",
+    ).length;
 
-    IN_PROGRESS:
-      "bg-violet-100 text-violet-700 border-violet-200",
-  };
+    const avg =
+      total > 0
+        ? Math.round(
+            tasks.reduce(
+              (sum, item) => sum + (item.progress || 0),
+              0,
+            ) / total,
+          )
+        : 0;
 
-  // STATS
-  const totalTasks = tasks.length;
-
-  const completedTasks = tasks.filter(
-    (task) => task.submission,
-  ).length;
-
-  const pendingTasks = tasks.filter(
-    (task) => !task.submission,
-  ).length;
+    return {
+      total,
+      verified,
+      pending,
+      avg,
+    };
+  }, [tasks]);
 
   return (
-    <>
-      <div className="min-h-screen bg-[#f4f7fb] p-4 md:p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* HEADER */}
-          <div className="mb-8 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-3xl bg-black text-white flex items-center justify-center shadow-lg">
-              <ClipboardList size={24} />
-            </div>
+    <div className="min-h-screen bg-[#f5f6f8]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-5 md:px-8 py-5 sm:py-7">
+        {/* HEADER */}
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-7">
+          <div className="w-full">
+            <p className="text-sm text-slate-500 mb-2">
+              Employee Dashboard
+            </p>
 
-            <div>
-              <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                Employee Tasks
-              </h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-900">
+              My Tasks
+            </h1>
 
-              <p className="text-slate-500 mt-1">
-                View and submit your assigned task items.
-              </p>
-            </div>
+            <p className="text-sm sm:text-base text-slate-500 mt-3 max-w-2xl leading-6">
+              Check assigned work, update progress and submit
+              tasks easily.
+            </p>
           </div>
 
-          {/* STATS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-            <div className="bg-white rounded-[30px] border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-500 text-sm mb-2">
-                Total Tasks
-              </p>
+          <div className="bg-white border border-slate-200 rounded-[28px] p-5 sm:p-6 w-full xl:w-[340px] shrink-0">
+            <p className="text-sm text-slate-500 mb-2">
+              Overall Progress
+            </p>
 
-              <h2 className="text-4xl font-black text-slate-900">
-                {totalTasks}
-              </h2>
-            </div>
+            <h2 className="text-4xl sm:text-5xl font-semibold text-slate-900">
+              {stats.avg}%
+            </h2>
 
-            <div className="bg-white rounded-[30px] border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-500 text-sm mb-2">
-                Submitted
-              </p>
-
-              <h2 className="text-4xl font-black text-emerald-600">
-                {completedTasks}
-              </h2>
-            </div>
-
-            <div className="bg-white rounded-[30px] border border-slate-200 p-6 shadow-sm">
-              <p className="text-slate-500 text-sm mb-2">
-                Pending
-              </p>
-
-              <h2 className="text-4xl font-black text-orange-500">
-                {pendingTasks}
-              </h2>
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden mt-5">
+              <div
+                style={{
+                  width: `${stats.avg}%`,
+                }}
+                className="h-full bg-slate-900 rounded-full transition-all duration-500"
+              />
             </div>
           </div>
-
-          {/* LOADING */}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-24">
-              <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mb-4" />
-
-              <p className="text-slate-500">
-                Loading tasks...
-              </p>
-            </div>
-          )}
-
-          {/* EMPTY */}
-          {!loading && tasks.length === 0 && (
-            <div className="bg-white border border-dashed border-slate-300 rounded-[36px] p-16 text-center">
-              <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-5">
-                <ClipboardList
-                  size={34}
-                  className="text-slate-400"
-                />
-              </div>
-
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                No Tasks Assigned
-              </h2>
-
-              <p className="text-slate-500">
-                Assigned tasks will appear here.
-              </p>
-            </div>
-          )}
-
-          {/* TASKS */}
-          {!loading && tasks.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {tasks.map((item) => {
-                const subtask = item.taskItem;
-                const task = subtask?.task;
-
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300"
-                  >
-                    {/* TOP */}
-                    <div className="p-6 border-b border-slate-100">
-                      <div className="flex items-start justify-between mb-5">
-                        <span
-                          className={`px-3 py-1 rounded-full border text-xs font-bold ${
-                            statusStyles[item.status]
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-
-                        {item.submission ? (
-                          <div className="flex items-center gap-1 text-emerald-600 text-sm font-semibold">
-                            <CheckCircle2 size={16} />
-                            Submitted
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 text-orange-500 text-sm font-semibold">
-                            <Clock3 size={16} />
-                            Pending
-                          </div>
-                        )}
-                      </div>
-
-                      {/* TITLE */}
-                      <h2 className="text-2xl font-black text-slate-900 leading-tight mb-3">
-                        {subtask?.title}
-                      </h2>
-
-                      {/* DESCRIPTION */}
-                      <p className="text-slate-600 text-sm leading-relaxed line-clamp-3">
-                        {subtask?.description}
-                      </p>
-                    </div>
-
-                    {/* BODY */}
-                    <div className="p-6 space-y-5">
-                      {/* MAIN TASK */}
-                      <div>
-                        <p className="text-xs text-slate-400 mb-1">
-                          Main Task
-                        </p>
-
-                        <h3 className="font-bold text-slate-800">
-                          {task?.title}
-                        </h3>
-                      </div>
-
-                      {/* SETUP TYPE */}
-                      <div>
-                        <p className="text-xs text-slate-400 mb-2">
-                          Setup Type
-                        </p>
-
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-black text-white font-semibold text-sm">
-                          <Sparkles size={15} />
-                          {task?.setupType}
-                        </div>
-                      </div>
-
-                      {/* DATE */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center">
-                          <Calendar size={17} />
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-slate-400">
-                            Due Date
-                          </p>
-
-                          <p className="font-semibold text-slate-700">
-                            {new Date(
-                              task?.date,
-                            ).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* LOCATION */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center">
-                          <MapPin size={17} />
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-slate-400">
-                            Location
-                          </p>
-
-                          <p className="font-semibold text-slate-700">
-                            {task?.location}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* BUTTON */}
-                      <button
-                        onClick={() => handleOpenTask(item)}
-                        className="w-full h-14 rounded-2xl bg-black hover:opacity-90 text-white font-bold transition-all duration-300"
-                      >
-                        View & Submit
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
+
+        {/* STATS */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+          <StatsCard
+            title="Total Tasks"
+            value={stats.total}
+          />
+
+          <StatsCard
+            title="Pending"
+            value={stats.pending}
+          />
+
+          <StatsCard
+            title="Verified"
+            value={stats.verified}
+          />
+
+          <StatsCard
+            title="Average"
+            value={`${stats.avg}%`}
+          />
+        </div>
+
+        {/* LOADING */}
+        {loading ? (
+          <div className="bg-white border border-slate-200 rounded-[28px] py-24 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-full border-2 border-slate-200 border-t-slate-900 animate-spin" />
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-[28px] p-10 sm:p-16 text-center">
+            <h3 className="text-xl sm:text-2xl font-semibold text-slate-900">
+              No Tasks Available
+            </h3>
+
+            <p className="text-sm text-slate-500 mt-3">
+              Tasks assigned by manager will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
+            {tasks.map((item) => (
+              <TaskCard
+                key={item.assignmentId}
+                item={item}
+                onOpen={() => handleOpenTask(item)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* MODAL */}
       {selectedTask && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto">
-          <div className="min-h-screen flex items-start justify-center p-4 md:p-8">
-            <div className="w-full max-w-4xl bg-white rounded-[40px] overflow-hidden shadow-2xl">
-              {/* HEADER */}
-              <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-5 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500 mb-1">
-                    Task Details
-                  </p>
-
-                  <h2 className="text-2xl font-black text-slate-900">
-                    {selectedTask?.taskItem?.title}
-                  </h2>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white w-full sm:max-w-5xl h-[100vh] sm:h-auto sm:max-h-[90vh] rounded-t-[32px] sm:rounded-[32px] overflow-hidden flex flex-col">
+            {/* HEADER */}
+            <div className="border-b border-slate-100 px-5 sm:px-8 py-5 sm:py-6 flex items-start justify-between shrink-0">
+              <div className="pr-4">
+                <div
+                  className={`inline-flex px-3 py-1 rounded-full text-xs font-medium mb-4 ${
+                    statusStyles[selectedTask.status]
+                  }`}
+                >
+                  {selectedTask.status}
                 </div>
 
-                <button
-                  onClick={() => setSelectedTask(null)}
-                  className="w-12 h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
-                >
-                  <X size={20} />
-                </button>
+                <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 leading-tight">
+                  {selectedTask.taskItem?.title}
+                </h2>
+
+                <p className="text-sm text-slate-500 mt-2 leading-6">
+                  {selectedTask.taskItem?.description}
+                </p>
               </div>
 
-              {/* BODY */}
-              <div className="p-6 md:p-8">
-                {/* DESCRIPTION */}
-                <div className="mb-8">
-                  <h3 className="text-xl font-bold mb-3">
-                    Description
-                  </h3>
+              <button
+                onClick={() => setSelectedTask(null)}
+                className="h-10 w-10 rounded-xl hover:bg-slate-100 text-slate-500 transition shrink-0"
+              >
+                ✕
+              </button>
+            </div>
 
-                  <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5">
-                    <p className="text-slate-700 leading-relaxed">
-                      {selectedTask?.taskItem?.description}
-                    </p>
-                  </div>
+            {/* BODY */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 p-5 sm:p-8 overflow-y-auto">
+              {/* LEFT */}
+              <div className="space-y-5">
+                <SimpleCard title="Instructions">
+                  <p className="text-sm text-slate-600 leading-7 whitespace-pre-line">
+                    {selectedTask.taskItem?.instructions ||
+                      "No instructions added"}
+                  </p>
+                </SimpleCard>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InfoCard
+                    title="Theme"
+                    value={
+                      selectedTask.taskItem?.theme || "-"
+                    }
+                  />
+
+                  <InfoCard
+                    title="Progress"
+                    value={`${progressValue}%`}
+                  />
+
+                  <InfoCard
+                    title="Manager"
+                    value={
+                      selectedTask.taskItem?.task?.createdBy
+                        ?.name || "-"
+                    }
+                  />
+
+                  <InfoCard
+                    title="Main Task"
+                    value={
+                      selectedTask.taskItem?.task?.title ||
+                      "-"
+                    }
+                  />
                 </div>
 
-                {/* INSTRUCTIONS */}
-                <div className="mb-8">
-                  <h3 className="text-xl font-bold mb-3">
-                    Instructions
-                  </h3>
-
-                  <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5">
-                    <p className="text-slate-700 whitespace-pre-line">
-                      {selectedTask?.taskItem?.instructions}
-                    </p>
-                  </div>
-                </div>
-
-                {/* LINK */}
-                {selectedTask?.taskItem?.referenceLink && (
-                  <div className="mb-8">
+                {selectedTask.taskItem?.task
+                  ?.referenceLink && (
+                  <SimpleCard title="Reference Link">
                     <a
                       href={
-                        selectedTask?.taskItem?.referenceLink
+                        selectedTask.taskItem.task
+                          .referenceLink
                       }
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-3 px-5 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 font-semibold"
+                      className="text-sm text-slate-900 underline break-all"
                     >
-                      <Link2 size={18} />
-                      Open Reference Link
+                      {
+                        selectedTask.taskItem.task
+                          .referenceLink
+                      }
                     </a>
-                  </div>
+                  </SimpleCard>
                 )}
+              </div>
 
-                {/* SUBMIT */}
-                {!selectedTask?.submission && (
-                  <div className="border-t border-slate-200 pt-8">
-                    <h3 className="text-2xl font-black mb-5">
-                      Submit Task
-                    </h3>
+              {/* RIGHT */}
+              <div className="space-y-5">
+                {/* PROGRESS */}
+                <div className="bg-slate-50 border border-slate-200 rounded-[28px] p-5 sm:p-6">
+                  <div className="flex items-center justify-between mb-5 gap-4">
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        Update Progress
+                      </p>
 
-                    <div className="space-y-5">
-                      <input
-                        type="text"
-                        placeholder="Paste Google Drive Link"
-                        value={driveLink}
-                        onChange={(e) =>
-                          setDriveLink(e.target.value)
-                        }
-                        className="w-full h-14 rounded-2xl border border-slate-200 px-5 outline-none focus:border-black"
-                      />
-
-                      <textarea
-                        placeholder="Remarks"
-                        value={remarks}
-                        onChange={(e) =>
-                          setRemarks(e.target.value)
-                        }
-                        className="w-full min-h-[140px] rounded-3xl border border-slate-200 p-5 outline-none focus:border-black resize-none"
-                      />
-
-                      <button
-                        onClick={handleSubmitTask}
-                        disabled={submitting}
-                        className="h-14 px-8 rounded-2xl bg-black text-white font-bold flex items-center gap-3 hover:opacity-90"
-                      >
-                        <Send size={18} />
-
-                        {submitting
-                          ? "Submitting..."
-                          : "Submit Task"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ALREADY SUBMITTED */}
-                {selectedTask?.submission && (
-                  <div className="border border-emerald-200 bg-emerald-50 rounded-3xl p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <CheckCircle2
-                        size={24}
-                        className="text-emerald-600"
-                      />
-
-                      <h3 className="text-xl font-bold text-emerald-700">
-                        Task Already Submitted
+                      <h3 className="text-3xl sm:text-4xl font-semibold text-slate-900 mt-2">
+                        {progressValue}%
                       </h3>
                     </div>
+                  </div>
 
-                    <p className="text-slate-700 mb-4">
-                      Your task submission has been recorded.
-                    </p>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={progressValue}
+                    onChange={(e) =>
+                      setProgressValue(
+                        parseInt(e.target.value),
+                      )
+                    }
+                    className="w-full accent-slate-900"
+                  />
 
-                    <div className="space-y-3">
+                  <button
+                    onClick={handleSaveProgress}
+                    disabled={savingProgress}
+                    className="h-12 w-full rounded-2xl bg-slate-900 text-white text-sm font-medium mt-6 hover:bg-slate-800 transition"
+                  >
+                    {savingProgress
+                      ? "Saving..."
+                      : "Save Progress"}
+                  </button>
+                </div>
+
+                {/* SUBMISSION */}
+                {selectedTask.submission ? (
+                  <SimpleCard title="Submitted Work">
+                    <div className="space-y-5">
                       <div>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-xs text-slate-400 mb-2">
                           Drive Link
                         </p>
 
                         <a
                           href={
-                            selectedTask?.submission
-                              ?.driveLink
+                            selectedTask.submission
+                              .driveLink
                           }
                           target="_blank"
                           rel="noreferrer"
-                          className="text-blue-600 font-semibold break-all"
+                          className="text-sm text-slate-900 underline break-all"
                         >
                           {
-                            selectedTask?.submission
-                              ?.driveLink
+                            selectedTask.submission
+                              .driveLink
                           }
                         </a>
                       </div>
 
                       <div>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-xs text-slate-400 mb-2">
                           Remarks
                         </p>
 
-                        <p className="font-medium text-slate-700">
-                          {
-                            selectedTask?.submission
-                              ?.remarks
-                          }
+                        <p className="text-sm text-slate-600 leading-7">
+                          {selectedTask.submission
+                            .remarks || "-"}
                         </p>
                       </div>
+
+                      <div>
+                        <p className="text-xs text-slate-400 mb-2">
+                          Submitted On
+                        </p>
+
+                        <p className="text-sm text-slate-600 break-words">
+                          {new Date(
+                            selectedTask.submission.submittedAt,
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </SimpleCard>
+                ) : (
+                  <div className="bg-white border border-slate-200 rounded-[28px] p-5 sm:p-6">
+                    <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-6">
+                      Submit Work
+                    </h3>
+
+                    <div className="space-y-5">
+                      <div>
+                        <label className="text-sm text-slate-500 block mb-2">
+                          Drive Link
+                        </label>
+
+                        <input
+                          type="text"
+                          value={driveLink}
+                          onChange={(e) =>
+                            setDriveLink(e.target.value)
+                          }
+                          placeholder="https://drive.google.com/"
+                          className="w-full h-12 rounded-2xl border border-slate-200 px-4 text-sm outline-none focus:border-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm text-slate-500 block mb-2">
+                          Remarks
+                        </label>
+
+                        <textarea
+                          rows={4}
+                          value={remarks}
+                          onChange={(e) =>
+                            setRemarks(e.target.value)
+                          }
+                          placeholder="Write remarks..."
+                          className="w-full rounded-2xl border border-slate-200 p-4 text-sm outline-none resize-none focus:border-slate-400"
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleSubmitTask}
+                        disabled={submitting}
+                        className="h-12 w-full rounded-2xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition"
+                      >
+                        {submitting
+                          ? "Submitting..."
+                          : "Submit Task"}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -500,7 +481,127 @@ const EmployeeTaskPage = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
+  );
+};
+
+/* COMPONENTS */
+
+const StatsCard = ({ title, value }) => {
+  return (
+    <div className="bg-white border border-slate-200 rounded-[28px] p-5 sm:p-6">
+      <p className="text-sm text-slate-500 mb-3">
+        {title}
+      </p>
+
+      <h3 className="text-2xl sm:text-3xl font-semibold text-slate-900">
+        {value}
+      </h3>
+    </div>
+  );
+};
+
+const TaskCard = ({ item, onOpen }) => {
+  return (
+    <div className="bg-white border border-slate-200 rounded-[28px] p-5 sm:p-6 flex flex-col hover:border-slate-300 hover:shadow-sm transition-all duration-300">
+      {/* STATUS */}
+      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-medium ${
+            statusStyles[item.status]
+          }`}
+        >
+          {item.status}
+        </span>
+
+        <span className="text-sm text-slate-500">
+          {item.progress || 0}%
+        </span>
+      </div>
+
+      {/* TITLE */}
+      <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 leading-snug">
+        {item.taskItem?.title}
+      </h2>
+
+      {/* DESCRIPTION */}
+      <p className="text-sm text-slate-500 leading-7 mt-4 line-clamp-3">
+        {item.taskItem?.description}
+      </p>
+
+      {/* INFO */}
+      <div className="space-y-3 mt-6">
+        {item.taskItem?.theme && (
+          <div className="bg-slate-50 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm text-slate-500">
+              Theme
+            </span>
+
+            <span className="text-sm font-medium text-slate-900 text-right">
+              {item.taskItem.theme}
+            </span>
+          </div>
+        )}
+
+        {item.taskItem?.task?.createdBy?.name && (
+          <div className="bg-slate-50 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm text-slate-500">
+              Manager
+            </span>
+
+            <span className="text-sm font-medium text-slate-900 text-right">
+              {item.taskItem.task.createdBy.name}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* PROGRESS */}
+      <div className="mt-6">
+        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div
+            style={{
+              width: `${item.progress || 0}%`,
+            }}
+            className="h-full bg-slate-900 rounded-full transition-all duration-500"
+          />
+        </div>
+      </div>
+
+      {/* BUTTON */}
+      <button
+        onClick={onOpen}
+        className="h-12 mt-7 rounded-2xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition"
+      >
+        Open Task
+      </button>
+    </div>
+  );
+};
+
+const SimpleCard = ({ title, children }) => {
+  return (
+    <div className="bg-white border border-slate-200 rounded-[28px] p-5 sm:p-6">
+      <h3 className="text-lg font-semibold text-slate-900 mb-5">
+        {title}
+      </h3>
+
+      {children}
+    </div>
+  );
+};
+
+const InfoCard = ({ title, value }) => {
+  return (
+    <div className="bg-white border border-slate-200 rounded-[28px] p-5">
+      <p className="text-sm text-slate-500 mb-2">
+        {title}
+      </p>
+
+      <p className="text-sm font-semibold text-slate-900 break-words">
+        {value}
+      </p>
+    </div>
   );
 };
 

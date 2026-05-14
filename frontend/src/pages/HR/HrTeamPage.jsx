@@ -12,10 +12,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-import {
-  motion,
-  AnimatePresence,
-} from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { useNavigate } from "react-router-dom";
 
@@ -23,6 +20,7 @@ import { useTeamData } from "./hooks/useTeamData";
 
 import HrAddEmployee from "./HrAddEmployee";
 import HrAddManager from "./HrAddManager";
+import HrAddDepartment from "./HrAddDepartment.jsx";
 
 const CARD_VARIANTS = {
   hidden: {
@@ -44,12 +42,7 @@ const CARD_VARIANTS = {
 export default function HrTeamPage() {
   const navigate = useNavigate();
 
-  const {
-    staff,
-    loading,
-    error,
-    refresh,
-  } = useTeamData();
+  const { staff, loading, error, refresh } = useTeamData();
 
   const [search, setSearch] = useState("");
 
@@ -71,30 +64,21 @@ export default function HrTeamPage() {
     return term
       ? staff.filter(
           (p) =>
-            p.name
-              ?.toLowerCase()
-              .includes(term) ||
-            p.department
-              ?.toLowerCase()
-              .includes(term) ||
-            p.role
-              ?.toLowerCase()
-              .includes(term),
+            p.name?.toLowerCase().includes(term) ||
+            p.department?.toLowerCase().includes(term) ||
+            p.role?.toLowerCase().includes(term),
         )
       : staff;
   }, [staff, search]);
 
-  const handleAction = useCallback(
-    (e, type, data = null) => {
-      e.stopPropagation();
+  const handleAction = useCallback((e, type, data = null) => {
+    e.stopPropagation();
 
-      setModal({
-        type,
-        data,
-      });
-    },
-    [],
-  );
+    setModal({
+      type,
+      data,
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -111,17 +95,22 @@ export default function HrTeamPage() {
             </h1>
 
             <p className="text-sm text-slate-500 mt-2 max-w-xl">
-              Manage employees, managers, and internal team
-              structure.
+              Manage employees, managers, and internal team structure.
             </p>
           </div>
 
           {/* ACTIONS */}
           <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
             <button
-              onClick={(e) =>
-                handleAction(e, "MANAGER")
-              }
+              onClick={(e) => handleAction(e, "DEPARTMENT")}
+              className="w-full sm:w-auto h-12 px-5 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Briefcase size={17} />
+              Add Department
+            </button>
+
+            <button
+              onClick={(e) => handleAction(e, "MANAGER")}
               className="w-full sm:w-auto h-12 px-5 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
             >
               <UserPlus size={17} />
@@ -129,13 +118,11 @@ export default function HrTeamPage() {
             </button>
 
             <button
-              onClick={(e) =>
-                handleAction(e, "EMPLOYEE")
-              }
+              onClick={(e) => handleAction(e, "EMPLOYEE")}
               className="w-full sm:w-auto h-12 px-5 rounded-2xl bg-black hover:bg-slate-800 text-white text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/10"
             >
               <Plus size={17} />
-              Hire Employee
+              Add Employee
             </button>
           </div>
         </header>
@@ -151,9 +138,7 @@ export default function HrTeamPage() {
             type="text"
             placeholder="Search employee, department..."
             value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full h-12 sm:h-13 pl-11 pr-4 rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-700 placeholder:text-slate-400 outline-none focus:border-black focus:ring-4 focus:ring-black/5 transition-all"
           />
         </div>
@@ -171,9 +156,7 @@ export default function HrTeamPage() {
             </div>
           ) : error ? (
             <div className="bg-white border border-red-100 rounded-3xl p-10 text-center">
-              <p className="text-red-500 font-semibold">
-                {error}
-              </p>
+              <p className="text-red-500 font-semibold">{error}</p>
 
               <button
                 onClick={refresh}
@@ -200,34 +183,21 @@ export default function HrTeamPage() {
                       y: -3,
                     }}
                     onClick={() =>
-                      navigate(
-                        `/hr/team/${
-                          person.employeeId ||
-                          person.id
-                        }`,
-                      )
+                      navigate(`/hr/team/${person.employeeId || person.id}`)
                     }
                     className="group relative bg-white border border-slate-200 rounded-[28px] p-5 sm:p-6 cursor-pointer hover:border-slate-300 hover:shadow-xl hover:shadow-black/[0.03] transition-all duration-300 overflow-hidden"
                   >
                     {/* TOP ACTIONS */}
                     <div className="absolute top-4 right-4 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
                       <button
-                        onClick={(e) =>
-                          handleAction(
-                            e,
-                            "EMPLOYEE",
-                            person,
-                          )
-                        }
+                        onClick={(e) => handleAction(e, "EMPLOYEE", person)}
                         className="w-9 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-black transition-all"
                       >
                         <Edit3 size={15} />
                       </button>
 
                       <button
-                        onClick={(e) =>
-                          e.stopPropagation()
-                        }
+                        onClick={(e) => e.stopPropagation()}
                         className="w-9 h-9 rounded-xl border border-slate-200 bg-white hover:bg-red-50 hover:border-red-100 flex items-center justify-center text-slate-500 hover:text-red-500 transition-all"
                       >
                         <Trash2 size={15} />
@@ -239,15 +209,12 @@ export default function HrTeamPage() {
                       <div
                         className={`w-14 h-14 rounded-2xl flex items-center justify-center text-base font-black mb-5 shadow-sm
                         ${
-                          person.role ===
-                          "MANAGER"
+                          person.role === "MANAGER"
                             ? "bg-slate-900 text-white"
                             : "bg-slate-100 text-slate-800"
                         }`}
                       >
-                        {person.name
-                          ?.substring(0, 2)
-                          ?.toUpperCase()}
+                        {person.name?.substring(0, 2)?.toUpperCase()}
                       </div>
 
                       <h3 className="text-lg font-bold text-slate-900 leading-tight line-clamp-1">
@@ -258,17 +225,13 @@ export default function HrTeamPage() {
                         <span
                           className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
                           ${
-                            person.role ===
-                            "MANAGER"
+                            person.role === "MANAGER"
                               ? "bg-black text-white"
                               : "bg-slate-100 text-slate-700"
                           }`}
                         >
-                          {person.role ===
-                          "MANAGER" ? (
-                            <ShieldCheck
-                              size={11}
-                            />
+                          {person.role === "MANAGER" ? (
+                            <ShieldCheck size={11} />
                           ) : (
                             <Users size={11} />
                           )}
@@ -286,8 +249,7 @@ export default function HrTeamPage() {
                         </p>
 
                         <p className="text-sm font-semibold text-slate-700 truncate">
-                          {person.department ||
-                            "General"}
+                          {person?.department?.name || "General"}
                         </p>
                       </div>
 
@@ -302,29 +264,31 @@ export default function HrTeamPage() {
           )}
 
           {/* EMPTY */}
-          {!loading &&
-            filteredStaff.length === 0 && (
-              <div className="bg-white border border-dashed border-slate-200 rounded-[32px] py-20 px-6 text-center mt-4">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                  <Briefcase
-                    size={22}
-                    className="text-slate-400"
-                  />
-                </div>
-
-                <h3 className="text-lg font-bold text-slate-800">
-                  No Employees Found
-                </h3>
-
-                <p className="text-sm text-slate-500 mt-2">
-                  Try changing your search keywords.
-                </p>
+          {!loading && filteredStaff.length === 0 && (
+            <div className="bg-white border border-dashed border-slate-200 rounded-[32px] py-20 px-6 text-center mt-4">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <Briefcase size={22} className="text-slate-400" />
               </div>
-            )}
+
+              <h3 className="text-lg font-bold text-slate-800">
+                No Employees Found
+              </h3>
+
+              <p className="text-sm text-slate-500 mt-2">
+                Try changing your search keywords.
+              </p>
+            </div>
+          )}
         </main>
       </div>
 
       {/* MODALS */}
+      <HrAddDepartment
+        isOpen={modal.type === "DEPARTMENT"}
+        onClose={closeModal}
+        onSave={refresh}
+      />
+
       <HrAddEmployee
         isOpen={modal.type === "EMPLOYEE"}
         initialData={modal.data}

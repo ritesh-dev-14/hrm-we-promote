@@ -2,11 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../../services/api";
 
-import {
-  notifySuccess,
-  notifyError,
-  notifyInfo,
-} from "../../utils/toast";
+import { notifySuccess, notifyError, notifyInfo } from "../../utils/toast";
 
 import {
   ArrowLeft,
@@ -46,9 +42,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const role = (user?.role || user?.data?.role || "")
-    .trim()
-    .toUpperCase();
+  const role = (user?.role || user?.data?.role || "").trim().toUpperCase();
 
   const isHrOrAdmin = role === "HR" || role === "ADMIN";
 
@@ -68,9 +62,9 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
       try {
         setLoading(true);
 
-        const endpoint = apiEndpoint || `/api/manager/tasks/${id}`;
+        const endpoint = `/api/manager/tasks/${id}`;
 
-        const res = await API.get(`http://localhost:8000${endpoint}`, {
+        const res = await API.get(endpoint, {
           headers,
         });
 
@@ -78,8 +72,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
       } catch (err) {
         console.error(err);
 
-        const message =
-          err?.response?.data?.message || "Failed to load task";
+        const message = err?.response?.data?.message || "Failed to load task";
 
         setError(message);
 
@@ -97,17 +90,11 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
     try {
       notifyInfo("Loading users...");
 
-      const [empRes, mgrRes] = await Promise.all([
-        API.get("http://localhost:8000/api/hr/employees", {
-          headers,
-        }),
-
-        API.get("http://localhost:8000/api/hr/managers", {
+      const [mgrRes] = await Promise.all([
+        API.get("/api/hr/managers", {
           headers,
         }),
       ]);
-
-      setEmployees(empRes.data?.data || []);
 
       setManagers(mgrRes.data?.data || []);
     } catch (err) {
@@ -172,11 +159,9 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
         })),
       };
 
-      await API.post(
-        `http://localhost:8000/api/manager/tasks/${task?.id}/assign`,
-        payload,
-        { headers },
-      );
+      await API.post(`/api/manager/tasks/${task?.id}/assign`, payload, {
+        headers,
+      });
 
       notifySuccess("Task assigned successfully");
 
@@ -186,9 +171,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
     } catch (err) {
       console.error(err);
 
-      notifyError(
-        err?.response?.data?.message || "Assignment failed",
-      );
+      notifyError(err?.response?.data?.message || "Assignment failed");
     } finally {
       setAssignLoading(false);
     }
@@ -202,9 +185,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
       (person) =>
         person?.name?.toLowerCase().includes(search.toLowerCase()) ||
         person?.email?.toLowerCase().includes(search.toLowerCase()) ||
-        person?.employeeId
-          ?.toLowerCase()
-          .includes(search.toLowerCase()),
+        person?.employeeId?.toLowerCase().includes(search.toLowerCase()),
     );
   }, [employees, managers, search]);
 
@@ -219,9 +200,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-100 text-red-700 p-4 rounded-lg">
-          {error}
-        </div>
+        <div className="bg-red-100 text-red-700 p-4 rounded-lg">{error}</div>
       </div>
     );
   }
@@ -245,9 +224,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
           {/* TOP */}
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
             <div>
-              <p className="text-sm text-gray-500 mb-2">
-                {task?.status}
-              </p>
+              <p className="text-sm text-gray-500 mb-2">{task?.status}</p>
 
               <h1 className="text-3xl font-bold text-gray-900">
                 {task?.title}
@@ -278,9 +255,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
               </div>
 
               <p className="font-medium">
-                {task?.date
-                  ? new Date(task.date).toLocaleDateString()
-                  : "N/A"}
+                {task?.date ? new Date(task.date).toLocaleDateString() : "N/A"}
               </p>
             </div>
 
@@ -290,9 +265,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
                 Location
               </div>
 
-              <p className="font-medium">
-                {task?.location || "N/A"}
-              </p>
+              <p className="font-medium">{task?.location || "N/A"}</p>
             </div>
 
             <div className="border rounded-xl p-4">
@@ -312,9 +285,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
           {/* INSTRUCTIONS */}
           {task?.instructions && (
             <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-3">
-                Instructions
-              </h2>
+              <h2 className="text-xl font-semibold mb-3">Instructions</h2>
 
               <div className="border rounded-xl p-4 text-gray-700 leading-7">
                 {task.instructions}
@@ -325,9 +296,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
           {/* LINK */}
           {task?.referenceLink && (
             <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-3">
-                Reference Link
-              </h2>
+              <h2 className="text-xl font-semibold mb-3">Reference Link</h2>
 
               <a
                 href={task.referenceLink}
@@ -350,9 +319,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
             {/* HEADER */}
             <div className="flex items-center justify-between p-5 border-b">
               <div>
-                <h2 className="text-xl font-semibold">
-                  Assign Task
-                </h2>
+                <h2 className="text-xl font-semibold">Assign Task</h2>
 
                 <p className="text-sm text-gray-500">
                   Select employees or managers
@@ -395,31 +362,21 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
             {/* USERS */}
             <div className="p-5 max-h-[400px] overflow-y-auto space-y-3">
               {allUsers.map((person) => {
-                const selected = selectedEmployees.includes(
-                  person.employeeId,
-                );
+                const selected = selectedEmployees.includes(person.employeeId);
 
                 return (
                   <div
                     key={person.id}
-                    onClick={() =>
-                      toggleEmployee(person.employeeId)
-                    }
+                    onClick={() => toggleEmployee(person.employeeId)}
                     className={`border rounded-xl p-4 cursor-pointer transition ${
-                      selected
-                        ? "border-black bg-gray-50"
-                        : "border-gray-200"
+                      selected ? "border-black bg-gray-50" : "border-gray-200"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold">
-                          {person.name}
-                        </h3>
+                        <h3 className="font-semibold">{person.name}</h3>
 
-                        <p className="text-sm text-gray-500">
-                          {person.email}
-                        </p>
+                        <p className="text-sm text-gray-500">{person.email}</p>
 
                         <p className="text-xs text-gray-400 mt-1">
                           {person.role} • {person.employeeId}
@@ -456,9 +413,7 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
                   disabled={assignLoading}
                   className="h-10 px-5 bg-black text-white rounded-lg disabled:opacity-50"
                 >
-                  {assignLoading
-                    ? "Assigning..."
-                    : "Assign Task"}
+                  {assignLoading ? "Assigning..." : "Assign Task"}
                 </button>
               </div>
             </div>

@@ -1,0 +1,284 @@
+{
+  "info": {
+    "_postman_id": "hr-api-collection",
+    "name": "HR API Tests",
+    "description": "Complete API testing collection for HR Manager and Employee endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Manager Endpoints",
+      "item": [
+        {
+          "name": "Create Manager",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('manager_id', jsonData.data.id);",
+                  "    pm.environment.set('manager_employee_id', jsonData.data.employeeId);",
+                  "    console.log('Manager ID saved:', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Manager\",\n  \"email\": \"john.manager@company.com\",\n  \"password\": \"SecurePass@123\",\n  \"department\": \"Sales\",\n  \"employeeId\": \"MGR-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/hr/manager",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "manager"]
+            }
+          }
+        },
+        {
+          "name": "Get All Managers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/hr/managers",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "managers"]
+            }
+          }
+        },
+        {
+          "name": "Get Manager by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/hr/manager/{{manager_employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "manager", "{{manager_employee_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Manager",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Manager Updated\",\n  \"email\": \"john.manager.updated@company.com\",\n  \"department\": \"Sales\",\n  \"position\": \"Senior Manager\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/hr/manager/{{manager_employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "manager", "{{manager_employee_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Manager",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/hr/manager/{{manager_employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "manager", "{{manager_employee_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee Endpoints",
+      "item": [
+        {
+          "name": "Create Employee",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('employee_id', jsonData.data.id);",
+                  "    pm.environment.set('employee_employee_id', jsonData.data.employeeId);",
+                  "    console.log('Employee ID saved:', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane.doe@company.com\",\n  \"password\": \"SecurePass@123\",\n  \"department\": \"Sales\",\n  \"position\": \"Sales Executive\",\n  \"role\": \"EMPLOYEE\",\n  \"managerId\": \"{{manager_id}}\",\n  \"employeeId\": \"EMP-{{$timestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/hr/employee",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "employee"]
+            }
+          }
+        },
+        {
+          "name": "Get All Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/hr/employees",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "employees"]
+            }
+          }
+        },
+        {
+          "name": "Get Employee by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/hr/employee/{{employee_employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "employee", "{{employee_employee_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe Updated\",\n  \"email\": \"jane.doe.updated@company.com\",\n  \"department\": \"Marketing\",\n  \"position\": \"Senior Sales Executive\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/hr/employee/{{employee_employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "employee", "{{employee_employee_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Employee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/hr/employee/{{employee_employee_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["hr", "employee", "{{employee_employee_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "YOUR_AUTH_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "manager_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "manager_employee_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employee_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employee_employee_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
