@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import API from "../../services/api";
 import { notifySuccess, notifyError } from "../../utils/toast";
 
+
 function Field({
   label,
   type = "text",
@@ -99,6 +100,10 @@ export default function HrAddEmployee({
     managerId: "",
   });
 
+  const [departments, setDepartments] = useState([]);
+const [fetchingDepartments, setFetchingDepartments] = useState(false);
+
+
   const [managers, setManagers] = useState([]);
   const [fetchingManagers, setFetchingManagers] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -113,6 +118,7 @@ export default function HrAddEmployee({
   useEffect(() => {
     if (isOpen) {
       fetchManagers();
+      fetchDepartments();
 
       if (initialData) {
         setForm(initialData);
@@ -121,7 +127,7 @@ export default function HrAddEmployee({
           name: "",
           email: "",
           password: "",
-          department: "Engineering",
+          department: "",
           position: "",
           managerId: "",
         });
@@ -250,12 +256,19 @@ export default function HrAddEmployee({
               label="Department"
               value={form.department}
               onChange={(e) => updateForm("department", e.target.value)}
+              disabled={fetchingDepartments}
             >
-              <option>Engineering</option>
-              <option>Sales</option>
-              <option>Marketing</option>
-              <option>HR</option>
-              <option>Production</option>
+              <option value="">
+                {fetchingDepartments
+                  ? "Loading departments..."
+                  : "Select Department"}
+              </option>
+
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.name}>
+                  {dept.name}
+                </option>
+              ))}
             </SelectField>
 
             <Field

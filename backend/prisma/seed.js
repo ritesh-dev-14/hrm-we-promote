@@ -169,7 +169,7 @@ async function main() {
       email: "manager@test.com",
       password,
       role: "MANAGER",
-      department: "Production",
+      // department: "Production",
       createdById: hr.id
     }
   });

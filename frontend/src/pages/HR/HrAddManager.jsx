@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { X } from "lucide-react";
 import API from "../../services/api";
 import { notifySuccess, notifyError } from "../../utils/toast";
@@ -47,19 +48,38 @@ function SelectField({ label, value, onChange, children }) {
   );
 }
 
-export default function HrAddManager({
-  isOpen,
-  onClose,
-  onSave,
-}) {
+export default function HrAddManager({ isOpen, onClose, onSave }) {
+  const [departments, setDepartments] = useState([]);
+  const [fetchingDepartments, setFetchingDepartments] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
-    department: "Engineering",
+    department: "",
   });
 
   const [loading, setLoading] = useState(false);
+  const fetchDepartments = async () => {
+    try {
+      setFetchingDepartments(true);
+
+      const res = await API.get("/api/departments");
+
+      setDepartments(res.data?.data || []);
+    } catch (err) {
+      console.error(err);
+
+      notifyError("Failed to load departments");
+    } finally {
+      setFetchingDepartments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchDepartments();
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,8 +102,7 @@ export default function HrAddManager({
 
       onClose();
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.message || "Failed to add manager";
+      const errorMsg = err.response?.data?.message || "Failed to add manager";
 
       notifyError(errorMsg);
     } finally {
@@ -99,9 +118,7 @@ export default function HrAddManager({
         {/* HEADER */}
         <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-start justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              Add Manager
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900">Add Manager</h2>
 
             <p className="text-sm text-slate-500 mt-1">
               Create manager-level access and permissions.
@@ -124,9 +141,7 @@ export default function HrAddManager({
           <Field
             label="Full Name"
             value={form.name}
-            onChange={(v) =>
-              setForm({ ...form, name: v })
-            }
+            onChange={(v) => setForm({ ...form, name: v })}
             placeholder="Jane Smith"
             required
           />
@@ -135,9 +150,7 @@ export default function HrAddManager({
             label="Email Address"
             type="email"
             value={form.email}
-            onChange={(v) =>
-              setForm({ ...form, email: v })
-            }
+            onChange={(v) => setForm({ ...form, email: v })}
             placeholder="jane@company.com"
             required
           />
@@ -146,9 +159,7 @@ export default function HrAddManager({
             label="Password"
             type="password"
             value={form.password}
-            onChange={(v) =>
-              setForm({ ...form, password: v })
-            }
+            onChange={(v) => setForm({ ...form, password: v })}
             placeholder="••••••••"
             required
           />
@@ -163,11 +174,17 @@ export default function HrAddManager({
               })
             }
           >
-            <option>Engineering</option>
-            <option>Sales</option>
-            <option>Marketing</option>
-            <option>Production</option>
-            <option>HR</option>
+            <option value="">
+              {fetchingDepartments
+                ? "Loading departments..."
+                : "Select Department"}
+            </option>
+
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.name}>
+                {dept.name}
+              </option>
+            ))}
           </SelectField>
 
           {/* FOOTER */}
