@@ -79,7 +79,10 @@ const ManagerTaskDetailPage = () => {
   const [subtaskForm, setSubtaskForm] = useState({
     title: "",
     description: "",
+    theme: "",
     instructions: "",
+    referenceLink: "",
+    order: "",
   });
 
   const loadPage = async () => {
@@ -159,7 +162,10 @@ const ManagerTaskDetailPage = () => {
       setSubtaskForm({
         title: "",
         description: "",
+        theme: "",
         instructions: "",
+        referenceLink: "",
+        order: "",
       });
 
       notifySuccess("Subtask created");
@@ -440,51 +446,133 @@ const ManagerTaskDetailPage = () => {
           </div>
 
           {/* CREATE FORM */}
-          <div className="bg-slate-50 border border-slate-200 rounded-[28px] p-5">
+          <div className="bg-slate-50 border border-slate-200 rounded-[28px] p-4 md:p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Subtask title"
-                value={subtaskForm.title}
-                onChange={(e) =>
-                  setSubtaskForm({
-                    ...subtaskForm,
-                    title: e.target.value,
-                  })
-                }
-                className="h-12 bg-white border border-slate-200 rounded-2xl px-4 outline-none focus:border-black"
-              />
+              {/* TITLE */}
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">
+                  Title
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Enter task title"
+                  value={subtaskForm.title}
+                  onChange={(e) =>
+                    setSubtaskForm({
+                      ...subtaskForm,
+                      title: e.target.value,
+                    })
+                  }
+                  className="w-full h-12 bg-white border border-slate-200 rounded-2xl px-4 outline-none focus:border-black text-sm"
+                />
+              </div>
+
+              {/* DESCRIPTION */}
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">
+                  Description
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Enter description"
+                  value={subtaskForm.description}
+                  onChange={(e) =>
+                    setSubtaskForm({
+                      ...subtaskForm,
+                      description: e.target.value,
+                    })
+                  }
+                  className="w-full h-12 bg-white border border-slate-200 rounded-2xl px-4 outline-none focus:border-black text-sm"
+                />
+              </div>
+
+              {/* THEME */}
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">
+                  Theme
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Golden / Premium / etc"
+                  value={subtaskForm.theme}
+                  onChange={(e) =>
+                    setSubtaskForm({
+                      ...subtaskForm,
+                      theme: e.target.value,
+                    })
+                  }
+                  className="w-full h-12 bg-white border border-slate-200 rounded-2xl px-4 outline-none focus:border-black text-sm"
+                />
+              </div>
+
+              {/* ORDER */}
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">
+                  Order
+                </label>
+
+                <input
+                  type="number"
+                  placeholder="1"
+                  value={subtaskForm.order}
+                  onChange={(e) =>
+                    setSubtaskForm({
+                      ...subtaskForm,
+                      order: e.target.value,
+                    })
+                  }
+                  className="w-full h-12 bg-white border border-slate-200 rounded-2xl px-4 outline-none focus:border-black text-sm"
+                />
+              </div>
+            </div>
+
+            {/* REFERENCE LINK */}
+            <div className="mt-4">
+              <label className="text-sm font-medium text-slate-700 block mb-2">
+                Reference Link
+              </label>
 
               <input
                 type="text"
-                placeholder="Description"
-                value={subtaskForm.description}
+                placeholder="https://drive.google.com/test"
+                value={subtaskForm.referenceLink}
                 onChange={(e) =>
                   setSubtaskForm({
                     ...subtaskForm,
-                    description: e.target.value,
+                    referenceLink: e.target.value,
                   })
                 }
-                className="h-12 bg-white border border-slate-200 rounded-2xl px-4 outline-none focus:border-black"
+                className="w-full h-12 bg-white border border-slate-200 rounded-2xl px-4 outline-none focus:border-black text-sm"
               />
             </div>
 
-            <textarea
-              placeholder="Instructions"
-              value={subtaskForm.instructions}
-              onChange={(e) =>
-                setSubtaskForm({
-                  ...subtaskForm,
-                  instructions: e.target.value,
-                })
-              }
-              className="w-full min-h-32 mt-4 bg-white border border-slate-200 rounded-2xl p-4 outline-none resize-none focus:border-black"
-            />
+            {/* INSTRUCTIONS */}
+            <div className="mt-4">
+              <label className="text-sm font-medium text-slate-700 block mb-2">
+                Instructions
+              </label>
 
+              <textarea
+                placeholder="Write instructions..."
+                value={subtaskForm.instructions}
+                onChange={(e) =>
+                  setSubtaskForm({
+                    ...subtaskForm,
+                    instructions: e.target.value,
+                  })
+                }
+                className="w-full min-h-[120px] bg-white border border-slate-200 rounded-2xl p-4 outline-none resize-none focus:border-black text-sm"
+              />
+            </div>
+
+            {/* BUTTON */}
             <button
               onClick={handleCreateSubtask}
               disabled={creatingSubtask}
-              className="h-11 px-5 rounded-2xl bg-black text-white text-sm font-bold mt-4"
+              className="h-12 px-6 rounded-2xl bg-black text-white text-sm font-semibold mt-5 w-full md:w-auto"
             >
               {creatingSubtask ? "Creating..." : "Create Subtask"}
             </button>
@@ -711,6 +799,52 @@ const ManagerTaskDetailPage = () => {
                                 )}
                               </div>
                             </div>
+
+                            {/* SUBMISSION DETAILS */}
+                            {emp.submission && (
+                              <div className="mt-5 bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+                                <h4 className="font-bold text-slate-900 text-sm">
+                                  Submission Details
+                                </h4>
+
+                                <div>
+                                  <p className="text-xs text-slate-500 uppercase font-semibold mb-1">
+                                    Drive Link
+                                  </p>
+
+                                  <a
+                                    href={emp.submission.driveLink}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-blue-600 text-sm font-semibold break-all"
+                                  >
+                                    {emp.submission.driveLink}
+                                  </a>
+                                </div>
+
+                                <div>
+                                  <p className="text-xs text-slate-500 uppercase font-semibold mb-1">
+                                    Remarks
+                                  </p>
+
+                                  <p className="text-sm text-slate-700">
+                                    {emp.submission.remarks || "-"}
+                                  </p>
+                                </div>
+
+                                <div>
+                                  <p className="text-xs text-slate-500 uppercase font-semibold mb-1">
+                                    Submitted On
+                                  </p>
+
+                                  <p className="text-sm text-slate-700">
+                                    {new Date(
+                                      emp.submission.submittedAt,
+                                    ).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
 
                             {/* COMPLETED */}
                             {emp.completedAt && (

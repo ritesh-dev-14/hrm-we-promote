@@ -20,14 +20,51 @@ export const fetchTaskById = async (id) => {
 };
 
 export const createTaskItem = async (taskId, payload) => {
-  try {
-    const response = await API.post(`/api/task-items/${taskId}`, payload);
 
-    return response.data.data;
+  try {
+
+    const formattedPayload = {
+
+      title: payload.title?.trim(),
+
+      description: payload.description?.trim(),
+
+      theme: payload.theme?.trim(),
+
+      instructions: payload.instructions?.trim(),
+
+      referenceLink: payload.referenceLink?.trim(),
+
+      order: Number(payload.order),
+
+    };
+
+    console.log("CREATE TASK ITEM PAYLOAD =>", formattedPayload);
+
+    const response = await API.post(
+
+      `/api/task-items/${taskId}`,
+
+      formattedPayload,
+
+    );
+
+    return response.data?.data;
+
   } catch (error) {
-    console.error(error);
+
+    console.error(
+
+      "Create Task Item Error:",
+
+      error?.response?.data || error.message,
+
+    );
+
     throw error;
+
   }
+
 };
 
 export const assignTaskItem = async (subtaskId, employeeIds = []) => {
