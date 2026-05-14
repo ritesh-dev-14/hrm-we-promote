@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
-import API from "../../services/api";
-import { notifySuccess, notifyError } from "../../utils/toast";
+import { X, ChevronDown } from "lucide-react";
 
+import API from "../../services/api";
+
+import {
+  notifySuccess,
+  notifyError,
+} from "../../utils/toast";
 
 function Field({
   label,
@@ -16,27 +20,43 @@ function Field({
   return (
     <div className="space-y-1.5">
       <label className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label}{" "}
+        {required && (
+          <span className="text-red-500">*</span>
+        )}
       </label>
 
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
         placeholder={placeholder}
         required={required}
         className={`w-full h-12 sm:h-13 bg-[#F8FAFC] border rounded-2xl px-4 text-sm font-medium text-slate-700 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 ${
-          error ? "border-red-500" : "border-slate-200"
+          error
+            ? "border-red-500"
+            : "border-slate-200"
         }`}
       />
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="text-xs text-red-500">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
-import { ChevronDown } from "lucide-react";
 
-function SelectField({ label, value, onChange, children, disabled = false }) {
+function SelectField({
+  label,
+  value,
+  onChange,
+  children,
+  disabled = false,
+}) {
   return (
     <div className="space-y-1.5">
       <label className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1">
@@ -70,15 +90,16 @@ function SelectField({ label, value, onChange, children, disabled = false }) {
             focus:ring-black/5
             disabled:opacity-50
             cursor-pointer
-            shadow-[0_1px_2px_rgba(0,0,0,0.02)]
           "
         >
           {children}
         </select>
 
-        {/* ICON */}
         <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-          <ChevronDown size={18} className="text-slate-400" />
+          <ChevronDown
+            size={18}
+            className="text-slate-400"
+          />
         </div>
       </div>
     </div>
@@ -95,68 +116,131 @@ export default function HrAddEmployee({
     name: "",
     email: "",
     password: "",
-    department: "Engineering",
+    department: "",
     position: "",
     managerId: "",
   });
 
-  const [departments, setDepartments] = useState([]);
-const [fetchingDepartments, setFetchingDepartments] = useState(false);
+  const [departments, setDepartments] =
+    useState([]);
 
+  const [fetchingDepartments, setFetchingDepartments] =
+    useState(false);
 
-  const [managers, setManagers] = useState([]);
-  const [fetchingManagers, setFetchingManagers] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [managers, setManagers] =
+    useState([]);
+
+  const [fetchingManagers, setFetchingManagers] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
 
   const updateForm = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
 
     if (error) setError("");
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchManagers();
-      fetchDepartments();
+  //
+  // 🔥 FETCH DEPARTMENTS
+  //
+  const fetchDepartments = async () => {
+    try {
+      setFetchingDepartments(true);
 
-      if (initialData) {
-        setForm(initialData);
-      } else {
-        setForm({
-          name: "",
-          email: "",
-          password: "",
-          department: "",
-          position: "",
-          managerId: "",
-        });
-      }
+      const res = await API.get(
+        "/api/departments"
+      );
 
-      setError("");
+      setDepartments(
+        res.data?.data || []
+      );
+    } catch (err) {
+      console.error(err);
+
+      notifyError(
+        "Failed to load departments"
+      );
+    } finally {
+      setFetchingDepartments(false);
     }
-  }, [isOpen, initialData]);
+  };
 
+  //
+  // 🔥 FETCH MANAGERS
+  //
   const fetchManagers = async () => {
     try {
       setFetchingManagers(true);
 
-      const res = await API.get("/api/hr/managers");
+      const res = await API.get(
+        "/api/hr/managers"
+      );
 
-      setManagers(res.data.data || []);
+      setManagers(
+        res.data?.data || []
+      );
     } catch (err) {
       console.error(err);
 
-      notifyError("Could not load managers list.");
+      notifyError(
+        "Could not load managers list."
+      );
     } finally {
       setFetchingManagers(false);
     }
   };
 
+  //
+  // 🔥 USE EFFECT
+  //
+  useEffect(() => {
+    if (!isOpen) return;
+
+    fetchManagers();
+    fetchDepartments();
+
+    if (initialData) {
+      setForm({
+        name: initialData.name || "",
+        email: initialData.email || "",
+        password: "",
+        department:
+          initialData.department?.name || "",
+        position:
+          initialData.position || "",
+        managerId:
+          initialData.managerId || "",
+      });
+    } else {
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        department: "",
+        position: "",
+        managerId: "",
+      });
+    }
+
+    setError("");
+  }, [isOpen, initialData]);
+
+  //
+  // 🔥 SUBMIT
+  //
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     setLoading(true);
+
     setError("");
 
     try {
@@ -167,27 +251,40 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
         role: "EMPLOYEE",
         department: form.department,
         position: form.position,
-        ...(form.managerId && { managerId: form.managerId }),
+        ...(form.managerId && {
+          managerId: form.managerId,
+        }),
       };
 
-      const res = await API.post("/api/hr/employee", payload);
+      const res = await API.post(
+        "/api/hr/employee",
+        payload
+      );
 
-      notifySuccess("Employee added successfully!");
+      notifySuccess(
+        "Employee added successfully!"
+      );
 
       setForm({
         name: "",
         email: "",
         password: "",
-        department: "Engineering",
+        department: "",
         position: "",
         managerId: "",
       });
 
       onClose();
 
-      if (onSave) onSave(res.data.data);
+      if (onSave) {
+        onSave(res.data.data);
+      }
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Failed to add employee";
+      console.error(err);
+
+      const errorMsg =
+        err.response?.data?.message ||
+        "Failed to add employee";
 
       setError(errorMsg);
 
@@ -201,14 +298,17 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
 
   return (
     <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-slate-950/50 backdrop-blur-md p-0 sm:p-4">
-      <div className="w-full sm:max-w-2xl bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-screen overflow-y-auto">
+      <div className="w-full sm:max-w-2xl bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden max-h-screen overflow-y-auto">
         {/* HEADER */}
         <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-start justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Add Employee</h2>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Add Employee
+            </h2>
 
             <p className="text-sm text-slate-500 mt-1">
-              Create and manage employee account access.
+              Create and manage employee
+              account access.
             </p>
           </div>
 
@@ -216,7 +316,10 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
             onClick={onClose}
             className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition-all"
           >
-            <X size={20} className="text-slate-500" />
+            <X
+              size={20}
+              className="text-slate-500"
+            />
           </button>
         </div>
 
@@ -228,7 +331,9 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
           <Field
             label="Full Name"
             value={form.name}
-            onChange={(v) => updateForm("name", v)}
+            onChange={(v) =>
+              updateForm("name", v)
+            }
             placeholder="John Doe"
             required
           />
@@ -237,7 +342,9 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
             label="Email"
             type="email"
             value={form.email}
-            onChange={(v) => updateForm("email", v)}
+            onChange={(v) =>
+              updateForm("email", v)
+            }
             placeholder="john@company.com"
             required
           />
@@ -246,7 +353,9 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
             label="Password"
             type="password"
             value={form.password}
-            onChange={(v) => updateForm("password", v)}
+            onChange={(v) =>
+              updateForm("password", v)
+            }
             placeholder="••••••••"
             required
           />
@@ -255,7 +364,12 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
             <SelectField
               label="Department"
               value={form.department}
-              onChange={(e) => updateForm("department", e.target.value)}
+              onChange={(e) =>
+                updateForm(
+                  "department",
+                  e.target.value
+                )
+              }
               disabled={fetchingDepartments}
             >
               <option value="">
@@ -265,7 +379,10 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
               </option>
 
               {departments.map((dept) => (
-                <option key={dept.id} value={dept.name}>
+                <option
+                  key={dept.id}
+                  value={dept.name}
+                >
                   {dept.name}
                 </option>
               ))}
@@ -274,7 +391,12 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
             <Field
               label="Position"
               value={form.position}
-              onChange={(v) => updateForm("position", v)}
+              onChange={(v) =>
+                updateForm(
+                  "position",
+                  v
+                )
+              }
               placeholder="Frontend Developer"
               required
             />
@@ -283,16 +405,26 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
           <SelectField
             label="Assign Manager"
             value={form.managerId}
-            onChange={(e) => updateForm("managerId", e.target.value)}
+            onChange={(e) =>
+              updateForm(
+                "managerId",
+                e.target.value
+              )
+            }
             disabled={fetchingManagers}
           >
             <option value="">
-              {fetchingManagers ? "Loading managers..." : "-- No Manager --"}
+              {fetchingManagers
+                ? "Loading managers..."
+                : "-- No Manager --"}
             </option>
 
             {managers.map((manager) => (
-              <option key={manager.id} value={manager.id}>
-                {manager.name} ({manager.department})
+              <option
+                key={manager.id}
+                value={manager.id}
+              >
+                {manager.name}
               </option>
             ))}
           </SelectField>
@@ -316,9 +448,11 @@ const [fetchingDepartments, setFetchingDepartments] = useState(false);
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold shadow-lg shadow-indigo-500/20 transition-all"
+              className="w-full sm:flex-1 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold transition-all"
             >
-              {loading ? "Creating..." : "Create Employee"}
+              {loading
+                ? "Creating..."
+                : "Create Employee"}
             </button>
           </div>
         </form>

@@ -249,7 +249,7 @@ export default function HrTeamPage() {
                         </p>
 
                         <p className="text-sm font-semibold text-slate-700 truncate">
-                          {person.department || "General"}
+                          {person?.department?.name || "General"}
                         </p>
                       </div>
 
@@ -288,7 +288,7 @@ export default function HrTeamPage() {
         onClose={closeModal}
         onSave={refresh}
       />
-      
+
       <HrAddEmployee
         isOpen={modal.type === "EMPLOYEE"}
         initialData={modal.data}

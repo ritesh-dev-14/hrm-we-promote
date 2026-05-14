@@ -31,7 +31,11 @@ exports.createManager = async (user, body) => {
           },
         },
       }),
-      createdById: user.id,
+      createdBy: {
+        connect: {
+          id: user.id,
+        },
+      },
     },
     select: {
       id: true,
@@ -89,7 +93,7 @@ exports.getManager = async (employeeId) => {
 
 // exports.updateManager = async (employeeId, body) => {
 //   const manager = await prisma.user.findUnique({ where: { employeeId } });
-  
+
 //   if (!manager) {
 //     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
 //   }
@@ -113,27 +117,17 @@ exports.getManager = async (employeeId) => {
 //   });
 // };
 
-exports.updateManager = async (
-  employeeId,
-  body
-) => {
-  const manager =
-    await prisma.user.findUnique({
-      where: { employeeId },
-    });
+exports.updateManager = async (employeeId, body) => {
+  const manager = await prisma.user.findUnique({
+    where: { employeeId },
+  });
 
   if (!manager) {
-    throw new ApiError(
-      404,
-      ERRORS.USER.NOT_FOUND
-    );
+    throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
   if (manager.role !== "MANAGER") {
-    throw new ApiError(
-      400,
-      ERRORS.HR.INVALID_USER_TYPE
-    );
+    throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 
   //
@@ -142,11 +136,7 @@ exports.updateManager = async (
   let hashedPassword;
 
   if (body.password) {
-    hashedPassword =
-      await bcrypt.hash(
-        body.password,
-        10
-      );
+    hashedPassword = await bcrypt.hash(body.password, 10);
   }
 
   return prisma.user.update({
@@ -186,7 +176,7 @@ exports.updateManager = async (
 
 exports.deleteManager = async (employeeId) => {
   const manager = await prisma.user.findUnique({ where: { employeeId } });
-  
+
   if (!manager) {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
@@ -221,7 +211,7 @@ exports.deleteManager = async (employeeId) => {
 //     if (manager.role !== "MANAGER") {
 //       throw new ApiError(400, "Assigned user is not a manager");
 //     }
-    
+
 //     // 🔥 Use manager's UUID id for the relation
 //     body.managerId = manager.id;
 //   }
@@ -257,7 +247,6 @@ exports.deleteManager = async (employeeId) => {
 
 //   return newUser;
 // };
-
 
 exports.createEmployee = async (user, body) => {
   // 🔹 Check duplicate email
@@ -309,7 +298,11 @@ exports.createEmployee = async (user, body) => {
       position: body.position,
 
       managerId: managerId, // ✅ clean
-      createdById: user.id,
+      createdBy: {
+        connect: {
+          id: user.id,
+        },
+      },
     },
     select: {
       id: true,
@@ -337,7 +330,6 @@ exports.createEmployee = async (user, body) => {
   return newUser;
 };
 
-
 exports.getEmployees = async (user) => {
   return prisma.user.findMany({
     where: {
@@ -354,8 +346,8 @@ exports.getEmployees = async (user) => {
       managerId: true,
       manager: {
         select: {
-          name: true
-        }
+          name: true,
+        },
       },
       createdAt: true,
     },
@@ -376,8 +368,8 @@ exports.getEmployee = async (employeeId) => {
       managerId: true,
       manager: {
         select: {
-          name: true
-        }
+          name: true,
+        },
       },
       createdAt: true,
     },
@@ -392,7 +384,7 @@ exports.getEmployee = async (employeeId) => {
 
 // exports.updateEmployee = async (employeeId, body) => {
 //   const employee = await prisma.user.findUnique({ where: { employeeId } });
-  
+
 //   if (!employee) {
 //     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
 //   }
@@ -418,27 +410,17 @@ exports.getEmployee = async (employeeId) => {
 //   });
 // };
 
-exports.updateEmployee = async (
-  employeeId,
-  body
-) => {
-  const employee =
-    await prisma.user.findUnique({
-      where: { employeeId },
-    });
+exports.updateEmployee = async (employeeId, body) => {
+  const employee = await prisma.user.findUnique({
+    where: { employeeId },
+  });
 
   if (!employee) {
-    throw new ApiError(
-      404,
-      ERRORS.USER.NOT_FOUND
-    );
+    throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
   if (employee.role !== "EMPLOYEE") {
-    throw new ApiError(
-      400,
-      ERRORS.HR.INVALID_USER_TYPE
-    );
+    throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 
   //
@@ -447,39 +429,27 @@ exports.updateEmployee = async (
   let hashedPassword;
 
   if (body.password) {
-    hashedPassword =
-      await bcrypt.hash(
-        body.password,
-        10
-      );
+    hashedPassword = await bcrypt.hash(body.password, 10);
   }
 
   //
   // 🔥 VALIDATE MANAGER
   //
-  let managerId =
-    employee.managerId;
+  let managerId = employee.managerId;
 
   if (body.managerId) {
-    const manager =
-      await prisma.user.findUnique({
-        where: {
-          id: body.managerId,
-        },
-      });
+    const manager = await prisma.user.findUnique({
+      where: {
+        id: body.managerId,
+      },
+    });
 
     if (!manager) {
-      throw new ApiError(
-        404,
-        ERRORS.HR.MANAGER_NOT_FOUND
-      );
+      throw new ApiError(404, ERRORS.HR.MANAGER_NOT_FOUND);
     }
 
     if (manager.role !== "MANAGER") {
-      throw new ApiError(
-        400,
-        ERRORS.HR.INVALID_USER_TYPE
-      );
+      throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
     }
 
     managerId = manager.id;
@@ -538,7 +508,7 @@ exports.updateEmployee = async (
 
 exports.deleteEmployee = async (employeeId) => {
   const employee = await prisma.user.findUnique({ where: { employeeId } });
-  
+
   if (!employee) {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
@@ -547,7 +517,6 @@ exports.deleteEmployee = async (employeeId) => {
     where: { employeeId },
   });
 };
-
 
 // Get Employee Attandance
 
@@ -637,7 +606,6 @@ exports.getEmployeeAttendanceSummary = async (employeeId) => {
 //     },
 //   });
 // };
-
 
 // // 🔹 APPROVE / REJECT
 // // exports.updateLeaveStatus = async (leaveId, hrId, body) => {
@@ -778,7 +746,6 @@ exports.getEmployeeAttendanceSummary = async (employeeId) => {
 //   });
 // };
 
-
 // // 🔹 EMPLOYEE LEAVE SUMMARY
 // // exports.getEmployeeLeaveSummary = async (employeeId) => {
 // //   const user = await prisma.user.findUnique({
@@ -844,7 +811,6 @@ exports.getEmployeeAttendanceSummary = async (employeeId) => {
 //       : null,
 //   };
 // };
-
 
 // 🔹 normalize date (IMPORTANT)
 const normalizeDate = (d) => {
@@ -975,8 +941,8 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
             date: normalizeDate(date),
             status: "LEAVE",
           },
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -1020,9 +986,9 @@ exports.getEmployeeLeaveSummary = async (employeeId) => {
 
   return {
     totalLeaves: leaves.length,
-    approved: leaves.filter(l => l.status === "APPROVED").length,
-    pending: leaves.filter(l => l.status === "PENDING").length,
-    rejected: leaves.filter(l => l.status === "REJECTED").length,
+    approved: leaves.filter((l) => l.status === "APPROVED").length,
+    pending: leaves.filter((l) => l.status === "PENDING").length,
+    rejected: leaves.filter((l) => l.status === "REJECTED").length,
 
     balance: balance
       ? {

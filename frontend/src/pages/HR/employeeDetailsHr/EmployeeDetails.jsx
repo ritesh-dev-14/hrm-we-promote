@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
+
 import API from "../../../services/api";
+
 import {
   Edit3,
   Save,
@@ -16,104 +18,200 @@ import {
   User,
   Mail,
   Building2,
-  Award
+  Award,
+  ChevronDown,
+  Lock,
 } from "lucide-react";
 
 export default function EmployeeDetails() {
   const { id } = useParams();
 
   const [employee, setEmployee] = useState(null);
+
   const [attendance, setAttendance] = useState([]);
+
   const [leaveData, setLeaveData] = useState(null);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [departments, setDepartments] =
+    useState([]);
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [form, setForm] = useState({});
+  const [error, setError] =
+    useState(null);
+
+  const [isEditing, setIsEditing] =
+    useState(false);
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    department: "",
+    position: "",
+    password: "",
+  });
 
   // ---------------- FETCH ----------------
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const [empRes, attRes, leaveRes] = await Promise.all([
-          API.get(`/api/hr/employee/${id}`),
-          API.get(`/api/attendance/${id}`),
-          API.get(`/api/hr/leave/employee/${id}`),
-        ]);
-
-        const empData = empRes?.data?.data || null;
-        const attData = attRes?.data?.data?.records || [];
-        const leaveStats = leaveRes?.data?.data || null;
-
-        setEmployee(empData);
-        setAttendance(attData);
-        setLeaveData(leaveStats);
-
-        setForm({
-          name: empData?.name || "",
-          email: empData?.email || "",
-          department: empData?.department || "",
-          position: empData?.position || "",
-        });
-      } catch (err) {
-        console.log(err);
-        setError("Failed to load employee details");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [id]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      setError(null);
+
+      const [
+        empRes,
+        attRes,
+        leaveRes,
+        deptRes,
+      ] = await Promise.all([
+        API.get(`/api/hr/employee/${id}`),
+
+        API.get(`/api/attendance/${id}`),
+
+        API.get(
+          `/api/hr/leave/employee/${id}`
+        ),
+
+        API.get(`/api/departments`),
+      ]);
+
+      const empData =
+        empRes?.data?.data || null;
+
+      const attData =
+        attRes?.data?.data?.records || [];
+
+      const leaveStats =
+        leaveRes?.data?.data || null;
+
+      const deptData =
+        deptRes?.data?.data || [];
+
+      setEmployee(empData);
+
+      setAttendance(attData);
+
+      setLeaveData(leaveStats);
+
+      setDepartments(deptData);
+
+      setForm({
+        name: empData?.name || "",
+
+        email: empData?.email || "",
+
+        department:
+          empData?.department?.name || "",
+
+        position:
+          empData?.position || "",
+
+        password: "",
+      });
+    } catch (err) {
+      console.log(err);
+
+      setError(
+        "Failed to load employee details"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ---------------- SAVE ----------------
   const handleSave = async () => {
     try {
       let endpoint = "";
+
       let payload = {};
 
       if (employee.role === "MANAGER") {
         endpoint = `/api/hr/manager/${employee.employeeId}`;
+
         payload = {
           name: form.name,
+
           email: form.email,
+
           department: form.department,
+
+          ...(form.password && {
+            password: form.password,
+          }),
         };
       } else {
         endpoint = `/api/hr/employee/${employee.employeeId}`;
+
         payload = {
           name: form.name,
+
+          email: form.email,
+
+          department: form.department,
+
+          position: form.position,
+
+          ...(form.password && {
+            password: form.password,
+          }),
         };
       }
 
-      const res = await API.put(endpoint, payload);
-      setEmployee(res.data.data);
+      const res = await API.put(
+        endpoint,
+        payload
+      );
+
+      const updated =
+        res?.data?.data;
+
+      setEmployee(updated);
 
       setForm({
-        name: res.data.data?.name || "",
-        email: res.data.data?.email || "",
-        department: res.data.data?.department || "",
-        position: res.data.data?.position || "",
+        name: updated?.name || "",
+
+        email: updated?.email || "",
+
+        department:
+          updated?.department?.name || "",
+
+        position:
+          updated?.position || "",
+
+        password: "",
       });
 
       setIsEditing(false);
     } catch (err) {
-      console.log("UPDATE ERROR:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Update failed");
+      console.log(err);
+
+      alert(
+        err?.response?.data?.message ||
+          "Update failed"
+      );
     }
   };
 
   // ---------------- ATTENDANCE STATS ----------------
   const attendanceStats = useMemo(() => {
     return {
-      present: attendance.filter((a) => a.status === "PRESENT").length,
-      leave: attendance.filter((a) => a.status === "LEAVE").length,
-      absent: attendance.filter((a) => a.status === "ABSENT").length,
+      present: attendance.filter(
+        (a) => a.status === "PRESENT"
+      ).length,
+
+      leave: attendance.filter(
+        (a) => a.status === "LEAVE"
+      ).length,
+
+      absent: attendance.filter(
+        (a) => a.status === "ABSENT"
+      ).length,
     };
   }, [attendance]);
 
@@ -123,6 +221,7 @@ export default function EmployeeDetails() {
       <div className="p-8 flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/50">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-[3px] border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+
           <p className="text-sm text-slate-500 font-medium tracking-wide">
             Loading profile analytics...
           </p>
@@ -131,39 +230,51 @@ export default function EmployeeDetails() {
     );
   }
 
-  if (error) return <div className="p-8 text-center text-rose-500 font-medium">{error}</div>;
-  if (!employee) return <div className="p-8 text-center text-slate-500 font-medium">Employee not found</div>;
+  if (error)
+    return (
+      <div className="p-8 text-center text-rose-500 font-medium">
+        {error}
+      </div>
+    );
 
-  // ---------------- UI ----------------
+  if (!employee)
+    return (
+      <div className="p-8 text-center text-slate-500 font-medium">
+        Employee not found
+      </div>
+    );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/40 p-4 md:p-8 antialiased selection:bg-slate-900 selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/40 p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* HEADER & GENERAL INFORMATION */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] p-6 md:p-8 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-slate-700 via-slate-900 to-slate-800" />
-          
+        {/* PROFILE */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-slate-100">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
                   {employee.name}
                 </h1>
-                <span className="inline-flex items-center px-2.5 py-0.5 bg-slate-900 text-white text-[11px] font-bold rounded-md tracking-wider uppercase">
+
+                <span className="px-3 py-1 bg-slate-900 text-white text-[10px] rounded-md font-bold uppercase tracking-wider">
                   {employee.role}
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              <div className="flex flex-wrap gap-2 mt-3">
                 {employee.department && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 text-slate-600 text-xs font-medium rounded-full border border-slate-200/60">
-                    <Building2 size={12} className="text-slate-400" />
-                    {employee.department}
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+                    <Building2 size={12} />
+                    {
+                      employee?.department
+                        ?.name
+                    }
                   </span>
                 )}
+
                 {employee.position && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 text-slate-600 text-xs font-medium rounded-full border border-slate-200/60">
-                    <Award size={12} className="text-slate-400" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+                    <Award size={12} />
                     {employee.position}
                   </span>
                 )}
@@ -171,20 +282,24 @@ export default function EmployeeDetails() {
             </div>
 
             <button
-              onClick={() => setIsEditing(!isEditing)}
-              className={`flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border transition-all duration-200 ${
-                isEditing 
-                ? "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100" 
-                : "bg-white text-slate-800 border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm"
+              onClick={() =>
+                setIsEditing(!isEditing)
+              }
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                isEditing
+                  ? "bg-slate-100 text-slate-700"
+                  : "bg-white hover:bg-slate-50"
               }`}
             >
               {isEditing ? (
                 <>
-                  <X size={15} /> Cancel
+                  <X size={15} />
+                  Cancel
                 </>
               ) : (
                 <>
-                  <Edit3 size={15} /> Edit Profile
+                  <Edit3 size={15} />
+                  Edit Profile
                 </>
               )}
             </button>
@@ -197,7 +312,12 @@ export default function EmployeeDetails() {
               value={form.name}
               disabled={!isEditing}
               icon={<User size={15} />}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  name: e.target.value,
+                })
+              }
             />
 
             <Input
@@ -205,15 +325,28 @@ export default function EmployeeDetails() {
               value={form.email}
               disabled={!isEditing}
               icon={<Mail size={15} />}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  email: e.target.value,
+                })
+              }
             />
 
-            <Input
+            {/* DEPARTMENT SELECT */}
+            <SelectInput
               label="Department"
               value={form.department}
               disabled={!isEditing}
               icon={<Building2 size={15} />}
-              onChange={(e) => setForm({ ...form, department: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  department:
+                    e.target.value,
+                })
+              }
+              options={departments}
             />
 
             <Input
@@ -221,16 +354,40 @@ export default function EmployeeDetails() {
               value={form.position}
               disabled={!isEditing}
               icon={<Award size={15} />}
-              onChange={(e) => setForm({ ...form, position: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  position:
+                    e.target.value,
+                })
+              }
             />
+
+            {/* PASSWORD */}
+            {isEditing && (
+              <Input
+                label="New Password"
+                type="password"
+                value={form.password}
+                disabled={!isEditing}
+                icon={<Lock size={15} />}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    password:
+                      e.target.value,
+                  })
+                }
+              />
+            )}
           </div>
 
-          {/* SAVE BUTTON */}
+          {/* SAVE */}
           {isEditing && (
-            <div className="mt-8 pt-4 border-t border-slate-100 flex justify-end">
+            <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end">
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm hover:shadow"
+                className="flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold"
               >
                 <Save size={15} />
                 Save Changes
@@ -239,284 +396,423 @@ export default function EmployeeDetails() {
           )}
         </div>
 
-        {/* LEAVE OVERVIEW */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] p-6 md:p-8">
+        {/* LEAVE */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8">
           <SectionHeader
             title="Leave Management"
-            subtitle="Overview of leave balances and pending counters"
-            icon={<Briefcase size={18} className="text-slate-700" />}
-            bg="bg-slate-100"
+            subtitle="Overview of employee leave data"
+            icon={<Briefcase size={18} />}
           />
 
           {leaveData ? (
             <>
-              {/* STATS COUNTERS */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                 <StatCard
                   title="Total Leaves"
-                  value={leaveData.totalLeaves}
-                  icon={<CalendarDays size={18} />}
-                  theme="slate"
+                  value={
+                    leaveData.totalLeaves
+                  }
+                  icon={
+                    <CalendarDays
+                      size={18}
+                    />
+                  }
                 />
+
                 <StatCard
                   title="Approved"
-                  value={leaveData.approved}
-                  icon={<CheckCircle2 size={18} />}
-                  theme="emerald"
+                  value={
+                    leaveData.approved
+                  }
+                  icon={
+                    <CheckCircle2
+                      size={18}
+                    />
+                  }
                 />
+
                 <StatCard
                   title="Pending"
-                  value={leaveData.pending}
-                  icon={<Clock3 size={18} />}
-                  theme="amber"
+                  value={
+                    leaveData.pending
+                  }
+                  icon={
+                    <Clock3 size={18} />
+                  }
                 />
+
                 <StatCard
                   title="Rejected"
-                  value={leaveData.rejected}
-                  icon={<XCircle size={18} />}
-                  theme="rose"
+                  value={
+                    leaveData.rejected
+                  }
+                  icon={
+                    <XCircle
+                      size={18}
+                    />
+                  }
                 />
               </div>
 
-              {/* LEAVE BALANCES */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <BalanceCard
-                  title="Casual Leave Balance"
-                  value={leaveData.balance?.casualLeft}
-                  theme="slate"
+                  title="Casual Leave"
+                  value={
+                    leaveData.balance
+                      ?.casualLeft
+                  }
                 />
+
                 <BalanceCard
-                  title="Sick Leave Balance"
-                  value={leaveData.balance?.sickLeft}
-                  theme="emerald"
+                  title="Sick Leave"
+                  value={
+                    leaveData.balance
+                      ?.sickLeft
+                  }
                 />
               </div>
             </>
           ) : (
-            <EmptyState text="No active leave data streams available" />
+            <EmptyState text="No leave data found" />
           )}
         </div>
 
-        {/* ATTENDANCE HISTORY */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] p-6 md:p-8">
+        {/* ATTENDANCE */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8">
           <SectionHeader
             title="Attendance Logs"
-            subtitle="Detailed history of timekeeping and daily check logs"
-            icon={<TimerReset size={18} className="text-slate-700" />}
-            bg="bg-slate-100"
+            subtitle="Daily attendance records"
+            icon={<TimerReset size={18} />}
           />
 
-          {/* ATTENDANCE SUMMARY COUNTERS */}
           <div className="grid grid-cols-3 gap-4 mt-6 mb-6">
             <StatCard
               title="Present"
-              value={attendanceStats.present}
-              icon={<CheckCircle2 size={18} />}
-              theme="emerald"
+              value={
+                attendanceStats.present
+              }
+              icon={
+                <CheckCircle2
+                  size={18}
+                />
+              }
             />
+
             <StatCard
-              title="On Leave"
-              value={attendanceStats.leave}
-              icon={<CalendarDays size={18} />}
-              theme="amber"
+              title="Leave"
+              value={
+                attendanceStats.leave
+              }
+              icon={
+                <CalendarDays
+                  size={18}
+                />
+              }
             />
+
             <StatCard
               title="Absent"
-              value={attendanceStats.absent}
-              icon={<XCircle size={18} />}
-              theme="rose"
+              value={
+                attendanceStats.absent
+              }
+              icon={
+                <XCircle
+                  size={18}
+                />
+              }
             />
           </div>
 
-          {/* ATTENDANCE LOG LIST */}
           <div className="space-y-3">
             {attendance.length > 0 ? (
               attendance.map((record) => (
                 <div
                   key={record.id}
-                  className="border border-slate-100 bg-slate-50/30 rounded-xl p-4 hover:bg-slate-50 transition-all duration-150"
+                  className="border border-slate-100 rounded-xl p-4 bg-slate-50"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    
-                    {/* LOG LEFT METADATA */}
+                  <div className="flex flex-col sm:flex-row justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <StatusBadge status={record.status} />
+                      <StatusBadge
+                        status={
+                          record.status
+                        }
+                      />
+
                       <div>
                         <p className="text-sm font-semibold text-slate-800">
-                          {new Date(record.date).toLocaleDateString(undefined, {
-                            weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
-                          })}
+                          {new Date(
+                            record.date
+                          ).toLocaleDateString()}
                         </p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          Logged at {new Date(record.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                        <p className="text-xs text-slate-400 mt-1">
+                          Logged at{" "}
+                          {new Date(
+                            record.createdAt
+                          ).toLocaleTimeString()}
                         </p>
                       </div>
                     </div>
 
-                    {/* LOG RIGHT TIMEBOXES */}
-                    <div className="flex gap-3 sm:justify-end">
+                    <div className="flex gap-3">
                       <TimeBox
                         label="Check In"
                         value={
                           record.startTime
-                            ? new Date(record.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            ? new Date(
+                                record.startTime
+                              ).toLocaleTimeString()
                             : "-- : --"
                         }
-                        icon={<LogIn size={14} className="text-emerald-600" />}
+                        icon={
+                          <LogIn
+                            size={14}
+                          />
+                        }
                       />
 
                       <TimeBox
                         label="Check Out"
                         value={
                           record.endTime
-                            ? new Date(record.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            ? new Date(
+                                record.endTime
+                              ).toLocaleTimeString()
                             : "-- : --"
                         }
-                        icon={<LogOut size={14} className="text-rose-600" />}
+                        icon={
+                          <LogOut
+                            size={14}
+                          />
+                        }
                       />
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <EmptyState text="No historic attendance timelines found" />
+              <EmptyState text="No attendance logs found" />
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
 }
 
-// ---------------- PREMIUM SECTION HEADER ----------------
-function SectionHeader({ title, subtitle, icon, bg }) {
+// ---------------- SECTION HEADER ----------------
+function SectionHeader({
+  title,
+  subtitle,
+  icon,
+}) {
   return (
-    <div className="flex items-center gap-3.5">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200/60 ${bg}`}>
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
         {icon}
       </div>
+
       <div>
-        <h2 className="text-lg font-bold text-slate-900 tracking-tight">{title}</h2>
-        <p className="text-xs text-slate-400 mt-0.5 font-medium">{subtitle}</p>
+        <h2 className="text-lg font-bold text-slate-900">
+          {title}
+        </h2>
+
+        <p className="text-xs text-slate-400">
+          {subtitle}
+        </p>
       </div>
     </div>
   );
 }
 
-// ---------------- PREMIUM STAT CARD ----------------
-function StatCard({ title, value, icon, theme }) {
-  const themes = {
-    slate: "bg-slate-50 text-slate-600 border-slate-200",
-    emerald: "bg-emerald-50/50 text-emerald-600 border-emerald-100",
-    amber: "bg-amber-50/50 text-amber-600 border-amber-100",
-    rose: "bg-rose-50/50 text-rose-600 border-rose-100",
-  };
-
+// ---------------- STAT CARD ----------------
+function StatCard({
+  title,
+  value,
+  icon,
+}) {
   return (
-    <div className="bg-white border border-slate-100 rounded-xl p-4 flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all hover:border-slate-200/80">
+    <div className="border border-slate-100 rounded-xl p-4 flex items-center justify-between">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        <p className="text-[11px] uppercase font-bold tracking-wider text-slate-400">
           {title}
         </p>
-        <h3 className="text-2xl font-bold text-slate-900 mt-1 tracking-tight">{value}</h3>
+
+        <h3 className="text-2xl font-bold text-slate-900 mt-1">
+          {value}
+        </h3>
       </div>
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${themes[theme]}`}>
+
+      <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
         {icon}
       </div>
     </div>
   );
 }
 
-// ---------------- PREMIUM BALANCE CARD ----------------
-function BalanceCard({ title, value, theme }) {
-  const themes = {
-    slate: "bg-slate-900 text-white",
-    emerald: "bg-emerald-50 text-emerald-700 border border-emerald-200/50",
-  };
-
+// ---------------- BALANCE CARD ----------------
+function BalanceCard({
+  title,
+  value,
+}) {
   return (
-    <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/40 flex items-center justify-between">
+    <div className="border border-slate-100 rounded-xl p-4 bg-slate-50 flex items-center justify-between">
       <div>
-        <p className="text-xs font-semibold text-slate-400 tracking-wide">
+        <p className="text-xs font-semibold text-slate-400">
           {title}
         </p>
-        <h3 className="text-2xl font-black text-slate-800 mt-1 tracking-tight">{value} <span className="text-xs font-medium text-slate-400">Days</span></h3>
+
+        <h3 className="text-2xl font-bold text-slate-900 mt-1">
+          {value} Days
+        </h3>
       </div>
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${themes[theme] || "bg-slate-100"}`}>
+
+      <div className="w-10 h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center">
         <CalendarDays size={16} />
       </div>
     </div>
   );
 }
 
-// ---------------- PREMIUM STATUS BADGE ----------------
+// ---------------- STATUS BADGE ----------------
 function StatusBadge({ status }) {
   const styles = {
-    PRESENT: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
-    LEAVE: "bg-amber-50 text-amber-700 border-amber-200/60",
-    ABSENT: "bg-rose-50 text-rose-700 border-rose-200/60",
+    PRESENT:
+      "bg-emerald-50 text-emerald-700 border-emerald-200",
+
+    LEAVE:
+      "bg-amber-50 text-amber-700 border-amber-200",
+
+    ABSENT:
+      "bg-rose-50 text-rose-700 border-rose-200",
   };
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${styles[status]}`}>
-      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-        status === 'PRESENT' ? 'bg-emerald-500' : status === 'LEAVE' ? 'bg-amber-500' : 'bg-rose-500'
-      }`} />
+    <span
+      className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase border ${
+        styles[status]
+      }`}
+    >
       {status}
     </span>
   );
 }
 
-// ---------------- PREMIUM TIME BOX ----------------
-function TimeBox({ label, value, icon }) {
+// ---------------- TIME BOX ----------------
+function TimeBox({
+  label,
+  value,
+  icon,
+}) {
   return (
-    <div className="min-w-[120px] rounded-lg bg-white border border-slate-200/60 px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-      <div className="flex items-center gap-1.5 mb-0.5">
+    <div className="min-w-[120px] border border-slate-200 rounded-lg px-3 py-2 bg-white">
+      <div className="flex items-center gap-1 mb-1">
         {icon}
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+
+        <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
           {label}
         </p>
       </div>
-      <h4 className="text-xs font-bold text-slate-800 tracking-tight">{value}</h4>
+
+      <h4 className="text-xs font-bold text-slate-800">
+        {value}
+      </h4>
     </div>
   );
 }
 
-// ---------------- PREMIUM EMPTY STATE ----------------
+// ---------------- EMPTY ----------------
 function EmptyState({ text }) {
   return (
-    <div className="text-center py-10 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 text-slate-400 text-xs font-medium tracking-wide">
+    <div className="py-10 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
       {text}
     </div>
   );
 }
 
-// ---------------- PREMIUM INPUT WITH INLINE ICON ----------------
-function Input({ label, value, onChange, disabled, icon }) {
+// ---------------- INPUT ----------------
+function Input({
+  label,
+  value,
+  onChange,
+  disabled,
+  icon,
+  type = "text",
+}) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
         {label}
       </label>
+
       <div className="relative">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            {icon}
-          </div>
-        )}
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+          {icon}
+        </div>
+
         <input
+          type={type}
           value={value}
           onChange={onChange}
           disabled={disabled}
-          className={`w-full text-sm border border-slate-200 rounded-xl py-2.5 transition-all outline-none
-            ${icon ? "pl-10 pr-4" : "px-4"}
-            ${disabled 
-              ? "bg-slate-50 text-slate-500 font-medium cursor-not-allowed border-slate-100" 
-              : "bg-white text-slate-800 font-normal focus:ring-4 focus:ring-slate-100 focus:border-slate-900 shadow-sm"
-            }
-          `}
+          className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm outline-none transition-all ${
+            disabled
+              ? "bg-slate-50 border-slate-100 text-slate-500"
+              : "bg-white border-slate-200 focus:border-slate-900 focus:ring-4 focus:ring-slate-100"
+          }`}
         />
+      </div>
+    </div>
+  );
+}
+
+// ---------------- SELECT INPUT ----------------
+function SelectInput({
+  label,
+  value,
+  onChange,
+  disabled,
+  icon,
+  options = [],
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        {label}
+      </label>
+
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 z-10">
+          {icon}
+        </div>
+
+        <select
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className={`appearance-none w-full pl-10 pr-10 py-2.5 rounded-xl border text-sm outline-none transition-all ${
+            disabled
+              ? "bg-slate-50 border-slate-100 text-slate-500"
+              : "bg-white border-slate-200 focus:border-slate-900 focus:ring-4 focus:ring-slate-100"
+          }`}
+        >
+          <option value="">
+            Select Department
+          </option>
+
+          {options.map((dept) => (
+            <option
+              key={dept.id}
+              value={dept.name}
+            >
+              {dept.name}
+            </option>
+          ))}
+        </select>
+
+        <div className="absolute inset-y-0 right-3 flex items-center text-slate-400">
+          <ChevronDown size={16} />
+        </div>
       </div>
     </div>
   );
