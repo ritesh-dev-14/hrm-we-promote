@@ -273,6 +273,17 @@ exports.getTaskItems = async (
 
             completedAt:
               a.completedAt,
+
+              submission: a.submission
+                ? {
+                    id: a.submission.id,
+                    driveLink: a.submission.driveLink,
+                    remarks: a.submission.remarks,
+                    verifiedByManager:
+                      a.submission.verifiedByManager,
+                    submittedAt: a.submission.submittedAt,
+                  }
+                : null,
           })
         ),
     };
