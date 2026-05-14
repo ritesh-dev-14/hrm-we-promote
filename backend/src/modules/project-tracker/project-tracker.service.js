@@ -109,33 +109,14 @@ exports.getManagerTaskTracker =
     //
     // 🔥 FIND TASKS ASSIGNED TO MANAGER
     //
-    const managerAssignments =
-      await prisma.taskAssignment.findMany({
-        where: {
-          userId: user.id,
-        },
-
-        select: {
-          taskId: true,
-        },
-      });
-
-    const taskIds =
-      managerAssignments.map(
-        (a) => a.taskId
-      );
-
-    //
-    // 🔥 GET TASK ITEM ASSIGNMENTS
-    //
+    // 🔥 GET TASK ITEM ASSIGNMENTS for manager's team or tasks created by manager
     const items =
       await prisma.taskItemAssignment.findMany({
         where: {
-          taskItem: {
-            taskId: {
-              in: taskIds,
-            },
-          },
+          OR: [
+            { employee: { managerId: user.id } },
+            { taskItem: { task: { createdById: user.id } } },
+          ],
         },
 
         include: {
