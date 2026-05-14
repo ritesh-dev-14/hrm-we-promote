@@ -91,16 +91,10 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
       notifyInfo("Loading users...");
 
       const [mgrRes] = await Promise.all([
-        // API.get("http://localhost:8000/api/hr/employees", {
-        //   headers,
-        // }),
-
-        API.get("http://localhost:8000/api/hr/managers", {
+        API.get("/api/hr/managers", {
           headers,
         }),
       ]);
-
-      // setEmployees(empRes.data?.data || []);
 
       setManagers(mgrRes.data?.data || []);
     } catch (err) {
@@ -165,11 +159,9 @@ const TaskDetailPage = ({ initialData = null, apiEndpoint = null }) => {
         })),
       };
 
-      await API.post(
-        `http://localhost:8000/api/manager/tasks/${task?.id}/assign`,
-        payload,
-        { headers },
-      );
+      await API.post(`/api/manager/tasks/${task?.id}/assign`, payload, {
+        headers,
+      });
 
       notifySuccess("Task assigned successfully");
 
