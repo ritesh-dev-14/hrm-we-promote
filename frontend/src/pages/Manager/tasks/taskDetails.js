@@ -70,3 +70,25 @@ export const fetchMyEmployees = async () => {
     throw error;
   }
 };
+
+export const assignMainTaskToMe = async (taskId, employeeId) => {
+  try {
+    const payload = {
+      assignments: [
+        {
+          employeeId,
+        },
+      ],
+    };
+
+    const response = await API.post(
+      `/api/manager/tasks/${taskId}/assign`,
+      payload,
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};

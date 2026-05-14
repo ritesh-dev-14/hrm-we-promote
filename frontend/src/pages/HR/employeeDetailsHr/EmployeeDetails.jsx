@@ -41,7 +41,7 @@ export default function EmployeeDetails() {
 
           // ATTENDANCE API
           API.get(`/api/attendance/${id}`),
-          
+
           // LEAVE STATS API
           API.get(`/api/hr/leave/employee/${id}`),
         ]);
@@ -77,22 +77,27 @@ export default function EmployeeDetails() {
   }, [id]);
 
   // ---------------- SAVE ----------------
+  // ---------------- SAVE ----------------
   const handleSave = async () => {
     try {
-      const endpoint =
-        employee.role === "MANAGER"
-          ? `/api/hr/manager/${id}`
-          : `/api/hr/employee/${id}`;
-
+      let endpoint = "";
       let payload = {};
 
+      // ================= MANAGER UPDATE =================
       if (employee.role === "MANAGER") {
+        endpoint = `/api/hr/manager/${employee.employeeId}`;
+
         payload = {
           name: form.name,
           email: form.email,
           department: form.department,
         };
-      } else {
+      }
+
+      // ================= EMPLOYEE UPDATE =================
+      else {
+        endpoint = `/api/hr/employee/${employee.employeeId}`;
+
         payload = {
           name: form.name,
         };
@@ -101,6 +106,13 @@ export default function EmployeeDetails() {
       const res = await API.put(endpoint, payload);
 
       setEmployee(res.data.data);
+
+      setForm({
+        name: res.data.data?.name || "",
+        email: res.data.data?.email || "",
+        department: res.data.data?.department || "",
+        position: res.data.data?.position || "",
+      });
 
       setIsEditing(false);
     } catch (err) {
@@ -145,7 +157,7 @@ export default function EmployeeDetails() {
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* HEADER */}
-        <div className="bg-white rounded-[28px] border border-slate-200 shadow-sm p-6 transition-all duration-0 hover:shadow-md"> 
+        <div className="bg-white rounded-[28px] border border-slate-200 shadow-sm p-6 transition-all duration-0 hover:shadow-md">
           <div className="flex justify-between items-start gap-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
