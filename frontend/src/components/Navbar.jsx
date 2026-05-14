@@ -212,7 +212,7 @@ export default function ProfessionalSidebar({ children }) {
                 exit={{ opacity: 0, x: -10 }}
               >
                 <h2 className="text-lg font-black tracking-tight text-white">
-                  WorkFlow
+                  We-Promote
                 </h2>
 
                 <p className="text-xs text-slate-400 mt-1">Team Management</p>
@@ -338,7 +338,7 @@ export default function ProfessionalSidebar({ children }) {
           />
 
           <div>
-            <h2 className="text-sm font-black text-slate-900">WorkFlow</h2>
+            <h2 className="text-sm font-black text-slate-900">We-Promote</h2>
 
             <p className="text-[10px] text-slate-500 uppercase tracking-widest">
               {role}
