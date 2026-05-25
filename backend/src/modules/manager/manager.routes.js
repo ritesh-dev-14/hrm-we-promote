@@ -20,4 +20,11 @@ router.get(
   controller.getMyEmployees
 );
 
+router.get(
+  "/dashboard",
+  auth,
+  role("MANAGER"),
+  controller.getDashboardStats
+);
+
 module.exports = router;

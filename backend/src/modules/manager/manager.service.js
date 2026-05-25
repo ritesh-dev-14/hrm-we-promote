@@ -111,3 +111,87 @@ exports.getMyEmployees =
 
     return employees;
   };
+
+//
+// 🔥 GET MANAGER DASHBOARD STATS
+//
+exports.getDashboardStats = async (user) => {
+  // Get all tasks (created by manager OR assigned to manager)
+  const tasks = await prisma.task.findMany({
+    where: {
+      OR: [
+        { createdById: user.id },
+        {
+          assignments: {
+            some: { userId: user.id },
+          },
+        },
+      ],
+    },
+    include: {
+      assignments: true,
+    },
+  });
+
+  // Count tasks by status
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(
+    (t) => t.status === "COMPLETED"
+  ).length;
+  const inProgressTasks = tasks.filter(
+    (t) => t.status === "IN_PROGRESS"
+  ).length;
+  const draftTasks = tasks.filter(
+    (t) => t.status === "DRAFT"
+  ).length;
+
+  // Get employees under this manager
+  const employees = await prisma.user.findMany({
+    where: {
+      managerId: user.id,
+      role: "EMPLOYEE",
+    },
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      email: true,
+    },
+  });
+
+  // For each employee, count their task assignments by status
+  const employeeStats = await Promise.all(
+    employees.map(async (emp) => {
+      const assignments = await prisma.taskAssignment.findMany({
+        where: { userId: emp.id },
+        include: { task: true },
+      });
+
+      return {
+        id: emp.id,
+        employeeId: emp.employeeId,
+        name: emp.name,
+        email: emp.email,
+        totalTasksAssigned: assignments.length,
+        completedTasksCount: assignments.filter(
+          (a) => a.task.status === "COMPLETED"
+        ).length,
+        inProgressTasksCount: assignments.filter(
+          (a) => a.task.status === "IN_PROGRESS"
+        ).length,
+        draftTasksCount: assignments.filter(
+          (a) => a.task.status === "DRAFT"
+        ).length,
+      };
+    })
+  );
+
+  return {
+    totalTasks,
+    completedTasks,
+    inProgressTasks,
+    draftTasks,
+    totalEmployees: employees.length,
+    employees: employeeStats,
+  };
+};
