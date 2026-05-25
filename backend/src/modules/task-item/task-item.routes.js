@@ -61,6 +61,7 @@ const controller =
 const {
   createTaskItemSchema,
   assignTaskItemSchema,
+  updateTaskItemStatusSchema,
 } = require("./task-item.validation");
 
 
@@ -101,6 +102,21 @@ router.post(
   validate(assignTaskItemSchema),
 
   controller.assignTaskItem
+);
+
+//
+// 🔥 UPDATE TASK ITEM STATUS
+//
+// Employee or manager updates status to: ASSIGNED, IN_PROGRESS, COMPLETED
+//
+router.patch(
+  "/assignment/:assignmentId/status",
+
+  auth,
+
+  validate(updateTaskItemStatusSchema),
+
+  controller.updateTaskItemStatus
 );
 
 module.exports = router;

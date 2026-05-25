@@ -5,7 +5,17 @@ const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
 
 //
-// 🔥 CREATE TASK ITEM
+// 🔥 CREATE TASK ITEM WITH ASSIGNMENT
+//
+// Manager/HR creates a task item from their task and assigns to specific employee
+//
+// Fields:
+// - title: String (required)
+// - employeeId: String (required) - which employee to assign to
+// - dueDate: DateTime (required)
+// - priority: Priority enum - LOW, MEDIUM, HIGH (required)
+// - description: String (optional)
+// - status: TaskItemStatus - DRAFT or IN_PROGRESS (default: DRAFT)
 //
 exports.createTaskItem = async (
   user,
@@ -20,6 +30,9 @@ exports.createTaskItem = async (
     where: {
       id: taskId,
     },
+    include: {
+      createdBy: true,
+    },
   });
 
   if (!task) {
@@ -32,14 +45,16 @@ exports.createTaskItem = async (
   //
   // ✅ ACCESS RULES
   //
+  // ADMIN: can create for any task
+  // HR: can create for own tasks
+  // MANAGER: can create for tasks assigned to them
+  //
   let allowed = false;
 
-  // ADMIN
   if (user.role === "ADMIN") {
     allowed = true;
   }
 
-  // HR → can create items for own task
   else if (
     user.role === "HR" &&
     task.createdById === user.id
@@ -47,9 +62,7 @@ exports.createTaskItem = async (
     allowed = true;
   }
 
-  // MANAGER → only if task assigned to manager
   else if (user.role === "MANAGER") {
-
     const assignment =
       await prisma.taskAssignment.findFirst({
         where: {
@@ -71,38 +84,101 @@ exports.createTaskItem = async (
   }
 
   //
-  // ✅ CREATE ITEM
+  // ✅ FIND EMPLOYEE
+  //
+  const employee =
+    await prisma.user.findUnique({
+      where: {
+        employeeId: body.employeeId,
+      },
+    });
+
+  if (!employee || employee.role !== "EMPLOYEE") {
+    throw new ApiError(
+      400,
+      "Employee not found or invalid"
+    );
+  }
+
+  //
+  // ✅ FOR MANAGER: CAN ONLY ASSIGN OWN EMPLOYEES
+  //
+  if (
+    user.role === "MANAGER" &&
+    employee.managerId !== user.id
+  ) {
+    throw new ApiError(
+      403,
+      "Can only assign your own employees"
+    );
+  }
+
+  //
+  // ✅ CREATE TASK ITEM
   //
   const item = await prisma.taskItem.create({
     data: {
       taskId,
-
       title: body.title,
-
-      description:
-        body.description || null,
-
-      theme:
-        body.theme || null,
-
-      referenceLink:
-        body.referenceLink || null,
-
-      instructions:
-        body.instructions || null,
-
-      order: body.order || 0,
-
-      status: "PENDING",
+      description: body.description || null,
+      dueDate: new Date(body.dueDate),
+      priority: body.priority || "MEDIUM",
+      status: body.status || "DRAFT",
     },
   });
 
-  return item;
+  //
+  // ✅ CREATE ASSIGNMENT
+  //
+  const assignment = await prisma.taskItemAssignment.create({
+    data: {
+      taskItemId: item.id,
+      userId: employee.id,
+      status: "ASSIGNED",
+    },
+  });
+
+  //
+  // ✅ SEND NOTIFICATION
+  //
+  await prisma.notification.create({
+    data: {
+      userId: employee.id,
+      title: "New Task Item Assigned",
+      message: `Task item "${item.title}" assigned to you for project "${task.projectName}" due ${new Date(body.dueDate).toLocaleDateString()}`,
+      type: "TASK_ASSIGNED",
+      level: "INFO",
+      entityId: item.id,
+    },
+  });
+
+  //
+  // ✅ RETURN RESPONSE
+  //
+  return {
+    id: item.id,
+    title: item.title,
+    project: task.projectName,
+    assignedToEmployee: {
+      id: employee.id,
+      employeeId: employee.employeeId,
+      name: employee.name,
+      email: employee.email,
+    },
+    dueDate: item.dueDate,
+    priority: item.priority,
+    status: item.status,
+    description: item.description,
+    createdAt: item.createdAt,
+  };
 };
 
 
 //
-// 🔥 GET TASK ITEMS
+// 🔥 GET TASK ITEMS FOR A TASK
+//
+// Returns list of task items with:
+// - title, project, due date, priority, status, assigned employee
 //
 exports.getTaskItems = async (
   user,
@@ -138,7 +214,6 @@ exports.getTaskItems = async (
   }
 
   else {
-
     const assignment =
       await prisma.taskAssignment.findFirst({
         where: {
@@ -176,17 +251,15 @@ exports.getTaskItems = async (
                 id: true,
                 employeeId: true,
                 name: true,
-                role: true,
+                email: true,
               },
             },
-
-            submission: true,
           },
         },
       },
 
       orderBy: {
-        order: "asc",
+        dueDate: "asc",
       },
     });
 
@@ -195,97 +268,32 @@ exports.getTaskItems = async (
   //
   return items.map((item) => {
 
-    const completedAssignments =
-      item.assignments.filter(
-        (a) =>
-          a.status === "COMPLETED"
-      ).length;
-
-    const progress =
-      item.assignments.length > 0
-        ? Math.round(
-          item.assignments.reduce(
-            (sum, a) =>
-              sum + (a.progress || 0),
-            0
-          ) / item.assignments.length
-        )
-        : 0;
+    const assignment =
+      item.assignments[0]; // One employee per item
 
     return {
       id: item.id,
-
       title: item.title,
-
-      description:
-        item.description,
-
-      theme: item.theme,
-
-      referenceLink:
-        item.referenceLink,
-
-      instructions:
-        item.instructions,
-
-      order: item.order,
-
+      project: task.projectName,
+      assignedToEmployee: assignment
+        ? {
+          id: assignment.employee.id,
+          employeeId:
+            assignment.employee.employeeId,
+          name: assignment.employee.name,
+          email: assignment.employee.email,
+        }
+        : null,
+      dueDate: item.dueDate,
+      priority: item.priority,
       status: item.status,
-
-      progress,
-
-      totalEmployees:
-        item.assignments.length,
-
-      completedAssignments,
-
-      employees:
-        item.assignments.map(
-          (a) => ({
-            assignmentId: a.id,
-
-            employee: {
-              id: a.employee.id,
-
-              employeeId:
-                a.employee.employeeId,
-
-              name:
-                a.employee.name,
-
-              role:
-                a.employee.role,
-            },
-
-            status: a.status,
-
-            progress:
-              a.progress || 0,
-
-            submitted:
-              !!a.submission,
-
-            startedAt:
-              a.startedAt,
-
-            submittedAt:
-              a.submittedAt,
-
-            completedAt:
-              a.completedAt,
-
-            submission: a.submission
-              ? {
-                id: a.submission.id,
-                driveLink: a.submission.driveLink,
-                remarks: a.submission.remarks,
-                verifiedByManager:
-                  a.submission.verifiedByManager,
-                submittedAt: a.submission.submittedAt,
-              }
-              : null,
-          })
-        ),
+      description: item.description,
+      progress: assignment?.progress || 0,
+      assignmentStatus:
+        assignment?.status || null,
+      completedAt:
+        assignment?.completedAt || null,
+      createdAt: item.createdAt,
     };
   });
 };
@@ -380,20 +388,6 @@ exports.assignTaskItem = async (
     );
   }
 
-  //
-  // ✅ FIND EMPLOYEES
-  //
-  // const employees =
-  //   await prisma.user.findMany({
-  //     where: {
-  //       employeeId: {
-  //         in: employeeIds,
-  //       },
-
-  //       role: "EMPLOYEE",
-  //     },
-  //   });
-
   const employeeWhere = {
     employeeId: {
       in: employeeIds,
@@ -434,7 +428,7 @@ exports.assignTaskItem = async (
 
       userId: emp.id,
 
-      status: "PENDING",
+      status: "ASSIGNED",
 
       progress: 0,
     }));
@@ -486,5 +480,165 @@ exports.assignTaskItem = async (
 
     message:
       "Task item assigned successfully",
+  };
+};
+
+//
+// 🔥 UPDATE TASK ITEM STATUS
+//
+// Employee or manager updates the status of a task item
+// Status: DRAFT, IN_PROGRESS, COMPLETED
+//
+exports.updateTaskItemStatus = async (
+  user,
+  assignmentId,
+  body
+) => {
+
+  //
+  // ✅ FIND ASSIGNMENT
+  //
+  const assignment =
+    await prisma.taskItemAssignment.findUnique({
+      where: {
+        id: assignmentId,
+      },
+      include: {
+        taskItem: {
+          include: {
+            task: true,
+          },
+        },
+        employee: true,
+      },
+    });
+
+  if (!assignment) {
+    throw new ApiError(
+      404,
+      "Assignment not found"
+    );
+  }
+
+  //
+  // ✅ ACCESS CONTROL
+  //
+  // Only the assigned employee or manager can update
+  //
+  let allowed = false;
+
+  if (user.id === assignment.userId) {
+    allowed = true;
+  }
+
+  // Manager or task creator can update
+  else if (
+    user.id ===
+    assignment.taskItem.task.createdById
+  ) {
+    allowed = true;
+  }
+
+  else if (
+    user.role === "ADMIN"
+  ) {
+    allowed = true;
+  }
+
+  if (!allowed) {
+    throw new ApiError(
+      403,
+      ERRORS.AUTH.ACCESS_DENIED
+    );
+  }
+
+  //
+  // ✅ UPDATE ASSIGNMENT
+  //
+  const validStatuses = [
+    "ASSIGNED",
+    "IN_PROGRESS",
+    "COMPLETED",
+  ];
+
+  if (
+    !validStatuses.includes(
+      body.status
+    )
+  ) {
+    throw new ApiError(
+      400,
+      "Invalid status. Must be: ASSIGNED, IN_PROGRESS, or COMPLETED"
+    );
+  }
+
+  const updateData = {
+    status: body.status,
+    progress: body.progress || 0,
+  };
+
+  // Update timestamps
+  if (body.status === "IN_PROGRESS") {
+    updateData.startedAt = new Date();
+  }
+
+  if (body.status === "COMPLETED") {
+    updateData.completedAt = new Date();
+    updateData.progress = 100;
+  }
+
+  const updated =
+    await prisma.taskItemAssignment.update({
+      where: {
+        id: assignmentId,
+      },
+      data: updateData,
+      include: {
+        taskItem: true,
+        employee: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+  //
+  // ✅ SEND NOTIFICATION
+  //
+  if (body.status === "COMPLETED") {
+    await prisma.notification.create({
+      data: {
+        userId:
+          assignment.taskItem.task
+            .createdById,
+
+        title:
+          "Task Item Completed",
+
+        message:
+          `${updated.employee.name} completed task item: "${assignment.taskItem.title}"`,
+
+        type: "TASK_COMPLETED",
+
+        level: "SUCCESS",
+
+        entityId:
+          assignment.taskItem.id,
+      },
+    });
+  }
+
+  return {
+    id: updated.id,
+    taskItemId:
+      updated.taskItemId,
+    employeeId: updated.userId,
+    status: updated.status,
+    progress: updated.progress,
+    completedAt:
+      updated.completedAt,
+    startedAt: updated.startedAt,
   };
 };

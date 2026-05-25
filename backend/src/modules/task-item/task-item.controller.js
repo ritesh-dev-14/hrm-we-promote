@@ -152,3 +152,29 @@ exports.assignTaskItem = async (
     next(err);
   }
 };
+
+
+// 🔥 UPDATE ITEM STATUS
+exports.updateTaskItemStatus = async (
+  req,
+  res,
+  next
+) => {
+  try {
+
+    const data =
+      await service.updateTaskItemStatus(
+        req.user,
+        req.params.assignmentId,
+        req.body
+      );
+
+    res.json({
+      success: true,
+      data,
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};

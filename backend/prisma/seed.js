@@ -35,7 +35,7 @@ async function main() {
   });
 
   // 🔹 MANAGER
-  await prisma.user.upsert({
+  const manager = await prisma.user.upsert({
     where: { email: "manager@test.com" },
     update: { password },
     create: {
@@ -50,39 +50,42 @@ async function main() {
   // 🔹 EMPLOYEE 1
   await prisma.user.upsert({
     where: { email: "employee1@test.com" },
-    update: { password },
+    update: { password, managerId: manager.id },
     create: {
       employeeId: "EMP-001",
       name: "Employee 1",
       email: "employee1@test.com",
       password,
       role: "EMPLOYEE",
+      managerId: manager.id,
     },
   });
 
   // 🔹 EMPLOYEE 2
   await prisma.user.upsert({
     where: { email: "employee2@test.com" },
-    update: { password },
+    update: { password, managerId: manager.id },
     create: {
       employeeId: "EMP-002",
       name: "Employee 2",
       email: "employee2@test.com",
       password,
       role: "EMPLOYEE",
+      managerId: manager.id,
     },
   });
 
   // 🔹 EMPLOYEE 3
   await prisma.user.upsert({
     where: { email: "employee3@test.com" },
-    update: { password },
+    update: { password, managerId: manager.id },
     create: {
       employeeId: "EMP-003",
       name: "Employee 3",
       email: "employee3@test.com",
       password,
       role: "EMPLOYEE",
+      managerId: manager.id,
     },
   });
 
