@@ -179,3 +179,8 @@ exports.sendRejectionMailToEmployee =
       html,
     });
   };
+
+//
+// 🔥 EXPORT SEND MAIL FOR GENERAL USE
+//
+exports.sendMail = sendMail;

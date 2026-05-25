@@ -923,34 +923,27 @@ exports.createTask = async (user, body) => {
 
   const task = await prisma.task.create({
     data: {
-      title: body.title,
-
-      description:
-        body.description || null,
-
-      instructions:
-        body.instructions || null,
-
-      referenceLink:
-        body.referenceLink || null,
-
-      date: new Date(body.date),
-
-      location:
-        body.location || null,
-
-      setupType: body.setupType,
-
+      projectName: body.projectName,
+      description: body.description || null,
+      startDate: new Date(body.startDate),
+      endDate: new Date(body.endDate),
       createdById: user.id,
-
-      isGroupTask:
-        body.isGroupTask || false,
-
       status: "DRAFT",
     },
   });
 
-  return task;
+  // Return a minimal task object — omit fields we don't want to expose
+  return {
+    id: task.id,
+    projectName: task.projectName,
+    description: task.description || null,
+    startDate: task.startDate,
+    endDate: task.endDate,
+    createdById: task.createdById,
+    status: task.status,
+    createdAt: task.createdAt,
+    progress: 0,
+  };
 };
 
 //
@@ -991,15 +984,10 @@ exports.assignTask = async (
     );
   }
 
-  //
-  // ✅ ONLY CREATOR CAN ASSIGN
-  //
-  if (task.createdById !== user.id) {
-    throw new ApiError(
-      403,
-      ERRORS.AUTH.ACCESS_DENIED
-    );
-  }
+  // NOTE: normally only the task creator can assign. However,
+  // allow a MANAGER to self-assign a task to themselves even if
+  // they are not the creator (use-case: manager accepts a task).
+  // We'll enforce this more granularly after resolving employee ids.
 
   //
   // ✅ GET EMPLOYEE IDS
@@ -1050,6 +1038,20 @@ exports.assignTask = async (
       ERRORS.TASK
         .EMPLOYEE_NOT_FOUND
     );
+  }
+
+  // ✅ AUTHORIZATION: allow only the task creator to assign,
+  // except permit a MANAGER to self-assign to themselves
+  // (use-case: manager accepts a task). Any other non-creator
+  // attempts are denied.
+  const isCreator = task.createdById === user.id;
+  const isManagerSelfAssign =
+    user.role === "MANAGER" &&
+    employees.length === 1 &&
+    employees[0].id === user.id;
+
+  if (!isCreator && !isManagerSelfAssign) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
   //
@@ -1154,9 +1156,11 @@ exports.assignTask = async (
 
           userId: emp.id,
 
-          taskGroupId:
-            a.taskGroupId ||
-            null,
+          workDate: a.workDate
+            ? new Date(a.workDate)
+            : task.startDate
+            ? new Date(task.startDate)
+            : new Date(),
         };
       }
     );
@@ -1194,7 +1198,7 @@ exports.assignTask = async (
           title:
             "New Main Task Assigned",
 
-          message: `You have been assigned main task: ${task.title}`,
+          message: `You have been assigned main task: ${task.projectName}`,
 
           type:
             "TASK_ASSIGNED",
@@ -1695,18 +1699,11 @@ exports.getTasks = async (
             employee: {
               select: {
                 id: true,
-
                 employeeId: true,
-
                 name: true,
-
                 role: true,
               },
             },
-
-            submission: true,
-
-            taskGroup: true,
           },
         },
 
@@ -1714,149 +1711,25 @@ exports.getTasks = async (
       },
 
       orderBy: {
-        date: "asc",
+        startDate: "asc",
       },
     });
 
-  return tasks.map((task) => {
-    const groupsMap = {};
-
-    const individuals = [];
-
-    const completedAssignments =
-      task.assignments.filter(
-        (a) =>
-          a.status ===
-          "COMPLETED"
-      ).length;
-
-    const progress =
-      task.assignments.length >
-      0
-        ? Math.round(
-            task.assignments.reduce(
-              (sum, a) =>
-                sum +
-                (a.progress ||
-                  0),
-              0
-            ) /
-              task.assignments
-                .length
-          )
-        : 0;
-
-    task.assignments.forEach(
-      (a) => {
-        const emp = {
-          employeeId:
-            a.employee
-              .employeeId,
-
-          name: a.employee.name,
-
-          role: a.employee.role,
-
-          status: a.status,
-
-          progress:
-            a.progress || 0,
-
-          submitted:
-            !!a.submission,
-
-          submittedAt:
-            a.submittedAt,
-
-          verifiedAt:
-            a.verifiedAt,
-
-          completedAt:
-            a.completedAt,
-        };
-
-        //
-        // ✅ GROUP
-        //
-        if (a.taskGroupId) {
-          if (
-            !groupsMap[
-              a.taskGroupId
-            ]
-          ) {
-            groupsMap[
-              a.taskGroupId
-            ] = {
-              taskGroupId:
-                a.taskGroupId,
-
-              groupName:
-                a.taskGroup
-                  ?.name ||
-                null,
-
-              members: [],
-            };
-          }
-
-          groupsMap[
-            a.taskGroupId
-          ].members.push(emp);
-        }
-
-        //
-        // ✅ INDIVIDUAL
-        //
-        else {
-          individuals.push(emp);
-        }
-      }
-    );
-
-    return {
-      id: task.id,
-
-      title: task.title,
-
-      description:
-        task.description,
-
-      instructions:
-        task.instructions,
-
-      referenceLink:
-        task.referenceLink,
-
-      date: task.date,
-
-      location:
-        task.location,
-
-      setupType:
-        task.setupType,
-
-      status: task.status,
-
-      progress,
-
-      createdBy:
-        task.createdBy,
-
-      totalEmployees:
-        task.assignments
-          .length,
-
-      completedAssignments,
-
-      totalItems:
-        task.items.length,
-
-      groups:
-        Object.values(
-          groupsMap
-        ),
-
-      individuals,
-    };
-  });
+  return tasks.map((task) => ({
+    id: task.id,
+    projectName: task.projectName,
+    description: task.description,
+    startDate: task.startDate,
+    endDate: task.endDate,
+    status: task.status,
+    createdAt: task.createdAt,
+    createdBy: task.createdBy,
+    assignments: task.assignments.map((a) => ({
+      userId: a.userId,
+      employee: a.employee,
+      status: a.status,
+      progress: a.progress || 0,
+    })),
+    totalItems: task.items.length,
+  }));
 };

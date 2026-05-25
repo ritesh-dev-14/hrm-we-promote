@@ -63,6 +63,11 @@ app.use(
   )
 );
 
+app.use(
+  "/api/escalations",
+  require("./modules/escalation/escalation.routes")
+);
+
 // Error handling middleware
 
 app.use(errorMiddleware);

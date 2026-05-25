@@ -204,12 +204,12 @@ exports.getTaskItems = async (
     const progress =
       item.assignments.length > 0
         ? Math.round(
-            item.assignments.reduce(
-              (sum, a) =>
-                sum + (a.progress || 0),
-              0
-            ) / item.assignments.length
-          )
+          item.assignments.reduce(
+            (sum, a) =>
+              sum + (a.progress || 0),
+            0
+          ) / item.assignments.length
+        )
         : 0;
 
     return {
@@ -274,16 +274,16 @@ exports.getTaskItems = async (
             completedAt:
               a.completedAt,
 
-              submission: a.submission
-                ? {
-                    id: a.submission.id,
-                    driveLink: a.submission.driveLink,
-                    remarks: a.submission.remarks,
-                    verifiedByManager:
-                      a.submission.verifiedByManager,
-                    submittedAt: a.submission.submittedAt,
-                  }
-                : null,
+            submission: a.submission
+              ? {
+                id: a.submission.id,
+                driveLink: a.submission.driveLink,
+                remarks: a.submission.remarks,
+                verifiedByManager:
+                  a.submission.verifiedByManager,
+                submittedAt: a.submission.submittedAt,
+              }
+              : null,
           })
         ),
     };
@@ -395,22 +395,22 @@ exports.assignTaskItem = async (
   //   });
 
   const employeeWhere = {
-  employeeId: {
-    in: employeeIds,
-  },
+    employeeId: {
+      in: employeeIds,
+    },
 
-  role: "EMPLOYEE",
-};
+    role: "EMPLOYEE",
+  };
 
-// 🔥 MANAGER CAN ONLY ASSIGN OWN EMPLOYEES
-if (user.role === "MANAGER") {
-  employeeWhere.managerId = user.id;
-}
+  // 🔥 MANAGER CAN ONLY ASSIGN OWN EMPLOYEES
+  if (user.role === "MANAGER") {
+    employeeWhere.managerId = user.id;
+  }
 
-const employees =
-  await prisma.user.findMany({
-    where: employeeWhere,
-  });
+  const employees =
+    await prisma.user.findMany({
+      where: employeeWhere,
+    });
 
   //
   // ✅ VALIDATE

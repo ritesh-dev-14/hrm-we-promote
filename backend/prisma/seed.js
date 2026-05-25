@@ -3,68 +3,87 @@ require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcrypt");
 
-// ✅ Use datasourceUrl for runtime configuration
-const prisma = new PrismaClient({
-  datasourceUrl: process.env.DATABASE_URL,
-});
+const prisma = new PrismaClient();
 
 async function main() {
   const password = await bcrypt.hash("123456", 10);
 
   // 🔹 ADMIN
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "admin@test.com" },
-    update: {},
+    update: { password },
     create: {
       employeeId: "ADMIN-001",
       name: "Admin",
       email: "admin@test.com",
       password,
-      role: "ADMIN"
-    }
+      role: "ADMIN",
+    },
   });
 
   // 🔹 HR
-  const hr = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "hr@test.com" },
-    update: {},
+    update: { password },
     create: {
       employeeId: "HR-001",
       name: "HR User",
       email: "hr@test.com",
       password,
       role: "HR",
-      createdById: admin.id
-    }
+    },
   });
 
   // 🔹 MANAGER
-  const manager = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "manager@test.com" },
-    update: {},
+    update: { password },
     create: {
       employeeId: "MGR-001",
       name: "Manager User",
       email: "manager@test.com",
       password,
       role: "MANAGER",
-      // department: "Production",
-      createdById: hr.id
-    }
+    },
   });
 
-  // 🔹 EMPLOYEE
+  // 🔹 EMPLOYEE 1
   await prisma.user.upsert({
-    where: { email: "employee@test.com" },
-    update: {},
+    where: { email: "employee1@test.com" },
+    update: { password },
     create: {
       employeeId: "EMP-001",
-      name: "Employee User",
-      email: "employee@test.com",
+      name: "Employee 1",
+      email: "employee1@test.com",
       password,
       role: "EMPLOYEE",
-      createdById: manager.id
-    }
+    },
+  });
+
+  // 🔹 EMPLOYEE 2
+  await prisma.user.upsert({
+    where: { email: "employee2@test.com" },
+    update: { password },
+    create: {
+      employeeId: "EMP-002",
+      name: "Employee 2",
+      email: "employee2@test.com",
+      password,
+      role: "EMPLOYEE",
+    },
+  });
+
+  // 🔹 EMPLOYEE 3
+  await prisma.user.upsert({
+    where: { email: "employee3@test.com" },
+    update: { password },
+    create: {
+      employeeId: "EMP-003",
+      name: "Employee 3",
+      email: "employee3@test.com",
+      password,
+      role: "EMPLOYEE",
+    },
   });
 
   console.log("🌱 Seed data inserted successfully");

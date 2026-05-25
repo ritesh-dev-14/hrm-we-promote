@@ -297,7 +297,7 @@ exports.createEmployee = async (user, body) => {
       }),
       position: body.position,
 
-      managerId: managerId, // ✅ clean
+      ...(managerId ? { manager: { connect: { id: managerId } } } : {}),
       createdBy: {
         connect: {
           id: user.id,

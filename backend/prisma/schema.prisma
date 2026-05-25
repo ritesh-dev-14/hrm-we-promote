@@ -28,14 +28,20 @@ model User {
   notifications       Notification[]
   createdTasks        Task[]               @relation("CreatedTasks")
   assignments         TaskAssignment[]
-  taskEscalations     TaskEscalation[]
-  managedGroups       TaskGroup[]
-  groupMemberships    TaskGroupMember[]
   taskItemAssignments TaskItemAssignment[]
-  createdBy           User?                @relation("Hierarchy", fields: [createdById], references: [id])
-  children            User[]               @relation("Hierarchy")
-  manager             User?                @relation("UserManager", fields: [managerId], references: [id])
-  subordinates        User[]               @relation("UserManager")
+
+  employeeCoverages EmployeeTaskCoverage[] @relation("EmployeeCoverage")
+
+  managerCoverages EmployeeTaskCoverage[] @relation("ManagerCoverage")
+
+  employeeEscalations TaskEscalation[] @relation("EmployeeEscalation")
+
+  managerEscalations TaskEscalation[] @relation("ManagerEscalation")
+
+  createdBy    User?  @relation("Hierarchy", fields: [createdById], references: [id])
+  children     User[] @relation("Hierarchy")
+  manager      User?  @relation("UserManager", fields: [managerId], references: [id])
+  subordinates User[] @relation("UserManager")
 }
 
 model Attendance {
@@ -65,17 +71,13 @@ model Break {
 
 model Task {
   id            String           @id @default(uuid())
-  title         String
+  projectName   String
   description   String?
-  date          DateTime
-  location      String?
-  setupType     SetupType
+  startDate     DateTime
+  endDate       DateTime
   status        TaskStatus       @default(DRAFT)
   createdAt     DateTime         @default(now())
   createdById   String
-  instructions  String?
-  isGroupTask   Boolean          @default(false)
-  referenceLink String?
   createdBy     User             @relation("CreatedTasks", fields: [createdById], references: [id])
   assignments   TaskAssignment[]
   items         TaskItem[]
@@ -83,7 +85,8 @@ model Task {
   progress Int @default(0)
 
   @@index([createdById])
-  @@index([date])
+  @@index([startDate])
+  @@index([endDate])
 }
 
 model TaskAssignment {
@@ -92,8 +95,8 @@ model TaskAssignment {
   taskId String
   userId String
 
-  // 🔥 GROUP
-  taskGroupId String?
+  workDate DateTime
+
 
   // 🔥 STATUS
   status AssignmentStatus @default(ASSIGNED)
@@ -127,13 +130,14 @@ model TaskAssignment {
 
   employee User @relation(fields: [userId], references: [id])
 
-  taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
 
   submission TaskSubmission?
 
   @@unique([taskId, userId])
+  @@index([workDate])
+  @@index([userId, workDate])
   @@index([userId])
-  @@index([taskGroupId])
+
   @@index([status])
 }
 
@@ -199,40 +203,104 @@ model LeaveBalance {
   @@unique([userId, year])
 }
 
-model TaskGroup {
-  id                  String               @id @default(uuid())
-  name                String
-  managerId           String
-  createdAt           DateTime             @default(now())
-  taskAssignments     TaskAssignment[]
-  manager             User                 @relation(fields: [managerId], references: [id])
-  members             TaskGroupMember[]
-  taskItemAssignments TaskItemAssignment[]
-}
+// model TaskGroup {
+//   id                  String               @id @default(uuid())
+//   name                String
+//   managerId           String
+//   createdAt           DateTime             @default(now())
+//   taskAssignments     TaskAssignment[]
+//   manager             User                 @relation(fields: [managerId], references: [id])
+//   members             TaskGroupMember[]
+//   taskItemAssignments TaskItemAssignment[]
+// }
 
-model TaskGroupMember {
-  id        String    @id @default(uuid())
-  groupId   String
-  userId    String
-  createdAt DateTime  @default(now())
-  group     TaskGroup @relation(fields: [groupId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
+// model TaskGroupMember {
+//   id        String    @id @default(uuid())
+//   groupId   String
+//   userId    String
+//   createdAt DateTime  @default(now())
+//   group     TaskGroup @relation(fields: [groupId], references: [id])
+//   user      User      @relation(fields: [userId], references: [id])
 
-  @@unique([groupId, userId])
-}
+//   @@unique([groupId, userId])
+// }
 
 model TaskEscalation {
-  id         String   @id @default(uuid())
-  managerId  String
-  date       DateTime
-  level1Sent Boolean  @default(false)
-  level2Sent Boolean  @default(false)
-  level3Sent Boolean  @default(false)
-  level4Sent Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  manager    User     @relation(fields: [managerId], references: [id])
+  id String @id @default(uuid())
 
-  @@unique([managerId, date])
+  employeeId String
+
+  managerId String
+
+  type EscalationType @default(NEXT_DAY_MISSING)
+
+  status EscalationStatus @default(PENDING)
+
+  //
+  // 🔥 MANAGER REMINDERS
+  //
+  reminder1SentAt DateTime?
+  reminder2SentAt DateTime?
+  reminder3SentAt DateTime?
+
+  //
+  // 🔥 HR ESCALATION
+  //
+  hrEscalatedAt DateTime?
+
+  //
+  // 🔥 ADMIN ESCALATION
+  //
+  adminEscalatedAt DateTime?
+
+  //
+  // 🔥 FINAL ESCALATION
+  //
+  finalEscalatedAt DateTime?
+
+  //
+  // 🔥 RESOLVED
+  //
+  resolvedAt DateTime?
+
+  //
+  // 🔥 MAIL TRACKING
+  //
+  managerMailSent Boolean @default(false)
+
+  hrMailSent Boolean @default(false)
+
+  adminMailSent Boolean @default(false)
+
+  //
+  // 🔥 POPUP TRACKING
+  //
+  popupSent Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  employee User @relation("EmployeeEscalation", fields: [employeeId], references: [id])
+
+  manager User    @relation("ManagerEscalation", fields: [managerId], references: [id])
+  
+  // NOTE: `userId` relation removed (was accidental) to match DB schema.
+
+  // Map `escalationDate` to the existing DB column `date`
+  escalationDate DateTime @map("date")
+
+  @@unique([employeeId, escalationDate, type])
+  @@index([managerId])
+  @@index([status])
+  @@index([escalationDate])
+}
+
+enum EscalationStatus {
+  PENDING
+  MANAGER_NOTIFIED
+  HR_ESCALATED
+  ADMIN_ESCALATED
+  FINAL_ESCALATED
+  RESOLVED
 }
 
 model TaskItem {
@@ -240,9 +308,8 @@ model TaskItem {
   taskId        String
   title         String
   description   String?
-  theme         String?
-  referenceLink String?
-  instructions  String?
+  dueDate       DateTime
+  priority      Priority             @default(MEDIUM)
   order         Int?
   status        TaskItemStatus       @default(DRAFT)
   createdAt     DateTime             @default(now())
@@ -284,16 +351,6 @@ enum SetupType {
   VERY_PREMIUM
   PHONE
 }
-
-// enum TaskStatus {
-//   DRAFT
-//   ASSIGNED
-//   IN_PROGRESS
-//   SUBMITTED
-//   VERIFIED
-//   OVERDUE
-//   CANCELLED
-// }
 
 enum TaskStatus {
   DRAFT
@@ -347,12 +404,6 @@ enum LeaveType {
 }
 
 enum TaskItemStatus {
-  // PENDING
-  // ASSIGNED
-  // IN_PROGRESS
-  // SUBMITTED
-  // VERIFIED
-
   PENDING
   DRAFT
   ASSIGNED
@@ -361,6 +412,12 @@ enum TaskItemStatus {
   VERIFIED
   REJECTED
   COMPLETED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
 }
 
 model TaskItemAssignment {
@@ -372,12 +429,6 @@ model TaskItemAssignment {
   status AssignmentStatus @default(ASSIGNED)
 
   progress Int @default(0)
-
-  // startedAt DateTime?
-
-  // submittedAt DateTime?
-
-  // completedAt DateTime?
 
   acceptedAt DateTime?
 
@@ -395,10 +446,6 @@ model TaskItemAssignment {
 
   createdAt DateTime @default(now())
 
-  taskGroupId String?
-
-  taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
-
   taskItem TaskItem @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
 
   employee User @relation(fields: [userId], references: [id])
@@ -407,7 +454,6 @@ model TaskItemAssignment {
 
   @@unique([taskItemId, userId])
   @@index([userId])
-  @@index([taskGroupId])
 }
 
 model Department {
@@ -419,138 +465,31 @@ model Department {
   users User[]
 }
 
-// model TaskAssignment {
-//   id String @id @default(uuid())
+model EmployeeTaskCoverage {
+  id String @id @default(uuid())
 
-//   taskId String
-//   userId String
+  employeeId String
+  managerId  String
 
-//   // 🔥 GROUP TASK SUPPORT
-//   taskGroupId String?
+  date DateTime
 
-//   // 🔥 LIVE STATUS
-//   status AssignmentStatus @default(PENDING)
+  // hasTask Boolean @default(false)
+  taskCount Int @default(0)
 
-//   // 🔥 PROGRESS %
-//   progress Int @default(0)
+  checkedAt DateTime?
 
-//   // 🔥 TIMESTAMPS
-//   acceptedAt DateTime?
-//   startedAt DateTime?
-//   submittedAt DateTime?
-//   verifiedAt DateTime?
-//   completedAt DateTime?
-//   rejectedAt DateTime?
+  createdAt DateTime @default(now())
 
-//   // 🔥 REJECTION
-//   rejectionReason String?
+  employee User @relation("EmployeeCoverage", fields: [employeeId], references: [id])
 
-//   createdAt DateTime @default(now())
+  manager User @relation("ManagerCoverage", fields: [managerId], references: [id])
 
-//   reminderSent Boolean @default(false)
+  @@unique([employeeId, date])
+  @@index([managerId])
+  @@index([date])
+}
 
-//   // 🔥 RELATIONS
-//   task Task @relation(fields: [taskId], references: [id])
-
-//   employee User @relation(fields: [userId], references: [id])
-
-//   taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
-
-//   submission TaskSubmission?
-
-//   @@unique([taskId, userId])
-
-//   @@index([userId])
-//   @@index([taskGroupId])
-//   @@index([status])
-// }
-
-// model TaskAssignment {
-//   id           String           @id @default(uuid())
-//   taskId       String
-//   userId       String
-//   status       AssignmentStatus @default(ASSIGNED)
-//   createdAt    DateTime         @default(now())
-//   reminderSent Boolean          @default(false)
-//   submittedAt  DateTime?
-//   taskGroupId  String?
-//   taskGroup    TaskGroup?       @relation(fields: [taskGroupId], references: [id])
-//   task         Task             @relation(fields: [taskId], references: [id])
-//   employee     User             @relation(fields: [userId], references: [id])
-//   submission   TaskSubmission?
-
-//   @@unique([taskId, userId])
-//   @@index([userId])
-//   @@index([taskGroupId])
-//   @@index([status])
-// }
-
-// model TaskItemAssignment {
-//   id          String              @id @default(uuid())
-//   taskItemId  String
-//   userId      String
-//   status      AssignmentStatus    @default(ASSIGNED)
-//   submittedAt DateTime?
-//   createdAt   DateTime            @default(now())
-//   taskGroupId String?
-//   taskGroup   TaskGroup?          @relation(fields: [taskGroupId], references: [id])
-//   taskItem    TaskItem            @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
-//   employee    User                @relation(fields: [userId], references: [id])
-//   submission  TaskItemSubmission?
-
-//   @@unique([taskItemId, userId])
-//   @@index([userId])
-//   @@index([taskGroupId])
-// }
-
-// model TaskAssignment {
-//   id String @id @default(uuid())
-
-//   taskId String
-//   userId String
-
-//   // 🔥 GROUP
-//   taskGroupId String?
-
-//   // 🔥 STATUS
-//   status AssignmentStatus @default(PENDING)
-
-//   // 🔥 PROGRESS %
-//   progress Int @default(0)
-
-//   // 🔥 STARTED TIME
-//   startedAt DateTime?
-
-//   // 🔥 SUBMITTED TIME
-//   submittedAt DateTime?
-
-//   // 🔥 COMPLETED TIME
-//   completedAt DateTime?
-
-//   // 🔥 REJECTION REASON
-//   rejectionReason String?
-
-//   createdAt DateTime @default(now())
-
-//   reminderSent Boolean @default(false)
-
-//   task Task @relation(fields: [taskId], references: [id])
-
-//   employee User @relation(fields: [userId], references: [id])
-
-//   taskGroup TaskGroup? @relation(fields: [taskGroupId], references: [id])
-
-//   submission TaskSubmission?
-
-//   @@unique([taskId, userId])
-
-//   @@index([userId])
-//   @@index([taskGroupId])
-//   @@index([status])
-// }
-
-// enum AssignmentStatus {
-//   ASSIGNED
-//   SUBMITTED
-//   APPROVED
-// }
+enum EscalationType {
+  NEXT_DAY_MISSING
+  FUTURE_4_DAYS_MISSING
+}
