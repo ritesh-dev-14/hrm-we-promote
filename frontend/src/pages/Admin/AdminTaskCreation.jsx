@@ -63,7 +63,7 @@ const AdminTaskPage = () => {
           </div>
 
           <CreateTaskButton
-            title="Create Task"
+            title="Create Project"
             onClick={() => setOpenModal(true)}
           />
         </div>

@@ -3,13 +3,10 @@ import { X, Loader2, ClipboardList, CheckCircle2 } from "lucide-react";
 import API from "../../services/api";
 
 const INITIAL_STATE = {
-  title: "",
+  projectName: "",
   description: "",
-  instructions: "",
-  referenceLink: "",
-  location: "",
-  date: "",
-  setupType: "PREMIUM"
+  startDate: "",
+  endDate: ""
 };
 
 const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
@@ -18,7 +15,7 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
   const [error, setError] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Close on Escape key
+  // Close modal on Escape key press
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") onClose();
@@ -27,6 +24,7 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
     return () => window.removeEventListener("keydown", handleEsc);
   }, [open, onClose]);
 
+  // Reset form states when modal opens
   useEffect(() => {
     if (open) {
       setFormData(INITIAL_STATE);
@@ -47,11 +45,13 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
     setError("");
 
     try {
-      // Clean data
-      const payload = Object.keys(formData).reduce((acc, key) => {
-        acc[key] = typeof formData[key] === "string" ? formData[key].trim() : formData[key];
-        return acc;
-      }, {});
+      // Format regular HTML dates to the exact ISO format expected by your API (T00:00:00.000Z)
+      const payload = {
+        projectName: formData.projectName.trim(),
+        description: formData.description.trim(),
+        startDate: formData.startDate ? `${formData.startDate}T00:00:00.000Z` : null,
+        endDate: formData.endDate ? `${formData.endDate}T00:00:00.000Z` : null
+      };
 
       const res = await API.post("/api/manager/tasks", payload);
 
@@ -60,10 +60,10 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
         setTimeout(() => {
           onTaskCreated(res.data.data);
           onClose();
-        }, 1500); // Brief pause to show success state
+        }, 1500); // Brief pause to show success checkmark
       }
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to create task. Please try again.");
+      setError(err?.response?.data?.message || "Failed to create project. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -73,13 +73,18 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
 
   const today = new Date().toISOString().split("T")[0];
 
+  // Reusable Tailwind classes to keep the component clean
+  const labelClass = "block text-xs font-bold text-gray-700 ml-0.5";
+  const inputClass = "w-full bg-gray-100 border-[1.5px] border-transparent rounded-[14px] px-3 py-2.5 text-sm text-gray-900 transition-all duration-200 outline-none focus:bg-white focus:border-black focus:ring-4 focus:ring-black/5";
+  const textareaClass = "w-full bg-gray-100 border-[1.5px] border-transparent rounded-[14px] px-3 py-2.5 text-sm text-gray-900 transition-all duration-200 outline-none focus:bg-white focus:border-black focus:ring-4 focus:ring-black/5 resize-none h-28";
+
   return (
     <div 
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={onClose} // Close on backdrop click
+      onClick={onClose} 
     >
       <div 
-        className="w-full max-w-md bg-white rounded-4xl shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200"
+        className="w-full max-w-md bg-white rounded-[32px] shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()} 
         role="dialog"
         aria-modal="true"
@@ -91,8 +96,8 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
               <ClipboardList size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Create Task</h2>
-              <p className="text-xs text-gray-500">Assign new duties to the team</p>
+              <h2 className="text-lg font-bold text-gray-900">Create Project</h2>
+              <p className="text-xs text-gray-500">Initialize a new project board</p>
             </div>
           </div>
           <button
@@ -105,127 +110,84 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
         </div>
 
         {/* FORM BODY */}
-        <div className="overflow-y-auto p-6 custom-scrollbar">
+        <div className="overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
           {isSuccess ? (
             <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
               <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center animate-bounce">
                 <CheckCircle2 size={32} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Task Created!</h3>
-              <p className="text-gray-500">The task has been successfully assigned.</p>
+              <h3 className="text-xl font-bold text-gray-900">Project Created!</h3>
+              <p className="text-gray-500">The project setup was successfully sent.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
-                {/* TITLE */}
+                
+                {/* PROJECT NAME */}
                 <div className="space-y-1.5">
-                  <label className="label">Title</label>
+                  <label className={labelClass}>Project Name</label>
                   <input
                     type="text"
-                    name="title"
+                    name="projectName"
                     required
-                    value={formData.title}
+                    value={formData.projectName}
                     onChange={handleChange}
-                    placeholder="e.g., New Store Setup"
-                    className="input"
+                    placeholder="e.g., Hr Project"
+                    className={inputClass}
                   />
                 </div>
 
-                {/* DATE & LOCATION GRID */}
+                {/* DATE GRID */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="label">Date</label>
+                    <label className={labelClass}>Start Date</label>
                     <input
                       type="date"
-                      name="date"
+                      name="startDate"
                       required
                       min={today}
-                      value={formData.date}
+                      value={formData.startDate}
                       onChange={handleChange}
-                      className="input"
+                      className={inputClass}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="label">Location</label>
+                    <label className={labelClass}>End Date</label>
                     <input
-                      type="text"
-                      name="location"
+                      type="date"
+                      name="endDate"
                       required
-                      value={formData.location}
+                      min={formData.startDate || today}
+                      value={formData.endDate}
                       onChange={handleChange}
-                      placeholder="City/Store"
-                      className="input"
+                      className={inputClass}
                     />
                   </div>
-                </div>
-
-                {/* DROPDOWNS */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="label">Setup Type</label>
-                    <select name="setupType" value={formData.setupType} onChange={handleChange} className="input">
-                      <option value="PREMIUM">Premium</option>
-                      <option value="VERY_PREMIUM">Very Premium</option>
-                      <option value="PHONE">Phone</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    {/* <label className="label">Assign Role</label>
-                    <select name="assignedToRole" value={formData.assignedToRole} onChange={handleChange} className="input">
-                      <option value="EMPLOYEE">Employee</option>
-                      <option value="MANAGER">Manager</option>
-                    </select> */}
-                  </div>
-                </div>
-
-                {/* REFERENCE LINK */}
-                <div className="space-y-1.5">
-                  <label className="label">Reference Link (Optional)</label>
-                  <input
-                    type="url"
-                    name="referenceLink"
-                    value={formData.referenceLink}
-                    onChange={handleChange}
-                    placeholder="https://drive.google.com/..."
-                    className="input"
-                  />
                 </div>
 
                 {/* DESCRIPTION */}
                 <div className="space-y-1.5">
-                  <label className="label">Description</label>
+                  <label className={labelClass}>Description</label>
                   <textarea
                     name="description"
                     required
                     value={formData.description}
                     onChange={handleChange}
-                    placeholder="Describe the overall goal..."
-                    className="textarea h-24"
-                  />
-                </div>
-
-                {/* INSTRUCTIONS */}
-                <div className="space-y-1.5">
-                  <label className="label">Step-by-Step Instructions</label>
-                  <textarea
-                    name="instructions"
-                    required
-                    value={formData.instructions}
-                    onChange={handleChange}
-                    placeholder="1. Check inventory..."
-                    className="textarea h-24"
+                    placeholder="Redesign the marketing website..."
+                    className={textareaClass}
                   />
                 </div>
               </div>
 
+              {/* ERROR STATE */}
               {error && (
-                <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-xl px-4 py-3 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-600" />
-                  {error}
+                <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-xl px-4 py-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                  <span className="font-medium">{error}</span>
                 </div>
               )}
 
-              {/* FOOTER BUTTON */}
+              {/* SUBMIT BUTTON */}
               <div className="pt-2">
                 <button
                   type="submit"
@@ -238,7 +200,7 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
                       Creating...
                     </>
                   ) : (
-                    "Create Task"
+                    "Create Project"
                   )}
                 </button>
               </div>
@@ -246,49 +208,6 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
           )}
         </div>
       </div>
-
-      <style>{`
-        .label {
-          display: block;
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #374151;
-          margin-left: 2px;
-        }
-
-        .input, .textarea {
-          width: 100%;
-          background: #f3f4f6;
-          border: 1.5px solid transparent;
-          border-radius: 14px;
-          padding: 0.6rem 0.8rem;
-          font-size: 0.875rem;
-          color: #111827;
-          transition: all 0.2s ease;
-        }
-
-        .input:focus, .textarea:focus {
-          background: #ffffff;
-          border-color: #000000;
-          outline: none;
-          box-shadow: 0 0 0 4px rgba(0,0,0,0.03);
-        }
-
-        .textarea {
-          resize: none;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e5e7eb;
-          border-radius: 10px;
-        }
-      `}</style>
     </div>
   );
 };

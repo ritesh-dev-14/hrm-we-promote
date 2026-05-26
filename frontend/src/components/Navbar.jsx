@@ -31,7 +31,7 @@ const NAV_CONFIG = [
   },
   {
     id: "tasks",
-    label: "Tasks",
+    label: "Projects",
     icon: BriefcaseBusiness,
     path: "/tasks",
     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],

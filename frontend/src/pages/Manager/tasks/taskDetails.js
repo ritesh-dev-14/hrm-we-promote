@@ -39,7 +39,7 @@ export const createTaskItem = async (taskId, payload) => {
 
     };
 
-    console.log("CREATE TASK ITEM PAYLOAD =>", formattedPayload);
+    console.log("CREATE PROJECT ITEM PAYLOAD =>", formattedPayload);
 
     const response = await API.post(
 
@@ -55,7 +55,7 @@ export const createTaskItem = async (taskId, payload) => {
 
     console.error(
 
-      "Create Task Item Error:",
+      "Create Project Item Error:",
 
       error?.response?.data || error.message,
 
