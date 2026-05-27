@@ -1031,8 +1031,20 @@ exports.getMyAssignedItems =
         task: {
           id: a.taskItem.task.id,
 
+          projectName:
+            a.taskItem.task.projectName,
+
           title:
             a.taskItem.task.title,
+
+          description:
+            a.taskItem.task.description,
+
+          status:
+            a.taskItem.task.status,
+
+          progress:
+            a.taskItem.task.progress,
 
           createdBy:
             a.taskItem.task.createdBy,
