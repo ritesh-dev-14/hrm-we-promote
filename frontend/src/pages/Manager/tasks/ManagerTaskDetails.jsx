@@ -253,7 +253,7 @@ const ManagerTaskDetailPage = () => {
   const stats = useMemo(() => {
     return [
       {
-        title: "Total Subtasks",
+        title: "Total Tasks",
         value: summary?.totalItems || 0,
         icon: ListTodo,
       },
@@ -311,7 +311,7 @@ const ManagerTaskDetailPage = () => {
                   {task.status}
                 </span>
                 <span className="text-sm font-medium text-slate-500">
-                  {task.progress || 0}% Progress System-wide
+                  Overall {task.progress || 0}% Progress
                 </span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
@@ -357,8 +357,8 @@ const ManagerTaskDetailPage = () => {
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm mt-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Subtasks Ecosystem</h2>
-              <p className="text-sm text-slate-500 mt-1">Review items, assign execution team members, and check link submissions</p>
+              <h2 className="text-xl font-bold text-slate-900">Task Management</h2>
+              <p className="text-sm text-slate-500 mt-1">Review tasks, assign execution team members, and check link submissions</p>
             </div>
             <button
               onClick={() => setShowSubtaskForm(!showSubtaskForm)}
@@ -444,7 +444,7 @@ const ManagerTaskDetailPage = () => {
             <table className="w-full min-w-[1200px]">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Subtask Info</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Task Info</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Due Date</th>

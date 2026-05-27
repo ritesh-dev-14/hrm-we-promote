@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import API from "../../services/api";
-
 import { notifyError, notifyInfo, notifySuccess } from "../../utils/toast";
 
 import {
@@ -14,7 +13,8 @@ import {
   CalendarDays,
   Loader2,
   X,
-  AlertOctagon,
+  ExternalLink,
+  ChevronRight
 } from "lucide-react";
 
 const statusStyles = {
@@ -23,6 +23,7 @@ const statusStyles = {
   SUBMITTED: "bg-blue-50 text-blue-700 border border-blue-200",
   ASSIGNED: "bg-slate-100 text-slate-700 border border-slate-200",
   PENDING: "bg-amber-50 text-amber-700 border border-amber-200",
+  UNABLE_TO_SUBMIT: "bg-rose-50 text-rose-700 border border-rose-200",
 };
 
 const EmployeeTaskPage = () => {
@@ -60,6 +61,7 @@ const EmployeeTaskPage = () => {
     setSelectedTask(task);
     setProgressValue(task.progress || 0);
     setRemarks(task.submission?.remarks || "");
+    setDriveLink(task.submission?.driveLink || "");
     setUnableReason(task.submission?.unableToSubmitReason || "");
   };
 
@@ -81,10 +83,11 @@ const EmployeeTaskPage = () => {
 
   const handleSubmitTask = async () => {
     try {
+    
       setSubmitting(true);
       await API.post(
         `/api/task-item-submission/${selectedTask.assignmentId}/submit`,
-        { remarks },
+        { remarks,  },
       );
       notifySuccess("Task submitted successfully");
       setSelectedTask(null);
@@ -99,7 +102,7 @@ const EmployeeTaskPage = () => {
   const handleUnableToSubmit = async () => {
     try {
       if (!unableReason.trim()) {
-        notifyInfo("Please provide a reason for tracking");
+        notifyInfo("Please provide a reason for the roadblock");
         return;
       }
       setReportingIssue(true);
@@ -107,11 +110,11 @@ const EmployeeTaskPage = () => {
         `/api/task-item-submission/${selectedTask.assignmentId}/unable-to-submit`,
         { reason: unableReason },
       );
-      notifySuccess("Issue context logged cleanly");
+      notifySuccess("Roadblock logged successfully");
       setSelectedTask(null);
       loadTasks();
     } catch (error) {
-      notifyError("Failed to record structural reason log");
+      notifyError("Failed to log roadblock");
     } finally {
       setReportingIssue(false);
     }
@@ -139,7 +142,7 @@ const EmployeeTaskPage = () => {
   }, [tasks]);
 
   const formatDate = (date) => {
-    if (!date) return "--";
+    if (!date) return "-";
     return new Date(date).toLocaleString("en-IN", {
       dateStyle: "medium",
       timeStyle: "short",
@@ -147,329 +150,301 @@ const EmployeeTaskPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* HEADER */}
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-8">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* HEADER SECTION */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between border-b border-slate-200 pb-6 mb-8 gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.25em] font-bold text-slate-400 mb-3">
-              Employee Workspace
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">
-              My Assignments
-            </h1>
-            <p className="text-sm sm:text-base text-slate-500 mt-3 max-w-2xl leading-7">
-              Track task progress, submit work blueprints, and log roadblock
-              contexts.
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950 mt-1">My Tasks</h1>
+            <p className="text-sm text-slate-500 mt-1">Track your active tasks, manage task delivery, and update your project progress.</p>
           </div>
-
-          {/* OVERALL COMPLETE PROGRESS PROGRESSION */}
-          <div className="w-full xl:w-[360px] bg-white border border-slate-200 rounded-[32px] p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm text-slate-500">Overall Completion</p>
-                <h2 className="text-5xl font-black text-slate-900 mt-2">
-                  {stats.avg}%
-                </h2>
-              </div>
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-                <CheckCircle2 size={24} className="text-slate-700" />
-              </div>
+          
+          <div className="flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-4 min-w-[260px]">
+            <div className="flex-1">
+              <span className="text-xs text-slate-500 block">Average Progress</span>
+              <span className="text-2xl font-bold text-slate-950 mt-0.5 block">{stats.avg}%</span>
             </div>
-            <div className="h-3 bg-slate-100 rounded-full overflow-hidden mt-6">
-              <div
-                style={{ width: `${stats.avg}%` }}
-                className="h-full bg-slate-900 rounded-full transition-all duration-500"
-              />
+            <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+              <CheckCircle2 size={18} className="text-slate-600" />
             </div>
           </div>
         </div>
 
-        {/* METRICS ROW */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-          <StatsCard title="Total Tasks" value={stats.total} icon={FileText} />
-          <StatsCard title="Pending" value={stats.pending} icon={Clock3} />
-          <StatsCard
-            title="Verified"
-            value={stats.verified}
-            icon={CheckCircle2}
-          />
-          <StatsCard
-            title="Rejected"
-            value={stats.rejected}
-            icon={AlertTriangle}
-          />
+        {/* METRICS COUNT GRID */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <StatsRow title="Total Assigned" value={stats.total} icon={FileText} />
+          <StatsRow title="In Progress" value={stats.pending} icon={Clock3} />
+          <StatsRow title="Verified Work" value={stats.verified} icon={CheckCircle2} />
+          <StatsRow title="Revisions Requested" value={stats.rejected} icon={AlertTriangle} />
         </div>
 
-        {/* LOADING CORE STREAMS */}
+        {/* CORE RENDER AREA */}
         {loading ? (
-          <div className="bg-white border border-slate-200 rounded-[32px] py-28 flex flex-col items-center justify-center">
-            <Loader2 className="animate-spin text-slate-700" />
-            <p className="text-sm text-slate-500 mt-4">
-              Loading operational node indices...
-            </p>
+          <div className="bg-white border border-slate-200 rounded-2xl py-24 flex flex-col items-center justify-center text-slate-400">
+            <Loader2 className="animate-spin text-slate-600 mb-3" size={24} />
+            <span className="text-sm font-medium text-slate-500">Fetching task listings...</span>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-[32px] p-14 text-center">
-            <h3 className="text-2xl font-bold text-slate-900">
-              No Assignments Found
-            </h3>
-            <p className="text-sm text-slate-500 mt-3">
-              Active task units assigned from management will materialize here.
-            </p>
+          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center">
+            <h3 className="text-lg font-semibold text-slate-900">No current tasks found</h3>
+            <p className="text-sm text-slate-500 mt-1">All newly assigned milestones from your manager will appear here.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
-            {tasks.map((item) => (
-              <TaskCard
-                key={item.assignmentId}
-                item={item}
-                onOpen={() => handleOpenTask(item)}
-              />
-            ))}
+          /* MINIMAL ROW LAYOUT */
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1000px] text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase text-slate-500 tracking-wider">
+                    <th className="px-6 py-4">Task Info</th>
+                    <th className="px-6 py-4">Project Name</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Task Progress</th>
+                    <th className="px-6 py-4">Manager</th>
+                    <th className="px-6 py-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {tasks.map((item) => (
+                    <tr key={item.assignmentId} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-6 py-4 max-w-sm">
+                        <span className="font-semibold text-slate-900 block truncate">{item.taskItem?.title}</span>
+                        {item.taskItem?.description && (
+                          <span className="text-xs text-slate-500 block truncate mt-0.5">{item.taskItem.description}</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 whitespace-nowrap">
+                        {item.taskItem?.task?.projectName || "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[item.status]}`}>
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3 w-32">
+                          <div className="flex-1 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div style={{ width: `${item.progress || 0}%` }} className="h-full bg-slate-900 rounded-full" />
+                          </div>
+                          <span className="text-xs font-medium text-slate-600 shrink-0">{item.progress || 0}%</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 whitespace-nowrap">
+                        {item.taskItem?.task?.createdBy?.name || "-"}
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => handleOpenTask(item)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl transition-colors"
+                        >
+                          View Work <ChevronRight size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
 
-      {/* DETAIL DRAWER MODAL EXTENSION */}
+      {/* DETAIL WORKSPACE INTERACTION OVERLAY */}
       {selectedTask && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end lg:items-center justify-center p-0 lg:p-6">
-          <div className="bg-[#f8fafc] w-full lg:max-w-7xl h-[100vh] lg:h-[92vh] rounded-t-[32px] lg:rounded-[32px] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end lg:items-center justify-center p-0 lg:p-4">
+          <div className="bg-white w-full lg:max-w-6xl h-[100vh] lg:h-[90vh] rounded-t-3xl lg:rounded-3xl border border-slate-200 overflow-hidden flex flex-col">
+            
             {/* MODAL HEADER */}
-            <div className="bg-white border-b border-slate-200 px-5 lg:px-8 py-5 flex items-start justify-between gap-4 shrink-0">
-              <div className="min-w-0">
-                <div
-                  className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold mb-4 ${statusStyles[selectedTask.status]}`}
-                >
+            <div className="border-b border-slate-200 px-6 py-5 flex items-start justify-between gap-4 shrink-0 bg-slate-50">
+              <div>
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[selectedTask.status]} mb-2`}>
                   {selectedTask.status}
-                </div>
-                <h2 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight">
-                  {selectedTask.taskItem?.title}
-                </h2>
-                <p className="text-sm text-slate-500 mt-3 max-w-3xl leading-7">
-                  {selectedTask.taskItem?.description}
-                </p>
+                </span>
+                <h2 className="text-xl font-bold text-slate-900">{selectedTask.taskItem?.title}</h2>
+                <p className="text-xs text-slate-500 mt-1 font-medium">Project Group: {selectedTask.taskItem?.task?.projectName}</p>
               </div>
               <button
                 onClick={() => setSelectedTask(null)}
-                className="w-11 h-11 rounded-2xl hover:bg-slate-100 flex items-center justify-center shrink-0"
+                className="w-9 h-9 rounded-xl hover:bg-slate-200 border border-slate-200 flex items-center justify-center transition-colors shrink-0"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            {/* MODAL WORKSPACE BODY */}
-            <div className="flex-1 overflow-y-auto p-5 lg:p-8">
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* INNER WORKSPACE LEFT BLOCK */}
-                <div className="xl:col-span-2 space-y-6">
-                  {/* DIRECTIVE PROPERTY PROFILE CARDS */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <InfoCard
-                      title="Manager Node"
-                      value={
-                        selectedTask.taskItem?.task?.createdBy?.name || "--"
-                      }
-                      icon={User2}
-                    />
-                    <InfoCard
-                      title="Role Scope"
-                      value={
-                        selectedTask.taskItem?.task?.createdBy?.role || "--"
-                      }
-                      icon={Briefcase}
-                    />
-                    <InfoCard
-                      title="Metric Progress"
-                      value={`${progressValue}%`}
-                      icon={Clock3}
-                    />
-                    <InfoCard
-                      title="Lifecycle Status"
-                      value={selectedTask.status}
-                      icon={CheckCircle2}
-                    />
+            {/* MAIN CORE DIALOG INTERACTION COLUMNS */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* DETAILS COMPONENT COLUMN */}
+                <div className="lg:col-span-2 space-y-5">
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block">Description</span>
+                    <p className="text-sm text-slate-700 leading-relaxed mt-1.5">{selectedTask.taskItem?.description || "No layout description included."}</p>
                   </div>
 
-                  {/* CHRONO TIMELINE LOGS TRACKER */}
-                  <SectionCard title="Lifecycle Timeline Metrics">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <TimelineCard
-                        label="Started At"
-                        value={formatDate(selectedTask.startedAt)}
-                      />
-                      <TimelineCard
-                        label="Submitted At"
-                        value={formatDate(selectedTask.submittedAt)}
-                      />
-                      <TimelineCard
-                        label="Completed At"
-                        value={formatDate(selectedTask.completedAt)}
-                      />
-                      <TimelineCard
-                        label="Verified At"
-                        value={formatDate(selectedTask.verifiedAt)}
-                      />
-                      <TimelineCard
-                        label="Rejected At"
-                        value={formatDate(selectedTask.rejectedAt)}
-                      />
-                      <TimelineCard
-                        label="Rejection Context"
-                        value={selectedTask.rejectionReason || "--"}
-                      />
-                    </div>
-                  </SectionCard>
+                  <div className="grid grid-cols-2 gap-4">
+                    <RowMetaItem label="Manager" value={selectedTask.taskItem?.task?.createdBy?.name} icon={User2} />
+                    <RowMetaItem label="Manager Role" value={selectedTask.taskItem?.task?.createdBy?.role} icon={Briefcase} />
+                    <RowMetaItem label="Task ID Reference" value={selectedTask.taskItem?.id} isMono />
+                    <RowMetaItem label="Assignment Reference" value={selectedTask.assignmentId} isMono />
+                  </div>
 
-                  {/* ACTIVE COMPLIANT LOGGED SUBMISSION AREA */}
+                  {/* TIMELINE METRICS */}
+                  <div className="border border-slate-200 rounded-2xl p-5">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Timeline Logs</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <RowTimelineLog label="Started At" value={formatDate(selectedTask.startedAt)} />
+                      <RowTimelineLog label="Submitted At" value={formatDate(selectedTask.submittedAt)} />
+                      <RowTimelineLog label="Completed At" value={formatDate(selectedTask.completedAt)} />
+                      <RowTimelineLog label="Verified At" value={formatDate(selectedTask.verifiedAt)} />
+                    </div>
+                  </div>
+
+                  {/* SUBMISSION SUMMARY CONTAINER */}
                   {selectedTask.submission && (
-                    <SectionCard title="Submitted Data">
-                      <div className="space-y-4">
+                    <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/40">
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Submitted Resource Ledger</h3>
+                      <div className="space-y-3">
+                        {selectedTask.submission.driveLink && (
+                          <div>
+                            <span className="text-xs text-slate-400 block">Resource Link</span>
+                            <a
+                              href={selectedTask.submission.driveLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-medium text-slate-900 inline-flex items-center gap-1 hover:underline mt-0.5"
+                            >
+                              {selectedTask.submission.driveLink} <ExternalLink size={12} className="text-slate-400" />
+                            </a>
+                          </div>
+                        )}
                         {selectedTask.submission.remarks && (
                           <div>
-                            <p className="text-xs font-semibold text-slate-400 mb-2">
-                              Remarks
-                            </p>
-                            <p className="text-sm text-slate-700">
-                              {selectedTask.submission.remarks}
-                            </p>
+                            <span className="text-xs text-slate-400 block">Remarks</span>
+                            <p className="text-sm text-slate-700 mt-0.5">{selectedTask.submission.remarks}</p>
                           </div>
                         )}
-
                         {selectedTask.submission.unableToSubmitReason && (
-                          <div className="p-4 bg-red-50 border border-red-200 rounded-2xl">
-                            <p className="text-xs font-bold text-red-600 mb-1">
-                              Unable to Submit Reason
-                            </p>
-                            <p className="text-sm text-red-700">
-                              {selectedTask.submission.unableToSubmitReason}
-                            </p>
+                          <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
+                            <span className="text-xs font-bold text-red-700 block">Roadblock Context</span>
+                            <p className="text-xs text-red-700 mt-1">{selectedTask.submission.unableToSubmitReason}</p>
                           </div>
                         )}
-
-                        <div className="text-xs text-slate-500">
-                          Verified:{" "}
-                          {selectedTask.submission.verifiedByManager
-                            ? "Yes"
-                            : "No"}
-                        </div>
                       </div>
-                    </SectionCard>
+                    </div>
+                  )}
+
+                  {selectedTask.status === "REJECTED" && selectedTask.rejectionReason && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-xs text-red-800">
+                      <AlertTriangle size={16} className="shrink-0 text-red-600 mt-0.5" />
+                      <div>
+                        <span className="font-bold block">Revision Requested by Manager:</span>
+                        <p className="mt-1">{selectedTask.rejectionReason}</p>
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* INNER WORKSPACE RIGHT OPERATION BLOCK */}
-                <div className="space-y-6">
-                  {/* COMPONENT MODULE: DELTA PROGRESS MODIFICATION */}
-                  <div className="bg-white border border-slate-200 rounded-[32px] p-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-5">
-                      <div>
-                        <p className="text-sm text-slate-500">
-                          Modify Local Progress
-                        </p>
-                        <h3 className="text-4xl font-black text-slate-900 mt-2">
-                          {progressValue}%
-                        </h3>
-                      </div>
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                        <Clock3 size={20} />
-                      </div>
+                {/* CONTROLS UPDATE COLUMN */}
+                <div className="space-y-5">
+                  {/* PROGRESS ACTION BOX */}
+                  <div className="border border-slate-200 rounded-2xl p-5 bg-white">
+                    <span className="text-xs font-semibold text-slate-400 uppercase block">Update Completion Level</span>
+                    <div className="flex items-baseline gap-1.5 mt-2">
+                      <span className="text-3xl font-bold text-slate-900">{progressValue}%</span>
                     </div>
+                    
                     <input
                       type="range"
                       min="0"
                       max="100"
                       value={progressValue}
-                      onChange={(e) =>
-                        setProgressValue(parseInt(e.target.value))
-                      }
-                      className="w-full accent-black"
+                      onChange={(e) => setProgressValue(parseInt(e.target.value))}
+                      className="w-full accent-slate-900 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer mt-4"
                     />
+
                     <button
                       onClick={handleSaveProgress}
                       disabled={savingProgress}
-                      className="w-full h-12 rounded-2xl bg-slate-900 text-white text-sm font-semibold mt-6 hover:bg-slate-800 transition disabled:opacity-50"
+                      className="w-full h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold mt-4 transition-colors disabled:opacity-50"
                     >
-                      {savingProgress ? "Syncing..." : "Save Progress Matrix"}
+                      {savingProgress ? "Updating..." : "Save Progress Value"}
                     </button>
                   </div>
 
-                  {/* ACTIVE DISPATCH CONTEXT FORM TIERS */}
+                  {/* DISPATCH DELIVERY HANDLER FORMS */}
                   {!selectedTask.submission && (
-                    <div className="space-y-6">
-                      {/* ACTION SUBMODULE A: SUBMIT ROUTE DISPATCH */}
-                      <div className="bg-white border border-slate-200 rounded-[32px] p-6 shadow-sm">
-                        <h3 className="text-xl font-bold text-slate-900 mb-6">
-                          Commit Asset Deliverable
-                        </h3>
-                        <div className="space-y-5">
+                    <div className="space-y-4">
+                      
+                      {/* COMMIT FORM */}
+                      <div className="border border-slate-200 rounded-2xl p-5 bg-white">
+                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Submit Output Deliverable</h3>
+                        <div className="space-y-3">
                           <div>
-                            <label className="text-sm text-slate-500 block mb-2">
-                              Drive Resource Destination URL
-                            </label>
+                            {/* <label className="text-xs text-slate-500 block mb-1">Resource Drive URL</label>
+                            <input
+                              type="url"
+                              value={driveLink}
+                              onChange={(e) => setDriveLink(e.target.value)}
+                              placeholder="https://drive.google.com/..."
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-900 bg-slate-50/50"
+                            /> */}
                           </div>
+
                           <div>
-                            <label className="text-sm text-slate-500 block mb-2">
-                              Scope Delivery Remarks
-                            </label>
+                            <label className="text-xs text-slate-500 block mb-1">Delivery Remarks</label>
                             <textarea
                               rows={3}
                               value={remarks}
                               onChange={(e) => setRemarks(e.target.value)}
-                              placeholder="Describe deliverable status components..."
-                              className="w-full rounded-2xl border border-slate-200 p-4 text-sm resize-none outline-none focus:border-black"
+                              placeholder="Provide status summary context..."
+                              className="w-full rounded-xl border border-slate-200 p-3 text-xs resize-none outline-none focus:border-slate-900 bg-slate-50/50"
                             />
                           </div>
+
                           <button
                             onClick={handleSubmitTask}
                             disabled={submitting}
-                            className="w-full h-12 rounded-2xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition disabled:opacity-50"
+                            className="w-full h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors disabled:opacity-50"
                           >
-                            {submitting
-                              ? "Processing Dispatch..."
-                              : "Commit Asset Submission"}
+                            {submitting ? "Submitting..." : "Submit Task Deliverable"}
                           </button>
                         </div>
                       </div>
 
-                      {/* ACTION SUBMODULE B: ROADBLOCK / EXCEPTION LOG ROUTE */}
-                      <div className="bg-white border border-red-100 rounded-[32px] p-6 shadow-sm bg-red-50/20">
-                        <h3 className="text-xl font-bold text-red-900 mb-2 flex items-center gap-2">
-                          <AlertTriangle size={20} className="text-red-600" />{" "}
-                          Log Blocking Roadblock
+                      {/* ROADBLOCK CONTEXT LOGGER */}
+                      <div className="border border-red-100 rounded-2xl p-5 bg-red-50/20">
+                        <h3 className="text-xs font-bold text-red-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <AlertTriangle size={14} className="text-red-600" /> Log Blocking Issue
                         </h3>
-                        <p className="text-xs text-slate-400 mb-4 leading-normal">
-                          Report systematic failure points or immediate blocks
-                          preventing task item lifecycle closing.
-                        </p>
-                        <div className="space-y-4">
-                          <div>
-                            <textarea
-                              rows={3}
-                              value={unableReason}
-                              onChange={(e) => setUnableReason(e.target.value)}
-                              placeholder="Provide explicit context regarding immediate processing limitations or block justifications..."
-                              className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm resize-none outline-none focus:border-red-500"
-                            />
-                          </div>
-                          2{" "}
+                        <p className="text-[11px] text-slate-500 mb-3">Use this if systemic issues completely prevent progress execution.</p>
+                        
+                        <div className="space-y-3">
+                          <textarea
+                            rows={3}
+                            value={unableReason}
+                            onChange={(e) => setUnableReason(e.target.value)}
+                            placeholder="Provide explicit context on limitations..."
+                            className="w-full rounded-xl border border-slate-200 p-3 text-xs resize-none bg-white outline-none focus:border-red-500"
+                          />
                           <button
                             onClick={handleUnableToSubmit}
                             disabled={reportingIssue}
-                            className="w-full h-11 rounded-2xl bg-red-600 text-white text-xs font-bold tracking-wide uppercase hover:bg-red-700 transition disabled:opacity-50"
+                            className="w-full h-9 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
                           >
-                            {reportingIssue
-                              ? "Filing Context..."
-                              : "Broadcast Roadblock Exception"}
+                            {reportingIssue ? "Logging Issue..." : "Report Roadblock Block"}
                           </button>
                         </div>
                       </div>
+
                     </div>
                   )}
                 </div>
+
               </div>
             </div>
+
           </div>
         </div>
       )}
@@ -477,147 +452,46 @@ const EmployeeTaskPage = () => {
   );
 };
 
-/* STATIC LAYOUT TILES Components */
-
-const StatsCard = ({ title, value, icon: Icon }) => {
+/* INNER METRIC ROW TILES */
+const StatsRow = ({ title, value, icon: Icon }) => {
   return (
-    <div className="bg-white border border-slate-200 rounded-[28px] p-5 sm:p-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-slate-500 mb-3">{title}</p>
-          <h3 className="text-3xl font-black text-slate-900">{value}</h3>
-        </div>
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-          <Icon size={20} className="text-slate-700" />
-        </div>
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+      <div>
+        <span className="text-xs font-medium text-slate-400 block">{title}</span>
+        <span className="text-xl font-bold text-slate-900 block mt-1">{value}</span>
+      </div>
+      <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+        <Icon size={16} className="text-slate-500" />
       </div>
     </div>
   );
 };
 
-const TaskCard = ({ item, onOpen }) => {
+/* METADATA DISPLAY LINE ITEMS */
+const RowMetaItem = ({ label, value, icon: Icon, isMono = false }) => {
   return (
-    <div className="bg-white border border-slate-200 rounded-[32px] p-6 flex flex-col shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-      <div className="flex items-start justify-between gap-4 mb-5">
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[item.status]}`}
-        >
-          {item.status}
-        </span>
-        <span className="text-sm font-semibold text-slate-500">
-          {item.progress || 0}%
+    <div className="border border-slate-100 bg-slate-50/50 rounded-xl p-3 flex items-center justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider block">{label}</span>
+        <span className={`text-xs font-semibold text-slate-800 block truncate mt-0.5 ${isMono ? "font-mono text-slate-500" : ""}`}>
+          {value || "-"}
         </span>
       </div>
-
-      <h2 className="text-2xl font-black text-slate-900 leading-tight truncate">
-        {item.taskItem?.title}
-      </h2>
-
-      <p className="text-sm text-slate-500 leading-7 mt-4 line-clamp-2 min-h-[56px]">
-        {item.taskItem?.description}
-      </p>
-
-      <div className="space-y-3 mt-6">
-        <MiniInfo
-          icon={User2}
-          label="Manager Hub"
-          value={item.taskItem?.task?.createdBy?.name || "--"}
-        />
-        <MiniInfo
-          icon={Briefcase}
-          label="Core Scope Role"
-          value={item.taskItem?.task?.createdBy?.role || "--"}
-        />
-        <MiniInfo
-          icon={CalendarDays}
-          label="Submission Entry Stamp"
-          value={
-            item.submittedAt
-              ? new Date(item.submittedAt).toLocaleDateString("en-IN")
-              : "--"
-          }
-        />
-      </div>
-
-      <div className="mt-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Node Progress Delta
-          </span>
-          <span className="text-xs font-semibold text-slate-600">
-            {item.progress || 0}%
-          </span>
+      {Icon && (
+        <div className="w-7 h-7 bg-white rounded-lg border border-slate-200/60 flex items-center justify-center shrink-0">
+          <Icon size={12} className="text-slate-400" />
         </div>
-        <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
-          <div
-            style={{ width: `${item.progress || 0}%` }}
-            className="h-full bg-slate-900 rounded-full transition-all duration-500"
-          />
-        </div>
-      </div>
-
-      <button
-        onClick={onOpen}
-        className="h-12 mt-7 rounded-2xl bg-slate-900 text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-slate-800 transition"
-      >
-        <Eye size={16} /> Open Workspace
-      </button>
+      )}
     </div>
   );
 };
 
-const SectionCard = ({ title, children }) => {
+/* LOG LEVEL ROW DISPLAY LINE */
+const RowTimelineLog = ({ label, value }) => {
   return (
-    <div className="bg-white border border-slate-200 rounded-[32px] p-6">
-      <h3 className="text-xl font-bold text-slate-900 mb-6">{title}</h3>
-      {children}
-    </div>
-  );
-};
-
-const InfoCard = ({ title, value, icon: Icon }) => {
-  return (
-    <div className="bg-white border border-slate-200 rounded-[28px] p-5">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-slate-500">{title}</p>
-        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
-          <Icon size={18} className="text-slate-700" />
-        </div>
-      </div>
-      <p className="text-sm font-bold text-slate-900 break-words">{value}</p>
-    </div>
-  );
-};
-
-const TimelineCard = ({ label, value }) => {
-  return (
-    <div className="bg-slate-50 rounded-2xl p-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-        {label}
-      </p>
-      <p className="text-sm font-semibold text-slate-700 break-words">
-        {value}
-      </p>
-    </div>
-  );
-};
-
-const MiniInfo = ({ icon: Icon, label, value }) => {
-  return (
-    <div className="bg-slate-50 rounded-2xl p-3 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3 min-w-0 w-full">
-        <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0">
-          <Icon size={14} className="text-slate-700" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
-            {label}
-          </p>
-          <p className="text-xs font-bold text-slate-900 truncate mt-0.5">
-            {value}
-          </p>
-        </div>
-      </div>
+    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50/80 border border-slate-100">
+      <span className="text-slate-500 font-medium">{label}</span>
+      <span className="font-semibold text-slate-700">{value}</span>
     </div>
   );
 };
