@@ -1186,8 +1186,6 @@ exports.submitTaskItem =
 
         include: {
           taskItem: true,
-
-          submission: true,
         },
       });
 
@@ -1237,7 +1235,14 @@ exports.submitTaskItem =
     //
     // ✅ PREVENT DUPLICATE
     //
-    if (assignment.submission) {
+    const existingSubmission =
+      await prisma.taskItemSubmission.findUnique({
+        where: {
+          assignmentId,
+        },
+      });
+
+    if (existingSubmission) {
       throw new ApiError(
         400,
         "Task already submitted"
@@ -1309,8 +1314,6 @@ exports.verifySubmission =
         },
 
         include: {
-          submission: true,
-
           taskItem: {
             include: {
               task: true,
@@ -1326,7 +1329,17 @@ exports.verifySubmission =
       );
     }
 
-    if (!assignment.submission) {
+    //
+    // ✅ CHECK SUBMISSION EXISTS
+    //
+    const submission =
+      await prisma.taskItemSubmission.findUnique({
+        where: {
+          assignmentId,
+        },
+      });
+
+    if (!submission) {
       throw new ApiError(
         400,
         "Submission not found"
@@ -1459,8 +1472,6 @@ exports.rejectSubmission =
               task: true,
             },
           },
-
-          submission: true,
         },
       });
 
@@ -1471,7 +1482,17 @@ exports.rejectSubmission =
       );
     }
 
-    if (!assignment.submission) {
+    //
+    // ✅ CHECK SUBMISSION EXISTS
+    //
+    const submission =
+      await prisma.taskItemSubmission.findUnique({
+        where: {
+          assignmentId,
+        },
+      });
+
+    if (!submission) {
       throw new ApiError(
         400,
         "Submission not found"
@@ -1681,8 +1702,6 @@ exports.unableToSubmit =
 
         include: {
           taskItem: true,
-
-          submission: true,
         },
       });
 
@@ -1720,7 +1739,14 @@ exports.unableToSubmit =
     //
     // ✅ PREVENT DUPLICATE
     //
-    if (assignment.submission) {
+    const existingSubmission =
+      await prisma.taskItemSubmission.findUnique({
+        where: {
+          assignmentId,
+        },
+      });
+
+    if (existingSubmission) {
       throw new ApiError(
         400,
         "Task already submitted or marked as unable to submit"

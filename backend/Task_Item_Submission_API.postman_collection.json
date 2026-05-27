@@ -1,0 +1,218 @@
+{
+  "info": {
+    "_postman_id": "task-item-submission-api",
+    "name": "Task Item Submission API",
+    "description": "Collection for testing Task Item Submission APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get My Assigned Items",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/task-item-submission/my-items",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "task-item-submission", "my-items"]
+        },
+        "description": "Get all task items assigned to the logged-in employee"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Submit Task Item",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"remarks\": \"Completed successfully\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/task-item-submission/{{assignmentId}}/submit",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "task-item-submission", "{{assignmentId}}", "submit"]
+        },
+        "description": "Employee submits completed task item (remarks only, no drive link required)"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Unable to Submit (With Reason)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Unable to complete due to missing resources\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/task-item-submission/{{assignmentId}}/unable-to-submit",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "task-item-submission", "{{assignmentId}}", "unable-to-submit"]
+        },
+        "description": "Employee marks task as unable to submit with a reason. Manager will see status as 'NOT SUBMITTED' with reason."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Verify Submission (Manager/Admin)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/task-item-submission/{{assignmentId}}/verify",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "task-item-submission", "{{assignmentId}}", "verify"]
+        },
+        "description": "Manager/Admin verifies the submitted task item"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Reject Submission (Manager/Admin)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rejectionReason\": \"Work quality needs improvement. Please revise and resubmit.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/task-item-submission/{{assignmentId}}/reject",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "task-item-submission", "{{assignmentId}}", "reject"]
+        },
+        "description": "Manager/Admin rejects the submitted task item with a reason"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Update Task Progress",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"progress\": 50\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/task-item-submission/{{assignmentId}}/progress",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "task-item-submission", "{{assignmentId}}", "progress"]
+        },
+        "description": "Employee updates task progress (0-100)"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Get Task Items with Details (Manager)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/manager/tasks/{{taskId}}/items",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "manager", "tasks", "{{taskId}}", "items"]
+        },
+        "description": "Manager views all task items of a particular task with all details:\n- Number of task items\n- All employees assigned\n- Their task status\n- Submission details\n- Summary counts"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://we-promote.onrender.com",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_EMPLOYEE_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "managerToken",
+      "value": "YOUR_MANAGER_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "assignmentId",
+      "value": "ASSIGNMENT_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "TASK_ID_HERE",
+      "type": "string"
+    }
+  ]
+}
