@@ -47,7 +47,7 @@ exports.createTaskItem = async (
   //
   // ADMIN: can create for any task
   // HR: can create for own tasks
-  // MANAGER: can create for tasks assigned to them
+  // MANAGER: can create for tasks assigned to them OR created by HR
   //
   let allowed = false;
 
@@ -63,6 +63,7 @@ exports.createTaskItem = async (
   }
 
   else if (user.role === "MANAGER") {
+    // Check if assigned to task
     const assignment =
       await prisma.taskAssignment.findFirst({
         where: {
@@ -72,6 +73,10 @@ exports.createTaskItem = async (
       });
 
     if (assignment) {
+      allowed = true;
+    }
+    // Also allow if task was created by HR (managers work on HR tasks)
+    else if (task.createdBy?.role === "HR") {
       allowed = true;
     }
   }
