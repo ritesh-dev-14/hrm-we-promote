@@ -998,3 +998,252 @@ exports.getEmployeeLeaveSummary = async (employeeId) => {
       : null,
   };
 };
+
+// 🔥 HR DASHBOARD OVERVIEW - COMPREHENSIVE MONITORING
+exports.getDashboardOverview = async () => {
+  // Get all managers
+  const managers = await prisma.user.findMany({
+    where: { role: "MANAGER" },
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      email: true,
+      department: true,
+      createdAt: true,
+    },
+  });
+
+  // Build comprehensive overview for each manager
+  const overview = await Promise.all(
+    managers.map(async (manager) => {
+      // Get manager's employees
+      const employees = await prisma.user.findMany({
+        where: {
+          managerId: manager.id,
+          role: "EMPLOYEE",
+        },
+        select: {
+          id: true,
+          employeeId: true,
+          name: true,
+          email: true,
+          department: true,
+        },
+      });
+
+      // Get manager's tasks
+      const tasks = await prisma.task.findMany({
+        where: {
+          createdById: manager.id,
+        },
+        select: {
+          id: true,
+          description: true,
+          status: true,
+          createdAt: true,
+          projectName: true,
+        },
+      });
+
+      // Get task assignments for this manager's tasks
+      const taskAssignments = await prisma.taskAssignment.findMany({
+        where: {
+          task: {
+            createdById: manager.id,
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      // Get task items created by this manager's tasks
+      const taskItems = await prisma.taskItem.findMany({
+        where: {
+          task: {
+            createdById: manager.id,
+          },
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          status: true,
+          createdAt: true,
+        },
+      });
+
+      // Get all task item assignments for this manager's team
+      const assignments = await prisma.taskItemAssignment.findMany({
+        where: {
+          userId: {
+            in: employees.map((e) => e.id),
+          },
+        },
+        include: {
+          employee: {
+            select: {
+              id: true,
+              employeeId: true,
+              name: true,
+              email: true,
+            },
+          },
+          taskItem: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      // Calculate statistics
+      const completedAssignments = assignments.filter(
+        (a) => a.status === "COMPLETED"
+      ).length;
+      const pendingAssignments = assignments.filter(
+        (a) => a.status === "PENDING"
+      ).length;
+      const submittedAssignments = assignments.filter(
+        (a) => a.status === "SUBMITTED"
+      ).length;
+      const rejectedAssignments = assignments.filter(
+        (a) => a.status === "REJECTED"
+      ).length;
+
+      const averageProgress =
+        assignments.length > 0
+          ? Math.round(
+              assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+                assignments.length
+            )
+          : 0;
+
+      // Group assignments by employee for quick lookup
+      const assignmentsByEmployee = {};
+      employees.forEach((emp) => {
+        assignmentsByEmployee[emp.id] = assignments.filter(
+          (a) => a.userId === emp.id
+        );
+      });
+
+      return {
+        manager: manager,
+        stats: {
+          totalEmployees: employees.length,
+          totalTasks: tasks.length,
+          totalTaskItems: taskItems.length,
+          totalAssignments: assignments.length,
+          completedAssignments: completedAssignments,
+          pendingAssignments: pendingAssignments,
+          submittedAssignments: submittedAssignments,
+          rejectedAssignments: rejectedAssignments,
+          averageProgress: averageProgress,
+          completionRate:
+            assignments.length > 0
+              ? Math.round(
+                  (completedAssignments / assignments.length) * 100
+                )
+              : 0,
+        },
+        employees: employees.map((emp) => ({
+          ...emp,
+          assignedTasks: assignmentsByEmployee[emp.id].length,
+          completedTasks: assignmentsByEmployee[emp.id].filter(
+            (a) => a.status === "COMPLETED"
+          ).length,
+          pendingTasks: assignmentsByEmployee[emp.id].filter(
+            (a) => a.status === "PENDING"
+          ).length,
+          submittedTasks: assignmentsByEmployee[emp.id].filter(
+            (a) => a.status === "SUBMITTED"
+          ).length,
+          averageProgress:
+            assignmentsByEmployee[emp.id].length > 0
+              ? Math.round(
+                  assignmentsByEmployee[emp.id].reduce(
+                    (sum, a) => sum + (a.progress || 0),
+                    0
+                  ) / assignmentsByEmployee[emp.id].length
+                )
+              : 0,
+        })),
+        tasks: tasks.map((task) => {
+          const taskItemsForTask = taskItems.filter((ti) => ti.taskId === task.id);
+          return {
+            ...task,
+            itemCount: taskItemsForTask.length,
+          };
+        }),
+        recentAssignments: assignments
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 10)
+          .map((a) => ({
+            id: a.id,
+            employee: a.employee,
+            taskItem: a.taskItem,
+            status: a.status,
+            progress: a.progress || 0,
+            createdAt: a.createdAt,
+            submittedAt: a.submittedAt,
+            rejectionReason: a.rejectionReason,
+          })),
+      };
+    })
+  );
+
+  // Calculate global statistics
+  const totalManagers = managers.length;
+  const totalEmployees = await prisma.user.count({
+    where: { role: "EMPLOYEE" },
+  });
+  const totalTasks = await prisma.task.count();
+  const totalTaskItems = await prisma.taskItem.count();
+  const allAssignments = await prisma.taskItemAssignment.findMany({
+    select: {
+      status: true,
+      progress: true,
+    },
+  });
+
+  const globalStats = {
+    totalManagers,
+    totalEmployees,
+    totalTasks,
+    totalTaskItems,
+    totalAssignments: allAssignments.length,
+    completedAssignments: allAssignments.filter(
+      (a) => a.status === "COMPLETED"
+    ).length,
+    pendingAssignments: allAssignments.filter((a) => a.status === "PENDING")
+      .length,
+    submittedAssignments: allAssignments.filter((a) => a.status === "SUBMITTED")
+      .length,
+    rejectedAssignments: allAssignments.filter((a) => a.status === "REJECTED")
+      .length,
+    globalAverageProgress:
+      allAssignments.length > 0
+        ? Math.round(
+            allAssignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+              allAssignments.length
+          )
+        : 0,
+    globalCompletionRate:
+      allAssignments.length > 0
+        ? Math.round(
+            (allAssignments.filter((a) => a.status === "COMPLETED").length /
+              allAssignments.length) *
+              100
+          )
+        : 0,
+  };
+
+  return {
+    globalStats,
+    managerDetails: overview,
+  };
+};

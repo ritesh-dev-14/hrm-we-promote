@@ -244,3 +244,17 @@ exports.getEmployeeLeaveSummary = async (req, res, next) => {
     next(err);
   }
 };
+
+// 🔥 HR DASHBOARD OVERVIEW
+exports.getDashboardOverview = async (req, res, next) => {
+  try {
+    const data = await service.getDashboardOverview();
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

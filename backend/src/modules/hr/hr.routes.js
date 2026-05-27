@@ -123,5 +123,12 @@ router.put(
   controller.updateLeaveStatus
 );
 
+// 🔥 HR DASHBOARD - COMPREHENSIVE OVERVIEW
+router.get(
+  "/dashboard/overview",
+  auth,
+  role("HR"),
+  controller.getDashboardOverview
+);
 
 module.exports = router;
