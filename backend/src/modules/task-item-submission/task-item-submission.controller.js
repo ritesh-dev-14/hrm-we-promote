@@ -131,3 +131,31 @@ exports.updateItemProgress =
       next(err);
     }
   };
+
+  //
+// 🔥 UNABLE TO SUBMIT
+//
+exports.unableToSubmit =
+  async (
+    req,
+    res,
+    next
+  ) => {
+    try {
+
+      const data =
+        await service.unableToSubmit(
+          req.user,
+          req.params.assignmentId,
+          req.body
+        );
+
+      res.json({
+        success: true,
+        data,
+      });
+
+    } catch (err) {
+      next(err);
+    }
+  };

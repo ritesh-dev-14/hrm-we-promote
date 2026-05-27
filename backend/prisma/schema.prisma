@@ -219,10 +219,11 @@ model TaskItem {
 model TaskItemSubmission {
   id                String             @id @default(uuid())
   assignmentId      String             @unique
-  driveLink         String
+  driveLink         String?
   remarks           String?
   submittedAt       DateTime           @default(now())
   verifiedByManager Boolean            @default(false)
+  unableToSubmitReason String?
   assignment        TaskItemAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 }
 
@@ -321,6 +322,7 @@ enum AssignmentStatus {
   REJECTED
   COMPLETED
   PENDING
+  UNABLE_TO_SUBMIT
 }
 
 enum NotificationLevel {
@@ -361,6 +363,7 @@ enum TaskItemStatus {
   REJECTED
   COMPLETED
   PENDING
+  UNABLE_TO_SUBMIT
 }
 
 enum Priority {

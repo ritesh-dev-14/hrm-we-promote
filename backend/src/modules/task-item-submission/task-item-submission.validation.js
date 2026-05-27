@@ -10,13 +10,16 @@
 const Joi = require("joi");
 
 exports.submitSchema = Joi.object({
-  driveLink: Joi.string()
-    .required(),
-
   remarks: Joi.string()
+    .optional()
     .allow("", null),
 });
 
+exports.unableToSubmitSchema =
+  Joi.object({
+    reason: Joi.string()
+      .required(),
+  });
 
 exports.rejectSchema =
   Joi.object({

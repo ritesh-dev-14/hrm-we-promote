@@ -1233,7 +1233,7 @@ exports.submitTaskItem =
           assignmentId,
 
           driveLink:
-            body.driveLink,
+            body.driveLink || null,
 
           remarks:
             body.remarks ||
@@ -1609,6 +1609,19 @@ const recalculateTaskItem =
     }
 
     //
+    // UNABLE_TO_SUBMIT
+    //
+    else if (
+      statuses.some(
+        (s) =>
+          s === "UNABLE_TO_SUBMIT"
+      )
+    ) {
+      status =
+        "UNABLE_TO_SUBMIT";
+    }
+
+    //
     // ✅ UPDATE TASK ITEM
     //
     await prisma.taskItem.update({
@@ -1623,4 +1636,113 @@ const recalculateTaskItem =
         status,
       },
     });
+  };
+
+//
+// ======================================================
+// 🔥 UNABLE TO SUBMIT (Employee cannot submit work)
+// ======================================================
+//
+exports.unableToSubmit =
+  async (
+    user,
+    assignmentId,
+    body
+  ) => {
+
+    //
+    // ✅ FIND ASSIGNMENT
+    //
+    const assignment =
+      await prisma.taskItemAssignment.findUnique({
+        where: {
+          id: assignmentId,
+        },
+
+        include: {
+          taskItem: true,
+
+          submission: true,
+        },
+      });
+
+    if (!assignment) {
+      throw new ApiError(
+        404,
+        "Assignment not found"
+      );
+    }
+
+    //
+    // ✅ ONLY ASSIGNED EMPLOYEE
+    //
+    if (
+      assignment.userId !== user.id
+    ) {
+      console.log(
+        "DEBUG - Assignment userId:",
+        assignment.userId,
+        "| User id:",
+        user.id
+      );
+
+      throw new ApiError(
+        403,
+        "This assignment is not assigned to you"
+      );
+    }
+
+    //
+    // ✅ PREVENT DUPLICATE
+    //
+    if (assignment.submission) {
+      throw new ApiError(
+        400,
+        "Task already submitted or marked as unable to submit"
+      );
+    }
+
+    //
+    // ✅ CREATE SUBMISSION WITH REASON
+    //
+    const submission =
+      await prisma.taskItemSubmission.create({
+        data: {
+          assignmentId,
+
+          unableToSubmitReason:
+            body.reason,
+        },
+      });
+
+    //
+    // ✅ UPDATE ASSIGNMENT STATUS
+    //
+    await prisma.taskItemAssignment.update({
+      where: {
+        id: assignmentId,
+      },
+
+      data: {
+        status:
+          "UNABLE_TO_SUBMIT",
+
+        submittedAt:
+          new Date(),
+      },
+    });
+
+    //
+    // ✅ UPDATE MAIN ITEM
+    //
+    await recalculateTaskItem(
+      assignment.taskItemId
+    );
+
+    return {
+      success: true,
+      message:
+        "Unable to submit recorded with reason",
+      submission,
+    };
   };

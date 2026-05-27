@@ -48,6 +48,7 @@ const {
   submitSchema,
   rejectSchema,
   updateProgressSchema,
+  unableToSubmitSchema,
 } = require(
   "./task-item-submission.validation"
 );
@@ -147,6 +148,21 @@ router.patch(
   validate(updateProgressSchema),
 
   controller.updateItemProgress
+);
+
+//
+// 🔥 UNABLE TO SUBMIT (Employee cannot submit work)
+//
+router.post(
+  "/:assignmentId/unable-to-submit",
+
+  auth,
+
+  role("EMPLOYEE"),
+
+  validate(unableToSubmitSchema),
+
+  controller.unableToSubmit
 );
 
 module.exports = router;
