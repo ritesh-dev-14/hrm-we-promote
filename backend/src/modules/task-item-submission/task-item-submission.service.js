@@ -1192,6 +1192,11 @@ exports.submitTaskItem =
       });
 
     if (!assignment) {
+      console.log(
+        "DEBUG - Submit: Assignment not found. ID:",
+        assignmentId
+      );
+
       throw new ApiError(
         404,
         "Assignment not found"
@@ -1204,6 +1209,13 @@ exports.submitTaskItem =
     if (
       assignment.userId !== user.id
     ) {
+      console.log(
+        "DEBUG - Submit: User mismatch. Assignment userId:",
+        assignment.userId,
+        "| User id:",
+        user.id
+      );
+
       throw new ApiError(
         403,
         ERRORS.AUTH.ACCESS_DENIED
@@ -1675,9 +1687,14 @@ exports.unableToSubmit =
       });
 
     if (!assignment) {
+      console.log(
+        "DEBUG - Assignment not found. ID:",
+        assignmentId
+      );
+
       throw new ApiError(
         404,
-        "Assignment not found"
+        "Assignment not found. Please verify the assignment ID."
       );
     }
 
