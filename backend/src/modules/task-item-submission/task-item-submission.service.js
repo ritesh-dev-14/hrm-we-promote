@@ -970,7 +970,15 @@ exports.getMyAssignedItems =
             },
           },
 
-          submission: true,
+          submission: {
+            select: {
+              id: true,
+              driveLink: true,
+              remarks: true,
+              submittedAt: true,
+              verifiedByManager: true,
+            },
+          },
         },
 
         orderBy: {
