@@ -157,6 +157,16 @@ router.get(
 );
 
 //
+// 🔥 GET TASK ITEMS WITH ALL DETAILS (For Manager)
+//
+router.get(
+  "/:taskId/items",
+  auth,
+  role("ADMIN", "HR", "MANAGER"),
+  controller.getTaskItemsWithDetails
+);
+
+//
 // 🔥 GET SINGLE TASK
 //
 router.get(

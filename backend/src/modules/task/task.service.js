@@ -1733,3 +1733,299 @@ exports.getTasks = async (
     totalItems: task.items.length,
   }));
 };
+
+//
+// ======================================================
+// 🔥 GET TASK ITEMS WITH ALL DETAILS (For Manager)
+// ======================================================
+//
+exports.getTaskItemsWithDetails =
+  async (
+    user,
+    taskId
+  ) => {
+
+    //
+    // ✅ FIND TASK
+    //
+    const task =
+      await prisma.task.findUnique({
+        where: {
+          id: taskId,
+        },
+
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              employeeId: true,
+              name: true,
+              role: true,
+            },
+          },
+        },
+      });
+
+    if (!task) {
+      throw new ApiError(
+        404,
+        ERRORS.TASK.NOT_FOUND
+      );
+    }
+
+    //
+    // ✅ ACCESS CONTROL
+    // (Manager/HR/Admin only)
+    //
+    const isCreator =
+      task.createdById === user.id;
+
+    const isManager =
+      user.role === "MANAGER";
+
+    const isAdmin =
+      user.role === "ADMIN";
+
+    const isHR =
+      user.role === "HR";
+
+    const hasAccess =
+      isCreator || isAdmin || 
+      isManager || isHR;
+
+    if (!hasAccess) {
+      throw new ApiError(
+        403,
+        ERRORS.AUTH.ACCESS_DENIED
+      );
+    }
+
+    //
+    // ✅ GET ALL TASK ITEMS
+    //
+    const taskItems =
+      await prisma.taskItem.findMany({
+        where: {
+          taskId,
+        },
+
+        include: {
+          assignments: {
+            include: {
+              employee: {
+                select: {
+                  id: true,
+                  employeeId: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                  position: true,
+                },
+              },
+
+              submission: {
+                select: {
+                  id: true,
+                  driveLink: true,
+                  remarks: true,
+                  unableToSubmitReason:
+                    true,
+                  submittedAt: true,
+                  verifiedByManager:
+                    true,
+                },
+              },
+            },
+
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
+        },
+
+        orderBy: {
+          order: "asc",
+        },
+      });
+
+    //
+    // ✅ FORMAT RESPONSE
+    //
+    return {
+      task: {
+        id: task.id,
+        projectName:
+          task.projectName,
+        description:
+          task.description,
+        startDate:
+          task.startDate,
+        endDate:
+          task.endDate,
+        status:
+          task.status,
+        progress:
+          task.progress,
+        createdAt:
+          task.createdAt,
+        createdBy:
+          task.createdBy,
+      },
+
+      summary: {
+        totalItems:
+          taskItems.length,
+
+        totalAssignments:
+          taskItems.reduce(
+            (sum, item) =>
+              sum +
+              item.assignments
+                .length,
+            0
+          ),
+
+        submittedCount:
+          taskItems.reduce(
+            (sum, item) =>
+              sum +
+              item.assignments.filter(
+                (a) =>
+                  a.status ===
+                  "SUBMITTED"
+              ).length,
+            0
+          ),
+
+        verifiedCount:
+          taskItems.reduce(
+            (sum, item) =>
+              sum +
+              item.assignments.filter(
+                (a) =>
+                  a.status ===
+                  "VERIFIED"
+              ).length,
+            0
+          ),
+
+        rejectedCount:
+          taskItems.reduce(
+            (sum, item) =>
+              sum +
+              item.assignments.filter(
+                (a) =>
+                  a.status ===
+                  "REJECTED"
+              ).length,
+            0
+          ),
+
+        unableToSubmitCount:
+          taskItems.reduce(
+            (sum, item) =>
+              sum +
+              item.assignments.filter(
+                (a) =>
+                  a.status ===
+                  "UNABLE_TO_SUBMIT"
+              ).length,
+            0
+          ),
+      },
+
+      items: taskItems.map(
+        (item) => ({
+          id: item.id,
+          title: item.title,
+          description:
+            item.description,
+          status:
+            item.status,
+          progress:
+            item.progress,
+          priority:
+            item.priority,
+          dueDate:
+            item.dueDate,
+          createdAt:
+            item.createdAt,
+
+          assignments:
+            item.assignments.map(
+              (a) => ({
+                assignmentId:
+                  a.id,
+
+                employee: {
+                  id: a.employee.id,
+                  employeeId:
+                    a.employee
+                      .employeeId,
+                  name:
+                    a.employee.name,
+                  email:
+                    a.employee.email,
+                  role:
+                    a.employee.role,
+                  position:
+                    a.employee
+                      .position,
+                },
+
+                status:
+                  a.status,
+
+                progress:
+                  a.progress || 0,
+
+                startedAt:
+                  a.startedAt,
+
+                submittedAt:
+                  a.submittedAt,
+
+                verifiedAt:
+                  a.verifiedAt,
+
+                completedAt:
+                  a.completedAt,
+
+                rejectedAt:
+                  a.rejectedAt,
+
+                rejectionReason:
+                  a.rejectionReason,
+
+                submission: a.submission
+                  ? {
+                      id: a.submission
+                        .id,
+
+                      driveLink:
+                        a.submission
+                          .driveLink,
+
+                      remarks:
+                        a.submission
+                          .remarks,
+
+                      unableToSubmitReason:
+                        a.submission
+                          .unableToSubmitReason,
+
+                      submittedAt:
+                        a.submission
+                          .submittedAt,
+
+                      verifiedByManager:
+                        a.submission
+                          .verifiedByManager,
+                    }
+                  : null,
+              })
+            ),
+        })
+      ),
+    };
+  };

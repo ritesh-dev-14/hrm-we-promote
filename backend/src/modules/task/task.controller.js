@@ -295,3 +295,28 @@ exports.updateTaskAssignmentStatus =
       next(err);
     }
   };
+
+//
+// 🔥 GET TASK ITEMS WITH ALL DETAILS
+//
+exports.getTaskItemsWithDetails =
+  async (
+    req,
+    res,
+    next
+  ) => {
+    try {
+      const data =
+        await service.getTaskItemsWithDetails(
+          req.user,
+          req.params.taskId
+        );
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
