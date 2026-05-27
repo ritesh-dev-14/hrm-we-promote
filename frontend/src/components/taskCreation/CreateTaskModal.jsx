@@ -1,69 +1,114 @@
 import { useEffect, useState } from "react";
-import { X, Loader2, ClipboardList, CheckCircle2 } from "lucide-react";
+import {
+  X,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
+
 import API from "../../services/api";
 
 const INITIAL_STATE = {
   projectName: "",
   description: "",
   startDate: "",
-  endDate: ""
+  endDate: "",
 };
 
-const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
-  const [formData, setFormData] = useState(INITIAL_STATE);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isSuccess, setIsSuccess] = useState(false);
+const CreateTaskModal = ({
+  open,
+  onClose,
+  onTaskCreated,
+}) => {
+  const [formData, setFormData] =
+    useState(INITIAL_STATE);
 
-  // Close modal on Escape key press
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] = useState("");
+
+  const [success, setSuccess] =
+    useState(false);
+
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") onClose();
     };
-    if (open) window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
+
+    if (open) {
+      window.addEventListener(
+        "keydown",
+        handleEsc,
+      );
+    }
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        handleEsc,
+      );
   }, [open, onClose]);
 
-  // Reset form states when modal opens
   useEffect(() => {
     if (open) {
       setFormData(INITIAL_STATE);
       setError("");
-      setIsSuccess(false);
+      setSuccess(false);
     }
   }, [open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) setError(""); // Clear error when user types
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
 
     try {
-      // Format regular HTML dates to the exact ISO format expected by your API (T00:00:00.000Z)
+      setLoading(true);
+      setError("");
+
       const payload = {
-        projectName: formData.projectName.trim(),
-        description: formData.description.trim(),
-        startDate: formData.startDate ? `${formData.startDate}T00:00:00.000Z` : null,
-        endDate: formData.endDate ? `${formData.endDate}T00:00:00.000Z` : null
+        projectName:
+          formData.projectName.trim(),
+
+        description:
+          formData.description.trim(),
+
+        startDate: formData.startDate
+          ? `${formData.startDate}T00:00:00.000Z`
+          : null,
+
+        endDate: formData.endDate
+          ? `${formData.endDate}T00:00:00.000Z`
+          : null,
       };
 
-      const res = await API.post("/api/manager/tasks", payload);
+      const response = await API.post(
+        "/api/manager/tasks",
+        payload,
+      );
 
-      if (res.data.success) {
-        setIsSuccess(true);
+      if (response?.data?.success) {
+        setSuccess(true);
+
         setTimeout(() => {
-          onTaskCreated(res.data.data);
+          onTaskCreated(response.data.data);
           onClose();
-        }, 1500); // Brief pause to show success checkmark
+        }, 1200);
       }
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to create project. Please try again.");
+      setError(
+        err?.response?.data?.message ||
+          "Failed to create project",
+      );
     } finally {
       setLoading(false);
     }
@@ -71,142 +116,175 @@ const CreateTaskModal = ({ open, onClose, onTaskCreated }) => {
 
   if (!open) return null;
 
-  const today = new Date().toISOString().split("T")[0];
-
-  // Reusable Tailwind classes to keep the component clean
-  const labelClass = "block text-xs font-bold text-gray-700 ml-0.5";
-  const inputClass = "w-full bg-gray-100 border-[1.5px] border-transparent rounded-[14px] px-3 py-2.5 text-sm text-gray-900 transition-all duration-200 outline-none focus:bg-white focus:border-black focus:ring-4 focus:ring-black/5";
-  const textareaClass = "w-full bg-gray-100 border-[1.5px] border-transparent rounded-[14px] px-3 py-2.5 text-sm text-gray-900 transition-all duration-200 outline-none focus:bg-white focus:border-black focus:ring-4 focus:ring-black/5 resize-none h-28";
+  const today = new Date()
+    .toISOString()
+    .split("T")[0];
 
   return (
-    <div 
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={onClose} 
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
     >
-      <div 
-        className="w-full max-w-md bg-white rounded-[32px] shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()} 
-        role="dialog"
-        aria-modal="true"
+      <div
+        onClick={(e) =>
+          e.stopPropagation()
+        }
+        className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-[0_10px_40px_rgba(15,23,42,0.08)] overflow-hidden"
       >
         {/* HEADER */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center shadow-lg shadow-black/20">
-              <ClipboardList size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Create Project</h2>
-              <p className="text-xs text-gray-500">Initialize a new project board</p>
-            </div>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <div>
+            <h2 className="text-[20px] font-semibold text-slate-900">
+              Create Project
+            </h2>
+
+            <p className="text-sm text-slate-500 mt-1">
+              Add a new project task
+            </p>
           </div>
+
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-            aria-label="Close modal"
+            className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-slate-100 transition"
           >
-            <X size={18} className="text-gray-500" />
+            <X
+              size={18}
+              className="text-slate-500"
+            />
           </button>
         </div>
 
-        {/* FORM BODY */}
-        <div className="overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-          {isSuccess ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
-              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center animate-bounce">
-                <CheckCircle2 size={32} />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900">Project Created!</h3>
-              <p className="text-gray-500">The project setup was successfully sent.</p>
+        {/* SUCCESS */}
+        {success ? (
+          <div className="py-20 flex flex-col items-center justify-center">
+            <div className="h-14 w-14 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+              <CheckCircle2
+                size={28}
+                className="text-emerald-600"
+              />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                
-                {/* PROJECT NAME */}
-                <div className="space-y-1.5">
-                  <label className={labelClass}>Project Name</label>
-                  <input
-                    type="text"
-                    name="projectName"
-                    required
-                    value={formData.projectName}
-                    onChange={handleChange}
-                    placeholder="e.g., Hr Project"
-                    className={inputClass}
-                  />
-                </div>
 
-                {/* DATE GRID */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Start Date</label>
-                    <input
-                      type="date"
-                      name="startDate"
-                      required
-                      min={today}
-                      value={formData.startDate}
-                      onChange={handleChange}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>End Date</label>
-                    <input
-                      type="date"
-                      name="endDate"
-                      required
-                      min={formData.startDate || today}
-                      value={formData.endDate}
-                      onChange={handleChange}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
+            <h3 className="text-lg font-semibold text-slate-900">
+              Project Created
+            </h3>
 
-                {/* DESCRIPTION */}
-                <div className="space-y-1.5">
-                  <label className={labelClass}>Description</label>
-                  <textarea
-                    name="description"
-                    required
-                    value={formData.description}
-                    onChange={handleChange}
-                    placeholder="Redesign the marketing website..."
-                    className={textareaClass}
-                  />
-                </div>
+            <p className="text-sm text-slate-500 mt-1">
+              Your project has been added
+            </p>
+          </div>
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="p-6 space-y-5"
+          >
+            {/* PROJECT NAME */}
+            <div>
+              <label className="block text-sm text-slate-600 mb-2">
+                Project Name
+              </label>
+
+              <input
+                type="text"
+                name="projectName"
+                required
+                value={formData.projectName}
+                onChange={handleChange}
+                placeholder="Enter project name"
+                className="w-full h-12 px-4 rounded-2xl border border-slate-200 bg-white text-sm outline-none focus:border-slate-400 transition"
+              />
+            </div>
+
+            {/* DATES */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-slate-600 mb-2">
+                  Start Date
+                </label>
+
+                <input
+                  type="date"
+                  name="startDate"
+                  required
+                  min={today}
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  className="w-full h-12 px-4 rounded-2xl border border-slate-200 bg-white text-sm outline-none focus:border-slate-400 transition"
+                />
               </div>
 
-              {/* ERROR STATE */}
-              {error && (
-                <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-xl px-4 py-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
-                  <span className="font-medium">{error}</span>
-                </div>
-              )}
+              <div>
+                <label className="block text-sm text-slate-600 mb-2">
+                  End Date
+                </label>
 
-              {/* SUBMIT BUTTON */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-12 rounded-2xl bg-black text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none shadow-xl shadow-black/10"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Project"
-                  )}
-                </button>
+                <input
+                  type="date"
+                  name="endDate"
+                  required
+                  min={
+                    formData.startDate || today
+                  }
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  className="w-full h-12 px-4 rounded-2xl border border-slate-200 bg-white text-sm outline-none focus:border-slate-400 transition"
+                />
               </div>
-            </form>
-          )}
-        </div>
+            </div>
+
+            {/* DESCRIPTION */}
+            <div>
+              <label className="block text-sm text-slate-600 mb-2">
+                Description
+              </label>
+
+              <textarea
+                name="description"
+                required
+                rows={5}
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Write project details"
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm outline-none resize-none focus:border-slate-400 transition"
+              />
+            </div>
+
+            {/* ERROR */}
+            {error && (
+              <div className="px-4 py-3 rounded-2xl bg-red-50 border border-red-100 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            {/* ACTIONS */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-11 px-5 rounded-2xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="h-11 px-6 rounded-2xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition disabled:opacity-60"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2
+                      size={16}
+                      className="animate-spin"
+                    />
+                    Creating
+                  </span>
+                ) : (
+                  "Create Project"
+                )}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

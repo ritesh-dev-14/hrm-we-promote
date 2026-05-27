@@ -1,39 +1,43 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
 import {
   ArrowLeft,
-  Calendar,
-  Users,
-  X,
   Loader2,
   CheckCircle2,
-  ShieldCheck,
   UserPlus,
-  XCircle,
+  X,
   AlertCircle,
+  Plus,
+  ClipboardList,
+  Clock3,
+  CheckCheck,
+  ListTodo,
+  CalendarDays,
+  User,
+  ThumbsUp,
+  ThumbsDown,
+  ExternalLink,
 } from "lucide-react";
 
 import API from "../../../services/api";
-
-import { fetchTaskById, assignMainTaskToMe } from "./taskDetails";
-
-import { notifySuccess, notifyError, notifyInfo } from "../../../utils/toast";
+import { assignMainTaskToMe } from "./taskDetails";
+import { notifySuccess, notifyError } from "../../../utils/toast";
 
 const statusStyles = {
-  DRAFT: "bg-slate-100 text-slate-700 border-slate-200",
-  ASSIGNED: "bg-blue-100 text-blue-700 border-blue-200",
-  COMPLETED: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  PENDING: "bg-orange-100 text-orange-700 border-orange-200",
-  SUBMITTED: "bg-violet-100 text-violet-700 border-violet-200",
-  VERIFIED: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  REJECTED: "bg-red-100 text-red-700 border-red-200",
+  DRAFT: "bg-slate-100 text-slate-700 border border-slate-200",
+  ASSIGNED: "bg-blue-50 text-blue-700 border border-blue-100",
+  COMPLETED: "bg-emerald-50 text-emerald-700 border border-emerald-100",
+  PENDING: "bg-amber-50 text-amber-700 border border-amber-100",
+  SUBMITTED: "bg-violet-50 text-violet-700 border border-violet-100",
+  VERIFIED: "bg-emerald-50 text-emerald-700 border border-emerald-100",
+  REJECTED: "bg-red-50 text-red-700 border border-red-100",
+  UNABLE_TO_SUBMIT: "bg-rose-50 text-rose-700 border border-rose-100",
 };
 
 const priorityStyles = {
-  LOW: "bg-slate-100 text-slate-600 border-slate-200",
-  MEDIUM: "bg-amber-50 text-amber-700 border-amber-200",
-  HIGH: "bg-rose-50 text-rose-700 border-rose-200",
+  LOW: "text-slate-500",
+  MEDIUM: "text-amber-600",
+  HIGH: "text-red-600",
 };
 
 const ManagerTaskDetailPage = () => {
@@ -41,19 +45,23 @@ const ManagerTaskDetailPage = () => {
   const navigate = useNavigate();
 
   const [task, setTask] = useState(null);
+  const [subtasks, setSubtasks] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [showSubtaskForm, setShowSubtaskForm] = useState(false);
   const [creatingSubtask, setCreatingSubtask] = useState(false);
-  const [assigning, setAssigning] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [assigningToMe, setAssigningToMe] = useState(false);
   const [openAssignModal, setOpenAssignModal] = useState(false);
   const [selectedSubtask, setSelectedSubtask] = useState(null);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
-  const [assigningToMe, setAssigningToMe] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
 
   const [rejectModal, setRejectModal] = useState({
     open: false,
-    subtaskId: null,
+    assignmentId: null,
     reason: "",
   });
 
@@ -63,54 +71,53 @@ const ManagerTaskDetailPage = () => {
     employeeId: "",
     dueDate: "",
     priority: "MEDIUM",
-    status: "DRAFT",
   });
 
   const loadPage = async () => {
     try {
       setLoading(true);
-
-      const [taskData, employeeRes] = await Promise.all([
-        fetchTaskById(id),
+      const [itemsRes, employeeRes] = await Promise.all([
+        API.get(`/api/manager/tasks/${id}/items`),
         API.get("/api/manager/my-employees"),
       ]);
 
-      setTask(taskData);
+      if (itemsRes?.data?.success) {
+        const payload = itemsRes.data.data;
+        setTask(payload.task);
+        setSubtasks(payload.items || []);
+        setSummary(payload.summary);
+      }
 
       if (employeeRes?.data?.success) {
         setEmployees(employeeRes.data.data || []);
-      } else {
-        setEmployees([]);
       }
     } catch (error) {
       console.error(error);
-      notifyError("Failed to synchronize component state tree data");
+      notifyError("Failed to load task dashboard details");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadPage();
+    if (id) loadPage();
   }, [id]);
 
   const handleAssignToMe = async () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem("user"));
       if (!storedUser?.employeeId) {
-        notifyError("Manager profile metadata block missing");
+        notifyError("Your Employee ID is missing from local context");
         return;
       }
 
       setAssigningToMe(true);
-      notifyInfo("Linking tracking instances...");
-
       const response = await assignMainTaskToMe(task.id, storedUser.employeeId);
-      notifySuccess(response?.data?.message || "Assigned successfully");
+      notifySuccess(response?.data?.message || "Main task assigned to you successfully");
       loadPage();
     } catch (error) {
       console.error(error);
-      notifyError(error?.response?.data?.message || "Failed to self-assign");
+      notifyError("Failed to self-assign main task");
     } finally {
       setAssigningToMe(false);
     }
@@ -119,47 +126,40 @@ const ManagerTaskDetailPage = () => {
   const handleCreateSubtask = async () => {
     try {
       if (!subtaskForm.title.trim()) {
-        notifyError("Subtask title is required");
+        notifyError("Title is required");
         return;
       }
       if (!subtaskForm.employeeId) {
-        notifyError("An engineer must be assigned");
+        notifyError("Please select an employee");
         return;
       }
       if (!subtaskForm.dueDate) {
-        notifyError("Due date parameter must be specified");
+        notifyError("Due date is required");
         return;
       }
 
       setCreatingSubtask(true);
-      notifyInfo("Injecting subtask entity matrix...");
-
       await API.post(`/api/task-items/${task.id}`, {
         title: subtaskForm.title,
+        description: subtaskForm.description,
         employeeId: subtaskForm.employeeId,
         dueDate: new Date(subtaskForm.dueDate).toISOString(),
         priority: subtaskForm.priority,
-        description: subtaskForm.description,
-        status: subtaskForm.status,
       });
 
-      await loadPage();
-
+      notifySuccess("Subtask created successfully");
       setSubtaskForm({
         title: "",
         description: "",
         employeeId: "",
         dueDate: "",
         priority: "MEDIUM",
-        status: "DRAFT",
       });
-
-      notifySuccess("Subtask committed successfully");
+      setShowSubtaskForm(false);
+      loadPage();
     } catch (error) {
       console.error(error);
-      notifyError(
-        error?.response?.data?.message || "Subtask generation rejected",
-      );
+      notifyError("Failed to create subtask");
     } finally {
       setCreatingSubtask(false);
     }
@@ -167,553 +167,553 @@ const ManagerTaskDetailPage = () => {
 
   const handleOpenAssignModal = (subtask) => {
     setSelectedSubtask(subtask);
-    setSelectedEmployees([]);
+    // Pre-populate with existing assigned employee IDs if any exist
+    const currentAssignments = subtask.assignments?.map(a => a.employee?.employeeId) || [];
+    setSelectedEmployees(currentAssignments);
     setOpenAssignModal(true);
   };
 
   const toggleEmployee = (employeeId) => {
     setSelectedEmployees((prev) =>
       prev.includes(employeeId)
-        ? prev.filter((item) => item !== employeeId)
-        : [...prev, employeeId],
+        ? prev.filter((id) => id !== employeeId)
+        : [...prev, employeeId]
     );
   };
 
   const handleAssign = async () => {
     try {
       if (!selectedEmployees.length) {
-        notifyError("Please pick at least one engineer");
+        notifyError("Select at least one employee");
         return;
       }
 
       setAssigning(true);
-      notifyInfo("Re-syncing allocation nodes...");
-
       await API.patch(`/api/task-items/assign/${selectedSubtask.id}`, {
         employeeIds: selectedEmployees,
       });
 
-      await loadPage();
+      notifySuccess("Employees assigned successfully");
       setOpenAssignModal(false);
-      notifySuccess("Team allocation bindings updated");
+      loadPage();
     } catch (error) {
       console.error(error);
-      notifyError(
-        error?.response?.data?.message || "Assignment link layer failure",
-      );
+      notifyError("Assignment update failed");
     } finally {
       setAssigning(false);
     }
   };
 
-  // VERIFY SUBMISSION
-// ONLY CHANGED FUNCTIONS RELATED TO VERIFY + REJECT APIs
-
-// VERIFY SUBMISSION (UPDATED - CLEAN)
-const handleApproveSubmission = async (assignmentId) => {
-  try {
-    setActionLoadingId(assignmentId);
-    notifyInfo("Verifying submission...");
-
-    // UPDATED API CALL (no unnecessary payload)
-    await API.patch(`/api/task-item-submission/${assignmentId}/verify`);
-
-    notifySuccess("Submission verified successfully");
-    loadPage();
-  } catch (error) {
-    console.error(error);
-    notifyError(error?.response?.data?.message || "Verification failed");
-  } finally {
-    setActionLoadingId(null);
-  }
-};
-
-
-// OPEN REJECT MODAL (UNCHANGED)
-const openRejectModal = (assignmentId) => {
-  setRejectModal({
-    open: true,
-    assignmentId,
-    reason: "",
-  });
-};
-
-
-// REJECT SUBMISSION (UPDATED STRICTLY AS PER API CONTRACT)
-const handleRejectSubmission = async () => {
-  try {
-    if (!rejectModal.reason.trim()) {
-      notifyError("Rejection reason is required");
-      return;
+  const handleApproveSubmission = async (assignmentId) => {
+    try {
+      setActionLoadingId(assignmentId);
+      await API.patch(`/api/task-item-submission/${assignmentId}/verify`);
+      notifySuccess("Submission verified and approved");
+      loadPage();
+    } catch (error) {
+      console.error(error);
+      notifyError("Verification action failed");
+    } finally {
+      setActionLoadingId(null);
     }
+  };
 
-    setActionLoadingId(rejectModal.assignmentId);
-    notifyInfo("Rejecting submission...");
-
-    // UPDATED API CALL
-    await API.patch(
-      `/api/task-item-submission/${rejectModal.assignmentId}/reject`,
-      {
-        rejectionReason: rejectModal.reason,
+  const handleRejectSubmission = async () => {
+    try {
+      if (!rejectModal.reason.trim()) {
+        notifyError("Rejection reason is required");
+        return;
       }
-    );
 
-    notifySuccess("Submission rejected successfully");
+      setActionLoadingId(rejectModal.assignmentId);
+      await API.patch(`/api/task-item-submission/${rejectModal.assignmentId}/reject`, {
+        rejectionReason: rejectModal.reason,
+      });
 
-    setRejectModal({
-      open: false,
-      assignmentId: null,
-      reason: "",
-    });
+      notifySuccess("Submission rejected");
+      setRejectModal({ open: false, assignmentId: null, reason: "" });
+      loadPage();
+    } catch (error) {
+      console.error(error);
+      notifyError("Rejection processing failed");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
-    loadPage();
-  } catch (error) {
-    console.error(error);
-    notifyError(error?.response?.data?.message || "Rejection failed");
-  } finally {
-    setActionLoadingId(null);
-  }
-};
-
-  const formatDateTime = (isoString) => {
-    if (!isoString) return "-";
-    return new Date(isoString).toLocaleString("en-US", {
-      month: "short",
+  const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("en-US", {
       day: "numeric",
+      month: "short",
       year: "numeric",
     });
   };
 
+  const stats = useMemo(() => {
+    return [
+      {
+        title: "Total Subtasks",
+        value: summary?.totalItems || 0,
+        icon: ListTodo,
+      },
+      {
+        title: "Submitted",
+        value: summary?.submittedCount || 0,
+        icon: ClipboardList,
+      },
+      {
+        title: "Verified Tasks",
+        value: summary?.verifiedCount || 0,
+        icon: CheckCheck,
+      },
+      {
+        title: "Blockers / Unable",
+        value: summary?.unableToSubmitCount || 0,
+        icon: Clock3,
+      },
+    ];
+  }, [summary]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4f7fb] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2
-            className="animate-spin mx-auto mb-4 text-slate-800"
-            size={36}
-          />
-          <p className="text-sm text-slate-500 font-medium">
-            Parsing contextual data trees...
-          </p>
-        </div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 size={30} className="animate-spin text-slate-500" />
       </div>
     );
   }
 
   if (!task) return null;
 
-  const user = JSON.parse(localStorage.getItem("user"));
-  const alreadyAssigned = task?.assignments?.some(
-    (assignment) => assignment?.employee?.employeeId === user?.employeeId,
-  );
-
-  const targetSubtasks = task.items || [];
+  const currentUser = JSON.parse(localStorage.getItem("user"));
+  const isMainTaskAssignedToMe = task.createdBy?.employeeId === currentUser?.employeeId;
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] p-4 md:p-6 text-slate-900">
-      <div className="max-w-7xl mx-auto">
-        {/* BACK NAV */}
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-black transition mb-6 outline-none"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </button>
-
-        {/* CORE PARENT TASK BLOCK */}
-        <div className="bg-white rounded-[32px] border border-slate-200/80 shadow-sm p-6 md:p-8">
-          <div className="flex flex-wrap items-center gap-3 mb-5">
-            <span
-              className={`px-4 py-1.5 rounded-full border text-xs font-bold tracking-wide uppercase ${statusStyles[task.status] || statusStyles.DRAFT}`}
-            >
-              {task.status}
-            </span>
-            <span className="px-4 py-1.5 rounded-full bg-slate-100 text-slate-800 text-xs font-bold border border-slate-200">
-              Progress: {task.progress || 0}%
-            </span>
-          </div>
-
-          <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-            {task.projectName}
-          </h1>
-
-          <p className="text-slate-600 mt-4 text-sm md:text-base leading-relaxed max-w-4xl">
-            {task.description}
-          </p>
-
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+        {/* TOP BAR NAVIGATION */}
+        <div className="flex items-center justify-between mb-6">
           <button
-            onClick={handleAssignToMe}
-            disabled={assigningToMe || alreadyAssigned}
-            className={`h-11 px-5 rounded-xl mt-6 text-sm font-bold flex items-center gap-2 transition-all active:scale-[0.98] ${
-              alreadyAssigned
-                ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-                : "bg-black text-white hover:bg-gray-800 shadow-lg shadow-black/5"
-            }`}
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-black transition"
           >
-            <UserPlus size={16} />
-            {alreadyAssigned
-              ? "Already assigned"
-              : assigningToMe
-                ? "Linking Account..."
-                : "Claim Assignment"}
+            <ArrowLeft size={16} />
+            Back to Dashboard
           </button>
         </div>
 
-        {/* SUBTASKS CONTAINER */}
-        <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm p-6 md:p-8 mt-6">
-          <div className="mb-8">
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-              Project Component Tree
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Manage transactional workflows & review pull milestones
-            </p>
-          </div>
-
-          {/* APPEND SUBTASK BLOCK */}
-          <div className="bg-slate-50 border border-slate-200 rounded-[24px] p-5 md:p-6">
-            <h3 className="text-xs font-bold text-slate-900 mb-4 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-black block" />
-              Append Subtask Node
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1.5 ml-0.5">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Subtask identifier name"
-                  value={subtaskForm.title}
-                  onChange={(e) =>
-                    setSubtaskForm({ ...subtaskForm, title: e.target.value })
-                  }
-                  className="w-full h-11 bg-white border border-slate-200 rounded-xl px-4 outline-none focus:border-black focus:ring-4 focus:ring-black/5 text-sm transition-all"
-                />
+        {/* HEADER INFORMATION CARD */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm">
+          <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-8">
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[task.status]}`}>
+                  {task.status}
+                </span>
+                <span className="text-sm font-medium text-slate-500">
+                  {task.progress || 0}% Progress System-wide
+                </span>
               </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1.5 ml-0.5">
-                  Assign Engineer Pool *
-                </label>
-                <select
-                  value={subtaskForm.employeeId}
-                  onChange={(e) =>
-                    setSubtaskForm({
-                      ...subtaskForm,
-                      employeeId: e.target.value,
-                    })
-                  }
-                  className="w-full h-11 bg-white border border-slate-200 rounded-xl px-4 outline-none focus:border-black focus:ring-4 focus:ring-black/5 text-sm transition-all appearance-none"
-                >
-                  <option value="">Select Resource Asset</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.employeeId}>
-                      {emp.name} ({emp.position || "Developer"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1.5 ml-0.5">
-                  Due Date Parameters *
-                </label>
-                <input
-                  type="date"
-                  value={subtaskForm.dueDate}
-                  onChange={(e) =>
-                    setSubtaskForm({ ...subtaskForm, dueDate: e.target.value })
-                  }
-                  className="w-full h-11 bg-white border border-slate-200 rounded-xl px-4 outline-none focus:border-black focus:ring-4 focus:ring-black/5 text-sm transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1.5 ml-0.5">
-                  Priority Flag
-                </label>
-                <select
-                  value={subtaskForm.priority}
-                  onChange={(e) =>
-                    setSubtaskForm({ ...subtaskForm, priority: e.target.value })
-                  }
-                  className="w-full h-11 bg-white border border-slate-200 rounded-xl px-4 outline-none focus:border-black focus:ring-4 focus:ring-black/5 text-sm transition-all"
-                >
-                  <option value="LOW">LOW</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="HIGH">HIGH</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label className="text-xs font-bold text-slate-600 block mb-1.5 ml-0.5">
-                Scope Description Summary
-              </label>
-              <textarea
-                placeholder="Outline clear operational goals for the engineer to review..."
-                value={subtaskForm.description}
-                onChange={(e) =>
-                  setSubtaskForm({
-                    ...subtaskForm,
-                    description: e.target.value,
-                  })
-                }
-                className="w-full min-h-[80px] bg-white border border-slate-200 rounded-xl p-4 outline-none resize-none focus:border-black focus:ring-4 focus:ring-black/5 text-sm transition-all"
-              />
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
+                {task.projectName}
+              </h1>
+              <p className="mt-4 text-slate-600 leading-7 max-w-4xl">
+                {task.description}
+              </p>
             </div>
 
             <button
-              onClick={handleCreateSubtask}
-              disabled={creatingSubtask}
-              className="h-11 px-6 rounded-xl bg-black text-white text-xs font-bold mt-5 w-full md:w-auto hover:bg-gray-800 transition-colors disabled:opacity-50 shadow-md shadow-black/5"
+              onClick={handleAssignToMe}
+              disabled={assigningToMe || isMainTaskAssignedToMe}
+              className={`h-12 px-5 rounded-2xl text-sm font-semibold flex items-center gap-2 transition-all ${
+                isMainTaskAssignedToMe
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  : "bg-black text-white hover:bg-slate-800"
+              }`}
             >
-              {creatingSubtask
-                ? "Injecting Subtask Structure..."
-                : "Commit Subtask Target"}
+              <UserPlus size={16} />
+              {isMainTaskAssignedToMe ? "Owner/Assigned" : assigningToMe ? "Assigning..." : "Assign To Me"}
             </button>
           </div>
+        </div>
 
-          {/* SIMPLIFIED SUBTASK LOOPS ITERATION */}
-          <div className="space-y-4 mt-8">
-            {targetSubtasks.map((item) => {
-              const isSubmitted = item.status === "SUBMITTED";
-              const isVerified = item.status === "VERIFIED";
-              const isRejected = item.status === "REJECTED";
-
-              return (
-                <div
-                  key={item.id}
-                  className="border border-slate-200/80 rounded-2xl p-5 bg-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  <div className="space-y-1.5 max-w-2xl">
-                    <div className="flex items-center flex-wrap gap-2">
-                      <h3 className="text-base font-bold text-slate-900">
-                        {item.title}
-                      </h3>
-                      <span
-                        className={`px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase ${statusStyles[item.status] || statusStyles.DRAFT}`}
-                      >
-                        {item.status}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase ${priorityStyles[item.priority] || priorityStyles.LOW}`}
-                      >
-                        {item.priority}
-                      </span>
-                    </div>
-                    {item.description && (
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        {item.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-4 text-[11px] font-medium text-slate-400 pt-0.5">
-                      <span>
-                        Due:{" "}
-                        <strong className="text-slate-600">
-                          {formatDateTime(item.dueDate)}
-                        </strong>
-                      </span>
-                      {item.assignedTo && (
-                        <span>
-                          Owner:{" "}
-                          <strong className="text-slate-600">
-                            {item.assignedTo}
-                          </strong>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* REJECTION REASON CONTEXT SUMMARY BANNER */}
-                    {isRejected && item.rejectionReason && (
-                      <div className="mt-2 bg-red-50/60 border border-red-100 rounded-lg p-2.5 text-xs text-red-700 flex items-start gap-1.5">
-                        <AlertCircle
-                          size={14}
-                          className="mt-0.5 text-red-500 shrink-0"
-                        />
-                        <div>
-                          <span className="font-bold uppercase tracking-wider text-[9px] block text-red-500">
-                            Rejection Feedback:
-                          </span>
-                          {item.rejectionReason}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* SIMPLIFIED MANAGER CONTROL LAYER MODULES */}
-                  <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                    {isSubmitted && (
-                      <>
-                        <button
-                          onClick={() => handleApproveSubmission(item.id)}
-                          disabled={actionLoadingId === item.id}
-                          className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50"
-                        >
-                          <ShieldCheck size={14} />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => openRejectModal(item.id)}
-                          disabled={actionLoadingId === item.id}
-                          className="h-9 px-3.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50"
-                        >
-                          <XCircle size={14} />
-                          Reject
-                        </button>
-                      </>
-                    )}
-
-                    {isVerified && (
-                      <span className="h-8 px-3 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs font-semibold flex items-center gap-1.5">
-                        <CheckCircle2 size={13} /> Verified
-                      </span>
-                    )}
-
-                    {!isSubmitted && !isVerified && (
-                      <button
-                        onClick={() => handleOpenAssignModal(item)}
-                        className="h-8 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-600 transition-all shadow-sm"
-                      >
-                        Assign Resource
-                      </button>
-                    )}
-                  </div>
+        {/* STATS SUMMARY METRICS */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-5 mt-6">
+          {stats.map((item, index) => (
+            <div key={index} className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                  <item.icon size={22} className="text-slate-700" />
                 </div>
-              );
-            })}
-
-            {targetSubtasks.length === 0 && (
-              <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/30">
-                <Users size={20} className="mx-auto text-slate-300 mb-2" />
-                <h4 className="font-bold text-slate-700 text-xs">
-                  No Active Components Added
-                </h4>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Use the block interface above to populate operational
-                  milestones.
-                </p>
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Live</span>
               </div>
-            )}
+              <h2 className="text-3xl font-bold text-slate-900 mt-5">{item.value}</h2>
+              <p className="text-sm text-slate-500 mt-1">{item.title}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* SUBTASKS CONTROL ACTION BAR */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm mt-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Subtasks Ecosystem</h2>
+              <p className="text-sm text-slate-500 mt-1">Review items, assign execution team members, and check link submissions</p>
+            </div>
+            <button
+              onClick={() => setShowSubtaskForm(!showSubtaskForm)}
+              className="h-11 px-5 rounded-2xl bg-black text-white text-sm font-medium flex items-center gap-2 hover:bg-slate-800 transition"
+            >
+              <Plus size={16} />
+              Create Subtask Item
+            </button>
+          </div>
+        </div>
+
+        {/* SUBTASK CREATION DRAWER-FORM */}
+        {showSubtaskForm && (
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm mt-6 animate-fadeIn">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <input
+                type="text"
+                placeholder="Subtask title"
+                value={subtaskForm.title}
+                onChange={(e) => setSubtaskForm({ ...subtaskForm, title: e.target.value })}
+                className="h-12 px-4 rounded-2xl border border-slate-300 outline-none focus:border-black text-sm"
+              />
+
+              <select
+                value={subtaskForm.employeeId}
+                onChange={(e) => setSubtaskForm({ ...subtaskForm, employeeId: e.target.value })}
+                className="h-12 px-4 rounded-2xl border border-slate-300 outline-none focus:border-black text-sm"
+              >
+                <option value="">Select Employee Context</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.employeeId}>
+                    {emp.name} ({emp.position || "Staff"})
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="date"
+                value={subtaskForm.dueDate}
+                onChange={(e) => setSubtaskForm({ ...subtaskForm, dueDate: e.target.value })}
+                className="h-12 px-4 rounded-2xl border border-slate-300 outline-none focus:border-black text-sm"
+              />
+
+              <select
+                value={subtaskForm.priority}
+                onChange={(e) => setSubtaskForm({ ...subtaskForm, priority: e.target.value })}
+                className="h-12 px-4 rounded-2xl border border-slate-300 outline-none focus:border-black text-sm"
+              >
+                <option value="LOW">Low Priority</option>
+                <option value="MEDIUM">Medium Priority</option>
+                <option value="HIGH">High Priority</option>
+              </select>
+            </div>
+
+            <textarea
+              placeholder="Provide deep structural descriptions or milestones for this item..."
+              value={subtaskForm.description}
+              onChange={(e) => setSubtaskForm({ ...subtaskForm, description: e.target.value })}
+              className="w-full mt-4 min-h-[120px] p-4 rounded-2xl border border-slate-300 outline-none focus:border-black resize-none text-sm"
+            />
+
+            <div className="flex items-center gap-3 mt-5">
+              <button
+                onClick={handleCreateSubtask}
+                disabled={creatingSubtask}
+                className="h-11 px-5 rounded-2xl bg-black text-white text-sm font-medium hover:bg-slate-800 transition disabled:opacity-50"
+              >
+                {creatingSubtask ? "Creating..." : "Save Subtask"}
+              </button>
+              <button
+                onClick={() => setShowSubtaskForm(false)}
+                className="h-11 px-5 rounded-2xl border border-slate-300 text-sm font-medium hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* CORE DATA TABLE */}
+        <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mt-6">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1200px]">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Subtask Info</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Due Date</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned Members</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Submissions / Roadblocks</th>
+                  <th className="text-right px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {subtasks.length > 0 ? (
+                  subtasks.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition">
+                      
+                      {/* SUBTASK INFO */}
+                      <td className="px-6 py-5 max-w-sm">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
+                          {item.description && (
+                            <p className="text-sm text-slate-500 mt-1 line-clamp-2">{item.description}</p>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* STATUS */}
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[item.status]}`}>
+                          {item.status}
+                        </span>
+                      </td>
+
+                      {/* PRIORITY */}
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <span className={`text-sm font-semibold ${priorityStyles[item.priority]}`}>
+                          {item.priority}
+                        </span>
+                      </td>
+
+                      {/* DUE DATE */}
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <CalendarDays size={15} className="text-slate-400" />
+                          {formatDate(item.dueDate)}
+                        </div>
+                      </td>
+
+                      {/* ASSIGNED MEMBERS MAP */}
+                      <td className="px-6 py-5">
+                        {item.assignments && item.assignments.length > 0 ? (
+                          <div className="flex flex-col gap-2.5">
+                            {item.assignments.map((assignment) => (
+                              <div key={assignment.assignmentId} className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
+                                  <User size={12} className="text-slate-600" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-slate-800">{assignment.employee?.name}</p>
+                                  <p className="text-[10px] text-slate-400 font-mono">{assignment.employee?.employeeId}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded border border-dashed">Unassigned</span>
+                        )}
+                      </td>
+
+                      {/* SUBMISSIONS & REASON HANDLING */}
+                      <td className="px-6 py-5 max-w-xs">
+                        {item.assignments?.map((assignment) => {
+                          const sub = assignment.submission;
+                          if (!sub) return null;
+                          return (
+                            <div key={assignment.assignmentId} className="text-xs space-y-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                              <p className="font-semibold text-slate-700">By {assignment.employee?.name}:</p>
+                              {sub.unableToSubmitReason ? (
+                                <div className="text-rose-600 flex items-start gap-1">
+                                  <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                                  <span><strong>Blocked:</strong> {sub.unableToSubmitReason}</span>
+                                </div>
+                              ) : (
+                                <div className="space-y-1 text-slate-600">
+                                  {sub.remarks && <p>"{sub.remarks}"</p>}
+                                  {sub.driveLink && (
+                                    <a
+                                      href={sub.driveLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 font-medium inline-flex items-center gap-1 hover:underline mt-0.5"
+                                    >
+                                      Review Delivery <ExternalLink size={12} />
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {item.status === "REJECTED" && item.rejectionReason && (
+                          <div className="flex items-start gap-1.5 text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl p-2.5 mt-2">
+                            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                            <span><strong>Rejected Reason:</strong> {item.rejectionReason}</span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* MANAGERIAL WORKFLOW ACTIONS */}
+                      <td className="px-6 py-5 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleOpenAssignModal(item)}
+                            className="p-2 border border-slate-200 hover:border-black hover:bg-slate-50 text-slate-700 rounded-xl transition tooltip"
+                            title="Manage Assignments"
+                          >
+                            <UserPlus size={15} />
+                          </button>
+
+                          {item.assignments?.map((assignment) => {
+                            const isPendingReview = assignment.status === "SUBMITTED" || item.status === "SUBMITTED";
+                            if (!isPendingReview) return null;
+
+                            return (
+                              <div key={assignment.assignmentId} className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                                <button
+                                  disabled={actionLoadingId !== null}
+                                  onClick={() => handleApproveSubmission(assignment.assignmentId)}
+                                  className="p-1.5 bg-white text-emerald-600 hover:bg-emerald-50 rounded-lg border border-slate-200 shadow-sm transition"
+                                  title="Verify & Approve"
+                                >
+                                  {actionLoadingId === assignment.assignmentId ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <ThumbsUp size={13} />
+                                  )}
+                                </button>
+                                <button
+                                  disabled={actionLoadingId !== null}
+                                  onClick={() => setRejectModal({
+                                    open: true,
+                                    assignmentId: assignment.assignmentId,
+                                    reason: ""
+                                  })}
+                                  className="p-1.5 bg-white text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 shadow-sm transition"
+                                  title="Reject Back to Team"
+                                >
+                                  <ThumbsDown size={13} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </td>
+
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="text-center py-16 text-slate-400 text-sm font-medium">
+                      No workspace subtask items found assigned to this dashboard
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      {/* RESOURCE ASSIGNMENT LAYER MODAL */}
+      {/* MULTI-EMPLOYEE ASSIGN MODAL */}
       {openAssignModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl flex flex-col overflow-hidden max-h-[80vh]">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Allocate Resource Layer
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Link engineering tokens to task nodes
-                </p>
+                <h3 className="text-lg font-bold text-slate-900">Assign Operations</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Toggle multiple workers for task synchronization</p>
               </div>
               <button
                 onClick={() => setOpenAssignModal(false)}
-                className="h-8 w-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400"
+                className="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-black transition"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-2">
-              {employees.map((employee) => {
-                const checked = selectedEmployees.includes(employee.employeeId);
-                return (
-                  <label
-                    key={employee.id}
-                    className={`flex items-center gap-3 border rounded-xl p-3 cursor-pointer transition-all ${checked ? "bg-black text-white border-black" : "border-slate-200 hover:bg-slate-50"}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="accent-black"
-                      checked={checked}
-                      onChange={() => toggleEmployee(employee.employeeId)}
-                    />
-                    <div className="text-xs">
-                      <p className="font-bold">{employee.name}</p>
-                      <p
-                        className={`mt-0.5 font-mono ${checked ? "text-slate-300" : "text-slate-400"}`}
-                      >
-                        {employee.employeeId} •{" "}
-                        {employee.position || "Developer"}
-                      </p>
-                    </div>
-                  </label>
-                );
-              })}
+            <div className="p-5 space-y-2.5 max-h-[360px] overflow-y-auto bg-slate-50/50">
+              {employees.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-6">No direct team members found.</p>
+              ) : (
+                employees.map((employee) => {
+                  const checked = selectedEmployees.includes(employee.employeeId);
+                  return (
+                    <label
+                      key={employee.id}
+                      className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer bg-white transition-all select-none ${
+                        checked ? "border-black ring-1 ring-black shadow-sm" : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        className="accent-black w-4 h-4 rounded"
+                        onChange={() => toggleEmployee(employee.employeeId)}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-slate-900">{employee.name}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-xs text-slate-400 font-mono">{employee.employeeId}</span>
+                          <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium">
+                            {employee.position || "Developer"}
+                          </span>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })
+              )}
             </div>
 
-            <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
+            <div className="p-5 border-t border-slate-100 flex justify-end gap-3 bg-white">
               <button
                 onClick={() => setOpenAssignModal(false)}
-                className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-gray-50"
+                className="h-11 px-5 rounded-2xl border border-slate-300 text-sm font-medium hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAssign}
                 disabled={assigning}
-                className="h-9 px-4 rounded-lg bg-black text-white text-xs font-bold shadow-sm disabled:opacity-50"
+                className="h-11 px-5 rounded-2xl bg-black text-white text-sm font-semibold hover:bg-slate-800 transition disabled:opacity-50"
               >
-                {assigning ? "Linking Threads..." : "Commit Bindings"}
+                {assigning ? "Updating..." : "Save Assignment"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* BOUNCE LOG DIALOG MODAL REASON INPUT */}
+      {/* REJECTION OVERLAY MODAL */}
       {rejectModal.open && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
             <div className="p-5 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">
-                Flag Pipeline Defect
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Specify why this task submission configuration fails criteria
-              </p>
+              <h3 className="text-lg font-bold text-slate-900">Decline Submission Delivery</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Please provide structural details regarding what needs correction.</p>
             </div>
 
             <div className="p-5">
               <textarea
-                placeholder="E.g., Video quality poor, incomplete functional testing..."
+                placeholder="Ex: The feature layout needs optimization for responsive viewports or edge cases failure..."
                 value={rejectModal.reason}
-                onChange={(e) =>
-                  setRejectModal((prev) => ({
-                    ...prev,
-                    reason: e.target.value,
-                  }))
-                }
-                className="w-full min-h-[90px] border border-slate-200 rounded-xl p-3 outline-none resize-none text-xs focus:border-red-500 focus:ring-4 focus:ring-red-500/5 transition-all"
+                onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
+                className="w-full min-h-[140px] p-4 rounded-2xl border border-slate-300 outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none text-sm leading-relaxed"
               />
             </div>
 
-            <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
+            <div className="p-5 border-t border-slate-100 flex justify-end gap-3">
               <button
-                onClick={() =>
-                  setRejectModal({ open: false, subtaskId: null, reason: "" })
-                }
-                className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-gray-50"
+                onClick={() => setRejectModal({ open: false, assignmentId: null, reason: "" })}
+                className="h-11 px-5 rounded-2xl border border-slate-300 text-sm font-medium hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRejectSubmission}
-                disabled={actionLoadingId === rejectModal.subtaskId}
-                className="h-9 px-4 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                disabled={actionLoadingId === rejectModal.assignmentId}
+                className="h-11 px-5 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition shadow-sm disabled:opacity-50"
               >
-                {actionLoadingId === rejectModal.subtaskId
-                  ? "Bouncing Thread..."
-                  : "Reject Submission"}
+                Confirm Decline
               </button>
             </div>
           </div>

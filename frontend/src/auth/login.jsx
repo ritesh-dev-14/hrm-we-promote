@@ -1,230 +1,213 @@
 import { useState } from "react";
-import { Eye, EyeOff, Lock, Mail, Loader2, AlertCircle } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
+import logo from "../assets/logo-removebg-.png"
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
   const [errors, setErrors] = useState({
     email: "",
     password: "",
     general: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
+
+  const [showPassword, setShowPassword] =
+    useState(false);
+
   const [loading, setLoading] = useState(false);
 
-  const handleInputChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error on input change
+    setFormData((p) => ({ ...p, [name]: value }));
+
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+      setErrors((p) => ({ ...p, [name]: "" }));
     }
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email";
-    }
-
-    if (!formData.password.trim()) {
-      newErrors.password = "Password is required";
-    }
-
-    return newErrors;
+  const validate = () => {
+    const e = {};
+    if (!formData.email) e.email = "Required";
+    if (!formData.password) e.password = "Required";
+    return e;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({ email: "", password: "", general: "" });
 
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors((prev) => ({ ...prev, ...validationErrors }));
+    const v = validate();
+    if (Object.keys(v).length) {
+      setErrors((p) => ({ ...p, ...v }));
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await API.post("/api/auth/login", {
+      const res = await API.post("/api/auth/login", {
         email: formData.email,
         password: formData.password,
       });
 
-      const { user, token } = response?.data?.data;
-
-      if (!user || !token) {
-        throw new Error("Invalid server response");
-      }
+      const { user, token } = res?.data?.data;
 
       login(user, token);
-      // Navigate to dashboard (AppRoutes component handles role-based content)
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      const message = err.response?.data?.message || "Login failed";
-
-      if (message.toLowerCase().includes("password")) {
-        setErrors((prev) => ({ ...prev, password: "Incorrect password" }));
-      } else if (
-        message.toLowerCase().includes("email") ||
-        message.toLowerCase().includes("not found")
-      ) {
-        setErrors((prev) => ({ ...prev, email: "Email not found" }));
-      } else {
-        setErrors((prev) => ({ ...prev, general: message }));
-      }
+      setErrors((p) => ({
+        ...p,
+        general:
+          err.response?.data?.message ||
+          "Invalid credentials",
+      }));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-slate-50 to-indigo-50 flex items-center justify-center p-4 sm:p-6">
-      {/* Main Container */}
-      <div className="w-full max-w-sm sm:max-w-md">
-        {/* Card */}
-        <div className="bg-white rounded-3xl sm:rounded-4xl shadow-lg sm:shadow-2xl border border-slate-100 p-6 sm:p-8 lg:p-10">
-          {/* Header */}
-          <div className="text-center mb-8 sm:mb-10">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-indigo-100 to-indigo-50 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-md">
-              <Lock className="text-indigo-600" size={28} strokeWidth={1.5} />
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
-              Welcome Back
-            </h1>
-
-            <p className="text-sm sm:text-base text-slate-500">
-              Sign in to your account to continue
-            </p>
+    <div className="min-h-screen flex items-center justify-center bg-white px-4">
+      <div className="w-full max-w-md ">
+        {/* HEADER */}
+        <div className="text-center mb-10">
+          <div className="w-10 h-10 mx-auto border border-slate-200 rounded-xl flex items-center justify-center mb-4">
+            {/* <Lock size={16} className="text-slate-700" /> */}
+            <img src={logo} alt="" />
           </div>
 
-          {/* General Error Alert */}
+          <h1 className="text-xl font-medium text-slate-900">
+            Sign in
+          </h1>
+
+          <p className="text-sm text-slate-500 mt-1">
+            Enter your credentials to continue
+          </p>
+        </div>
+
+        {/* CARD */}
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5"
+        >
+          {/* ERROR */}
           {errors.general && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3">
-              <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
-              <p className="text-sm sm:text-base text-red-700 font-medium">
-                {errors.general}
-              </p>
+            <div className="flex items-center gap-2 text-sm text-red-600">
+              <AlertCircle size={14} />
+              {errors.general}
             </div>
           )}
 
-          {/* Form */}
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5 sm:space-y-6"
-            noValidate
+          {/* EMAIL */}
+          <div>
+            <label className="text-xs text-slate-500">
+              Email
+            </label>
+
+            <div className="relative mt-1">
+              <Mail
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="name@example.com"
+                className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-slate-900 transition"
+              />
+            </div>
+
+            {errors.email && (
+              <p className="text-xs text-red-500 mt-1">
+                {errors.email}
+              </p>
+            )}
+          </div>
+
+          {/* PASSWORD */}
+          <div>
+            <label className="text-xs text-slate-500">
+              Password
+            </label>
+
+            <div className="relative mt-1">
+              <Lock
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <input
+                type={
+                  showPassword ? "text" : "password"
+                }
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                className="w-full pl-9 pr-9 py-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-slate-900 transition"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowPassword(!showPassword)
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+              >
+                {showPassword ? (
+                  <EyeOff size={14} />
+                ) : (
+                  <Eye size={14} />
+                )}
+              </button>
+            </div>
+
+            {errors.password && (
+              <p className="text-xs text-red-500 mt-1">
+                {errors.password}
+              </p>
+            )}
+          </div>
+
+          {/* BUTTON */}
+          <button
+            disabled={loading}
+            className="w-full py-2.5 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition flex items-center justify-center"
           >
-            {/* Email Field */}
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
-                    errors.email ? "text-red-400" : "text-slate-400"
-                  }`}
-                  size={18}
-                  strokeWidth={1.5}
-                />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="you@example.com"
-                  className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 pl-12 sm:pl-13 rounded-xl sm:rounded-2xl border-2 transition-all outline-none placeholder:text-slate-400 text-sm sm:text-base ${
-                    errors.email
-                      ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                      : "border-slate-200 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  }`}
-                  disabled={loading}
-                />
-              </div>
-              {errors.email && (
-                <p className="mt-2 text-xs sm:text-sm text-red-600 font-medium flex items-center gap-1">
-                  <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
-                  {errors.email}
-                </p>
-              )}
-            </div>
+            {loading ? (
+              <Loader2
+                size={16}
+                className="animate-spin"
+              />
+            ) : (
+              "Sign in"
+            )}
+          </button>
+        </form>
 
-            {/* Password Field */}
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
-                    errors.password ? "text-red-400" : "text-slate-400"
-                  }`}
-                  size={18}
-                  strokeWidth={1.5}
-                />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Enter your password"
-                  className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 pl-12 sm:pl-13 pr-12 rounded-xl sm:rounded-2xl border-2 transition-all outline-none placeholder:text-slate-400 text-sm sm:text-base ${
-                    errors.password
-                      ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                      : "border-slate-200 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  }`}
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-2 text-xs sm:text-sm text-red-600 font-medium flex items-center gap-1">
-                  <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
-                  {errors.password}
-                </p>
-              )}
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-8 py-3 sm:py-4 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 disabled:from-indigo-300 disabled:to-indigo-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl sm:rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:shadow-md text-sm sm:text-base"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  <span>Signing in...</span>
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </button>
-          </form>
-
-          {/* Footer */}
-          <p className="text-center mt-6 sm:mt-8 text-xs sm:text-sm text-slate-500">
-            Don't have an account?{" "}
-            <span className="text-indigo-600 font-semibold">Contact HR</span>
-          </p>
-        </div>
+        {/* FOOTER */}
+        <p className="text-center text-xs text-slate-400 mt-8">
+          Contact admin for access
+        </p>
       </div>
     </div>
   );

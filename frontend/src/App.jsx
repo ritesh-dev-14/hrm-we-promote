@@ -27,7 +27,7 @@ export default function App() {
             theme="light"
           /> */}
           <ToastContainer
-            position="top-center"
+            position="top-left"
             autoClose={2500}
             theme="light"
             toastClassName="!bg-white !text-slate-900 !rounded-2xl !shadow-xl !border !border-slate-200"
