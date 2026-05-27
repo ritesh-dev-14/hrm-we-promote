@@ -1711,20 +1711,8 @@ exports.unableToSubmit =
     }
 
     //
-    // ✅ CREATE SUBMISSION WITH REASON
-    //
-    const submission =
-      await prisma.taskItemSubmission.create({
-        data: {
-          assignmentId,
-
-          unableToSubmitReason:
-            body.reason,
-        },
-      });
-
-    //
     // ✅ UPDATE ASSIGNMENT STATUS
+    // Store reason in rejectionReason for backward compatibility
     //
     await prisma.taskItemAssignment.update({
       where: {
@@ -1734,6 +1722,9 @@ exports.unableToSubmit =
       data: {
         status:
           "UNABLE_TO_SUBMIT",
+
+        rejectionReason:
+          body.reason,
 
         submittedAt:
           new Date(),
@@ -1751,6 +1742,10 @@ exports.unableToSubmit =
       success: true,
       message:
         "Unable to submit recorded with reason",
-      submission,
+      data: {
+        assignmentId,
+        status: "UNABLE_TO_SUBMIT",
+        reason: body.reason,
+      },
     };
   };
