@@ -47,7 +47,7 @@ exports.createTaskItem = async (
   //
   // ADMIN: can create for any task
   // HR: can create for own tasks
-  // MANAGER: can create for tasks assigned to them OR created by HR
+  // MANAGER: can create for tasks created by them OR assigned to them OR created by HR
   //
   let allowed = false;
 
@@ -63,21 +63,27 @@ exports.createTaskItem = async (
   }
 
   else if (user.role === "MANAGER") {
-    // Check if assigned to task
-    const assignment =
-      await prisma.taskAssignment.findFirst({
-        where: {
-          taskId,
-          userId: user.id,
-        },
-      });
-
-    if (assignment) {
+    // Check if manager created the task
+    if (task.createdById === user.id) {
       allowed = true;
     }
-    // Also allow if task was created by HR (managers work on HR tasks)
-    else if (task.createdBy?.role === "HR") {
-      allowed = true;
+    // Check if assigned to task
+    else {
+      const assignment =
+        await prisma.taskAssignment.findFirst({
+          where: {
+            taskId,
+            userId: user.id,
+          },
+        });
+
+      if (assignment) {
+        allowed = true;
+      }
+      // Also allow if task was created by HR (managers work on HR tasks)
+      else if (task.createdBy?.role === "HR") {
+        allowed = true;
+      }
     }
   }
 
@@ -349,23 +355,30 @@ exports.assignTaskItem = async (
   }
 
   //
-  // ✅ MANAGER MUST HAVE TASK
+  // ✅ MANAGER MUST HAVE TASK (created by them or assigned to them)
   //
   if (user.role === "MANAGER") {
 
-    const assignment =
-      await prisma.taskAssignment.findFirst({
-        where: {
-          taskId: item.taskId,
-          userId: user.id,
-        },
-      });
+    // Check if manager created the task
+    if (item.task.createdById === user.id) {
+      // Manager created the task, so they can assign items
+    }
+    // Check if assigned to task
+    else {
+      const assignment =
+        await prisma.taskAssignment.findFirst({
+          where: {
+            taskId: item.taskId,
+            userId: user.id,
+          },
+        });
 
-    if (!assignment) {
-      throw new ApiError(
-        403,
-        ERRORS.AUTH.ACCESS_DENIED
-      );
+      if (!assignment) {
+        throw new ApiError(
+          403,
+          ERRORS.AUTH.ACCESS_DENIED
+        );
+      }
     }
   }
 
