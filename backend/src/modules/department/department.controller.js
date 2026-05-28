@@ -68,3 +68,21 @@ exports.deleteDepartment =
       next(err);
     }
   };
+
+//
+// 🔥 GET ALL DEPARTMENTS WITH EMPLOYEES
+//
+exports.getDepartmentsWithEmployees =
+  async (req, res, next) => {
+    try {
+      const data =
+        await service.getDepartmentsWithEmployees();
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };

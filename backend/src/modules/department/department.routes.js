@@ -39,6 +39,16 @@ router.get(
 );
 
 //
+// 🔥 GET ALL WITH EMPLOYEES (For Manager/HR to assign tasks)
+//
+router.get(
+  "/with-employees/all",
+  auth,
+  role("ADMIN", "HR", "MANAGER"),
+  controller.getDepartmentsWithEmployees
+);
+
+//
 // 🔥 UPDATE
 //
 router.patch(

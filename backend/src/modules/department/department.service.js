@@ -85,3 +85,41 @@ exports.deleteDepartment = async (
     where: { id },
   });
 };
+
+//
+// 🔥 GET ALL DEPARTMENTS WITH EMPLOYEES
+//
+// Returns all departments with their employees
+// Accessible by: MANAGER, HR, ADMIN
+//
+exports.getDepartmentsWithEmployees = async () => {
+  const departments = await prisma.department.findMany({
+    include: {
+      users: {
+        select: {
+          id: true,
+          employeeId: true,
+          name: true,
+          email: true,
+          role: true,
+          position: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      },
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+
+  // Format response
+  return departments.map((dept) => ({
+    id: dept.id,
+    name: dept.name,
+    employeeCount: dept.users.length,
+    employees: dept.users,
+    createdAt: dept.createdAt,
+  }));
+};
