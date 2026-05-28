@@ -112,19 +112,6 @@ exports.createTaskItem = async (
   }
 
   //
-  // ✅ FOR MANAGER: CAN ONLY ASSIGN OWN EMPLOYEES
-  //
-  if (
-    user.role === "MANAGER" &&
-    employee.managerId !== user.id
-  ) {
-    throw new ApiError(
-      403,
-      "Can only assign your own employees"
-    );
-  }
-
-  //
   // ✅ CREATE TASK ITEM
   //
   const item = await prisma.taskItem.create({
@@ -413,11 +400,6 @@ exports.assignTaskItem = async (
 
     role: "EMPLOYEE",
   };
-
-  // 🔥 MANAGER CAN ONLY ASSIGN OWN EMPLOYEES
-  if (user.role === "MANAGER") {
-    employeeWhere.managerId = user.id;
-  }
 
   const employees =
     await prisma.user.findMany({
