@@ -1,7 +1,9 @@
+import { useMemo, useState } from "react";
 import {
   Calendar,
   Clock,
   CircleDot,
+  Filter,
 } from "lucide-react";
 
 import { motion } from "framer-motion";
@@ -11,6 +13,9 @@ export default function AttendanceView({
   records,
   loading,
 }) {
+  const [selectedFilter, setSelectedFilter] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("ALL");
+
   const getIcon = (label) => {
     if (label.includes("Present")) {
       return <Calendar size={18} />;
@@ -45,6 +50,46 @@ export default function AttendanceView({
 
     return `${hours.toFixed(1)} hrs`;
   };
+
+  const filteredRecords = useMemo(() => {
+    let filtered = [...(records || [])];
+
+    const now = new Date();
+
+    if (selectedFilter !== "all") {
+      filtered = filtered.filter((record) => {
+        const recordDate = new Date(record.date);
+
+        if (selectedFilter === "week") {
+          const weekAgo = new Date();
+          weekAgo.setDate(now.getDate() - 7);
+
+          return recordDate >= weekAgo;
+        }
+
+        if (selectedFilter === "month") {
+          return (
+            recordDate.getMonth() === now.getMonth() &&
+            recordDate.getFullYear() === now.getFullYear()
+          );
+        }
+
+        if (selectedFilter === "year") {
+          return recordDate.getFullYear() === now.getFullYear();
+        }
+
+        return true;
+      });
+    }
+
+    if (selectedStatus !== "ALL") {
+      filtered = filtered.filter(
+        (record) => record.status === selectedStatus
+      );
+    }
+
+    return filtered;
+  }, [records, selectedFilter, selectedStatus]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-3 sm:p-4 lg:p-6">
@@ -103,7 +148,7 @@ export default function AttendanceView({
           className="hidden lg:block bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden"
         >
           {/* TABLE HEADER */}
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="px-6 py-5 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
                 Attendance Records
@@ -112,6 +157,45 @@ export default function AttendanceView({
               <p className="text-sm text-slate-500 mt-1">
                 Daily check-in and working hours
               </p>
+            </div>
+
+            {/* FILTERS */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* DATE FILTER */}
+              <div className="flex items-center gap-2 bg-slate-100 rounded-xl p-1">
+                <Filter size={16} className="text-slate-500 ml-2" />
+
+                {["all", "week", "month", "year"].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setSelectedFilter(filter)}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold uppercase transition-all ${
+                      selectedFilter === filter
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-600 hover:bg-white"
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+
+              {/* STATUS FILTER */}
+              <div className="flex items-center gap-2 bg-slate-100 rounded-xl p-1">
+                {["ALL", "PRESENT", "ABSENT", "LEAVE"].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setSelectedStatus(status)}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold uppercase transition-all ${
+                      selectedStatus === status
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-600 hover:bg-white"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -143,8 +227,8 @@ export default function AttendanceView({
               </thead>
 
               <tbody>
-                {!loading && records?.length > 0 ? (
-                  records.map((r, i) => (
+                {!loading && filteredRecords?.length > 0 ? (
+                  filteredRecords.map((r, i) => (
                     <motion.tr
                       key={r.id}
                       initial={{ opacity: 0 }}
@@ -175,6 +259,8 @@ export default function AttendanceView({
                           className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                             r.status === "PRESENT"
                               ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              : r.status === "LEAVE"
+                              ? "bg-amber-50 text-amber-600 border border-amber-100"
                               : "bg-rose-50 text-rose-600 border border-rose-100"
                           }`}
                         >
@@ -202,83 +288,122 @@ export default function AttendanceView({
           </div>
         </motion.div>
 
-        {/* MOBILE + TABLET CARDS */}
-        <div className="lg:hidden space-y-4">
-          {!loading && records?.length > 0 ? (
-            records.map((r, i) => (
-              <motion.div
-                key={r.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm"
-              >
-                {/* TOP */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 mb-1">
-                      Date
-                    </p>
-
-                    <h3 className="text-sm font-semibold text-slate-800">
-                      {formatDate(r.date)}
-                    </h3>
-                  </div>
-
-                  <span
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                      r.status === "PRESENT"
-                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                        : "bg-rose-50 text-rose-600 border border-rose-100"
+        {/* MOBILE + TABLET */}
+        <div className="lg:hidden">
+          {/* MOBILE FILTERS */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm mb-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-2">
+                {["all", "week", "month", "year"].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setSelectedFilter(filter)}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold uppercase transition-all ${
+                      selectedFilter === filter
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-600"
                     }`}
                   >
-                    {r.status}
-                  </span>
-                </div>
+                    {filter}
+                  </button>
+                ))}
+              </div>
 
-                {/* DETAILS */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 rounded-xl p-3">
-                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
-                      Clock In
-                    </p>
-
-                    <p className="text-sm font-semibold text-slate-700">
-                      {formatTime(r.startTime)}
-                    </p>
-                  </div>
-
-                  <div className="bg-slate-50 rounded-xl p-3">
-                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
-                      Clock Out
-                    </p>
-
-                    <p className="text-sm font-semibold text-slate-700">
-                      {formatTime(r.endTime)}
-                    </p>
-                  </div>
-
-                  <div className="col-span-2 bg-slate-50 rounded-xl p-3">
-                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
-                      Working Hours
-                    </p>
-
-                    <p className="text-sm font-semibold text-slate-700">
-                      {formatHours(r.totalHours)}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
-              <p className="text-sm font-medium text-slate-400">
-                {loading
-                  ? "Loading attendance..."
-                  : "No attendance records found."}
-              </p>
+              <div className="flex flex-wrap gap-2">
+                {["ALL", "PRESENT", "ABSENT", "LEAVE"].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setSelectedStatus(status)}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold uppercase transition-all ${
+                      selectedStatus === status
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
+          </div>
+
+          <div className="space-y-4">
+            {!loading && filteredRecords?.length > 0 ? (
+              filteredRecords.map((r, i) => (
+                <motion.div
+                  key={r.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 mb-1">
+                        Date
+                      </p>
+
+                      <h3 className="text-sm font-semibold text-slate-800">
+                        {formatDate(r.date)}
+                      </h3>
+                    </div>
+
+                    <span
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                        r.status === "PRESENT"
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                          : r.status === "LEAVE"
+                          ? "bg-amber-50 text-amber-600 border border-amber-100"
+                          : "bg-rose-50 text-rose-600 border border-rose-100"
+                      }`}
+                    >
+                      {r.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 rounded-xl p-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
+                        Clock In
+                      </p>
+
+                      <p className="text-sm font-semibold text-slate-700">
+                        {formatTime(r.startTime)}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-xl p-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
+                        Clock Out
+                      </p>
+
+                      <p className="text-sm font-semibold text-slate-700">
+                        {formatTime(r.endTime)}
+                      </p>
+                    </div>
+
+                    <div className="col-span-2 bg-slate-50 rounded-xl p-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400 mb-1">
+                        Working Hours
+                      </p>
+
+                      <p className="text-sm font-semibold text-slate-700">
+                        {formatHours(r.totalHours)}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+                <p className="text-sm font-medium text-slate-400">
+                  {loading
+                    ? "Loading attendance..."
+                    : "No attendance records found."}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

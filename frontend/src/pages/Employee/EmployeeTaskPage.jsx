@@ -176,7 +176,7 @@ const EmployeeTaskPage = () => {
           <StatsRow title="Total Assigned" value={stats.total} icon={FileText} />
           <StatsRow title="In Progress" value={stats.pending} icon={Clock3} />
           <StatsRow title="Verified Work" value={stats.verified} icon={CheckCircle2} />
-          <StatsRow title="Revisions Requested" value={stats.rejected} icon={AlertTriangle} />
+          <StatsRow title="Rejected" value={stats.rejected} icon={AlertTriangle} />
         </div>
 
         {/* CORE RENDER AREA */}
@@ -284,14 +284,14 @@ const EmployeeTaskPage = () => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <RowMetaItem label="Manager" value={selectedTask.taskItem?.task?.createdBy?.name} icon={User2} />
-                    <RowMetaItem label="Manager Role" value={selectedTask.taskItem?.task?.createdBy?.role} icon={Briefcase} />
-                    <RowMetaItem label="Task ID Reference" value={selectedTask.taskItem?.id} isMono />
-                    <RowMetaItem label="Assignment Reference" value={selectedTask.assignmentId} isMono />
+                    <RowMetaItem label="Assigned by" value={selectedTask.taskItem?.task?.createdBy?.name} icon={User2} />
+                    <RowMetaItem label="Assigner Role" value={selectedTask.taskItem?.task?.createdBy?.role} icon={Briefcase} />
+                    {/* <RowMetaItem label="Task ID Reference" value={selectedTask.taskItem?.id} isMono />
+                    <RowMetaItem label="Assignment Reference" value={selectedTask.assignmentId} isMono /> */}
                   </div>
 
                   {/* TIMELINE METRICS */}
-                  <div className="border border-slate-200 rounded-2xl p-5">
+                  {/* <div className="border border-slate-200 rounded-2xl p-5">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Timeline Logs</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       <RowTimelineLog label="Started At" value={formatDate(selectedTask.startedAt)} />
@@ -299,7 +299,7 @@ const EmployeeTaskPage = () => {
                       <RowTimelineLog label="Completed At" value={formatDate(selectedTask.completedAt)} />
                       <RowTimelineLog label="Verified At" value={formatDate(selectedTask.verifiedAt)} />
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* SUBMISSION SUMMARY CONTAINER */}
                   {selectedTask.submission && (
@@ -379,7 +379,7 @@ const EmployeeTaskPage = () => {
                       
                       {/* COMMIT FORM */}
                       <div className="border border-slate-200 rounded-2xl p-5 bg-white">
-                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Submit Output Deliverable</h3>
+                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Submit Your task here</h3>
                         <div className="space-y-3">
                           <div>
                             {/* <label className="text-xs text-slate-500 block mb-1">Resource Drive URL</label>
@@ -393,7 +393,7 @@ const EmployeeTaskPage = () => {
                           </div>
 
                           <div>
-                            <label className="text-xs text-slate-500 block mb-1">Delivery Remarks</label>
+                            <label className="text-xs text-slate-500 block mb-1">Submission Remarks</label>
                             <textarea
                               rows={3}
                               value={remarks}
@@ -408,7 +408,7 @@ const EmployeeTaskPage = () => {
                             disabled={submitting}
                             className="w-full h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors disabled:opacity-50"
                           >
-                            {submitting ? "Submitting..." : "Submit Task Deliverable"}
+                            {submitting ? "Submitting..." : "Submit Task"}
                           </button>
                         </div>
                       </div>
@@ -416,9 +416,9 @@ const EmployeeTaskPage = () => {
                       {/* ROADBLOCK CONTEXT LOGGER */}
                       <div className="border border-red-100 rounded-2xl p-5 bg-red-50/20">
                         <h3 className="text-xs font-bold text-red-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                          <AlertTriangle size={14} className="text-red-600" /> Log Blocking Issue
+                          <AlertTriangle size={14} className="text-red-600" /> Failed to complete task
                         </h3>
-                        <p className="text-[11px] text-slate-500 mb-3">Use this if systemic issues completely prevent progress execution.</p>
+                        {/* <p className="text-[11px] text-slate-500 mb-3">Use this if systemic issues completely prevent progress execution.</p> */}
                         
                         <div className="space-y-3">
                           <textarea
@@ -433,7 +433,7 @@ const EmployeeTaskPage = () => {
                             disabled={reportingIssue}
                             className="w-full h-9 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
                           >
-                            {reportingIssue ? "Logging Issue..." : "Report Roadblock Block"}
+                            {reportingIssue ? "Submiting..." : "Unable to Complete Task"}
                           </button>
                         </div>
                       </div>

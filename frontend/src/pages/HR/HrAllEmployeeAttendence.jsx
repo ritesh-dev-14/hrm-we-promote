@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Clock3,
   TimerReset,
+  Filter,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -18,6 +19,12 @@ export default function HrAttendance() {
 
   const [search, setSearch] = useState("");
 
+  const [selectedFilter, setSelectedFilter] =
+    useState("all");
+
+  const [selectedStatus, setSelectedStatus] =
+    useState("ALL");
+
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -26,14 +33,19 @@ export default function HrAttendance() {
     try {
       setLoading(true);
 
-      const [attendanceRes, dashboardRes] = await Promise.all([
-        api.get("/api/attendance"),
-        api.get("/api/attendance/dashboard"),
-      ]);
+      const [attendanceRes, dashboardRes] =
+        await Promise.all([
+          api.get("/api/attendance"),
+          api.get("/api/attendance/dashboard"),
+        ]);
 
-      setAttendance(attendanceRes.data?.data || []);
+      setAttendance(
+        attendanceRes.data?.data || [],
+      );
 
-      setDashboard(dashboardRes.data?.data || {});
+      setDashboard(
+        dashboardRes.data?.data || {},
+      );
     } catch (error) {
       console.log(error);
     } finally {
@@ -44,20 +56,27 @@ export default function HrAttendance() {
   // FILTERED DATA
 
   const filteredAttendance = useMemo(() => {
-    return attendance.filter((item) => {
+    let filtered = [...attendance];
+
+    const searchValue = search.toLowerCase();
+
+    // SEARCH FILTER
+
+    filtered = filtered.filter((item) => {
       const employeeName =
         item.user?.name?.toLowerCase?.() || "";
 
       const employeeId =
-        item.user?.employeeId?.toLowerCase?.() || "";
+        item.user?.employeeId?.toLowerCase?.() ||
+        "";
 
       const department =
-        item.user?.department?.name?.toLowerCase?.() || "";
+        item.user?.department?.name?.toLowerCase?.() ||
+        "";
 
       const position =
-        item.user?.position?.toLowerCase?.() || "";
-
-      const searchValue = search.toLowerCase();
+        item.user?.position?.toLowerCase?.() ||
+        "";
 
       return (
         employeeName.includes(searchValue) ||
@@ -66,25 +85,88 @@ export default function HrAttendance() {
         position.includes(searchValue)
       );
     });
-  }, [attendance, search]);
+
+    // DATE FILTER
+
+    const now = new Date();
+
+    if (selectedFilter !== "all") {
+      filtered = filtered.filter((item) => {
+        const itemDate = new Date(item.date);
+
+        if (selectedFilter === "week") {
+          const weekAgo = new Date();
+
+          weekAgo.setDate(
+            now.getDate() - 7,
+          );
+
+          return itemDate >= weekAgo;
+        }
+
+        if (selectedFilter === "month") {
+          return (
+            itemDate.getMonth() ===
+              now.getMonth() &&
+            itemDate.getFullYear() ===
+              now.getFullYear()
+          );
+        }
+
+        if (selectedFilter === "year") {
+          return (
+            itemDate.getFullYear() ===
+            now.getFullYear()
+          );
+        }
+
+        return true;
+      });
+    }
+
+    // STATUS FILTER
+
+    if (selectedStatus !== "ALL") {
+      filtered = filtered.filter(
+        (item) =>
+          item.status === selectedStatus,
+      );
+    }
+
+    return filtered;
+  }, [
+    attendance,
+    search,
+    selectedFilter,
+    selectedStatus,
+  ]);
 
   // FORMAT TIME
 
   const formatTime = (time) => {
     if (!time) return "--";
 
-    return new Date(time).toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return new Date(time).toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+      },
+    );
   };
 
   // FORMAT HOURS
 
   const formatHours = (hours) => {
-    if (hours === null || hours === undefined) return "--";
+    if (
+      hours === null ||
+      hours === undefined
+    )
+      return "--";
 
-    return `${Number(hours).toFixed(1)} hrs`;
+    return `${Number(hours).toFixed(
+      1,
+    )} hrs`;
   };
 
   // FORMAT DATE
@@ -92,11 +174,14 @@ export default function HrAttendance() {
   const formatDate = (date) => {
     if (!date) return "--";
 
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(date).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      },
+    );
   };
 
   return (
@@ -115,7 +200,8 @@ export default function HrAttendance() {
             </h1>
 
             <p className="text-sm text-slate-500 mt-2">
-              Monitor employee attendance, work sessions and status.
+              Monitor employee attendance,
+              work sessions and status.
             </p>
           </div>
 
@@ -146,33 +232,45 @@ export default function HrAttendance() {
             {
               label: "Employees",
               value:
-                dashboard?.totalEmployees || 0,
+                dashboard?.totalEmployees ||
+                0,
               icon: Users,
             },
 
             {
               label: "Present",
-              value: dashboard?.present || 0,
+              value:
+                dashboard?.present || 0,
               icon: CalendarDays,
             },
 
             {
               label: "Half Day",
-              value: dashboard?.halfDay || 0,
+              value:
+                dashboard?.halfDay || 0,
               icon: TimerReset,
             },
 
             {
               label: "Absent",
-              value: dashboard?.absent || 0,
+              value:
+                dashboard?.absent || 0,
               icon: Clock3,
             },
           ].map((item, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.04 }}
+              initial={{
+                opacity: 0,
+                y: 12,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                delay: index * 0.04,
+              }}
               className="bg-white border border-slate-200 rounded-2xl p-5"
             >
               <div className="flex items-center justify-between mb-4">
@@ -198,6 +296,91 @@ export default function HrAttendance() {
         {/* TABLE */}
 
         <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden">
+          {/* TABLE TOP */}
+
+          <div className="p-5 border-b border-slate-200 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Attendance Records
+              </h2>
+
+              <p className="text-sm text-slate-500 mt-1">
+                Manage and track employee
+                attendance.
+              </p>
+            </div>
+
+            {/* FILTERS */}
+
+            <div className="flex flex-col gap-3">
+              {/* DATE FILTER */}
+
+              <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1 rounded-2xl">
+                <div className="px-2">
+                  <Filter
+                    size={16}
+                    className="text-slate-500"
+                  />
+                </div>
+
+                {[
+                  "all",
+                  "week",
+                  "month",
+                  "year",
+                ].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() =>
+                      setSelectedFilter(
+                        filter,
+                      )
+                    }
+                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${
+                      selectedFilter ===
+                      filter
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-600 hover:bg-white"
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+
+              {/* STATUS FILTER */}
+
+              <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1 rounded-2xl">
+                {[
+                  "ALL",
+                  "PRESENT",
+                  "HALF_DAY",
+                  "ABSENT",
+                ].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() =>
+                      setSelectedStatus(
+                        status,
+                      )
+                    }
+                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${
+                      selectedStatus ===
+                      status
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-600 hover:bg-white"
+                    }`}
+                  >
+                    {status.replace(
+                      "_",
+                      " ",
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* TABLE HEADER */}
 
           <div className="hidden lg:grid grid-cols-8 gap-4 px-6 py-4 border-b border-slate-200 bg-slate-50">
@@ -238,7 +421,8 @@ export default function HrAttendance() {
 
           <div>
             {!loading &&
-            filteredAttendance.length > 0 ? (
+            filteredAttendance.length >
+              0 ? (
               filteredAttendance.map(
                 (item, index) => (
                   <motion.div
@@ -252,7 +436,8 @@ export default function HrAttendance() {
                       y: 0,
                     }}
                     transition={{
-                      delay: index * 0.02,
+                      delay:
+                        index * 0.02,
                     }}
                     className="border-b border-slate-100 last:border-none"
                   >
@@ -269,28 +454,33 @@ export default function HrAttendance() {
 
                         <p className="text-xs text-slate-500 mt-1">
                           {item.user
-                            ?.employeeId || "--"}
+                            ?.employeeId ||
+                            "--"}
                         </p>
                       </div>
 
                       {/* DEPARTMENT */}
 
                       <p className="text-sm text-slate-600">
-                        {item.user?.department
+                        {item.user
+                          ?.department
                           ?.name || "--"}
                       </p>
 
                       {/* POSITION */}
 
                       <p className="text-sm text-slate-600">
-                        {item.user?.position ||
+                        {item.user
+                          ?.position ||
                           "--"}
                       </p>
 
                       {/* DATE */}
 
                       <p className="text-sm text-slate-600">
-                        {formatDate(item.date)}
+                        {formatDate(
+                          item.date,
+                        )}
                       </p>
 
                       {/* CHECK IN */}
@@ -304,7 +494,9 @@ export default function HrAttendance() {
                       {/* CHECK OUT */}
 
                       <p className="text-sm text-slate-600">
-                        {formatTime(item.endTime)}
+                        {formatTime(
+                          item.endTime,
+                        )}
                       </p>
 
                       {/* HOURS */}
@@ -330,7 +522,10 @@ export default function HrAttendance() {
                               : "bg-red-50 text-red-700"
                         }`}
                         >
-                          {item.status}
+                          {item.status.replace(
+                            "_",
+                            " ",
+                          )}
                         </span>
                       </div>
                     </div>
@@ -341,13 +536,15 @@ export default function HrAttendance() {
                       <div className="flex items-start justify-between gap-4 mb-4">
                         <div>
                           <h3 className="text-sm font-bold text-slate-900">
-                            {item.user?.name ||
+                            {item.user
+                              ?.name ||
                               "Unknown"}
                           </h3>
 
                           <p className="text-xs text-slate-500 mt-1">
                             {item.user
-                              ?.employeeId || "--"}
+                              ?.employeeId ||
+                              "--"}
                           </p>
                         </div>
 
@@ -363,7 +560,10 @@ export default function HrAttendance() {
                               : "bg-red-50 text-red-700"
                         }`}
                         >
-                          {item.status}
+                          {item.status.replace(
+                            "_",
+                            " ",
+                          )}
                         </span>
                       </div>
 
@@ -374,8 +574,10 @@ export default function HrAttendance() {
                           </p>
 
                           <p className="text-sm font-medium text-slate-700">
-                            {item.user?.department
-                              ?.name || "--"}
+                            {item.user
+                              ?.department
+                              ?.name ||
+                              "--"}
                           </p>
                         </div>
 
@@ -385,7 +587,8 @@ export default function HrAttendance() {
                           </p>
 
                           <p className="text-sm font-medium text-slate-700">
-                            {item.user?.position ||
+                            {item.user
+                              ?.position ||
                               "--"}
                           </p>
                         </div>
@@ -420,7 +623,9 @@ export default function HrAttendance() {
                           </p>
 
                           <p className="text-sm font-medium text-slate-700">
-                            {formatDate(item.date)}
+                            {formatDate(
+                              item.date,
+                            )}
                           </p>
                         </div>
 
