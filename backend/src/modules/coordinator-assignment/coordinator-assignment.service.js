@@ -391,11 +391,10 @@ exports.updateAssignmentStatus = async (
   }
 
   //
-  // ✅ REQUIRE REASON FOR NON-COMPLETION STATUSES
+  // ✅ REQUIRE REASON ONLY FOR UNABLE_TO_SUBMIT AND REJECTED
   //
   if (
-    status !== "COMPLETED" &&
-    status !== "SUBMITTED" &&
+    (status === "UNABLE_TO_SUBMIT" || status === "REJECTED") &&
     (!reason || reason.trim() === "")
   ) {
     throw new ApiError(
