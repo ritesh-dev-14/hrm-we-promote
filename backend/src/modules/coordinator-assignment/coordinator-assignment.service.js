@@ -540,3 +540,48 @@ exports.listAllAssignments = async (user, filters = {}) => {
     },
   };
 };
+
+//
+// 🔥 GET ALL USERS (HR, MANAGER, EMPLOYEES)
+// Coordinator can see all users to assign tasks
+//
+exports.getAllUsers = async (user) => {
+  //
+  // ✅ ONLY COORDINATOR CAN ACCESS THIS
+  //
+  if (user.role !== "COORDINATOR") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  //
+  // ✅ GET ALL USERS (except coordinator themselves and admin)
+  //
+  const users = await prisma.user.findMany({
+    where: {
+      role: {
+        in: ["EMPLOYEE", "MANAGER", "HR"],
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      employeeId: true,
+      role: true,
+      department: true,
+    },
+    orderBy: [{ role: "desc" }, { name: "asc" }],
+  });
+
+  return {
+    data: users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      employeeId: u.employeeId,
+      role: u.role,
+      department: u.department,
+    })),
+    total: users.length,
+  };
+};

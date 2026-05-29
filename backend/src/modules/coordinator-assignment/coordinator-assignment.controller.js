@@ -121,3 +121,19 @@ exports.listAllAssignments = async (req, res, next) => {
     next(error);
   }
 };
+
+//
+// 🔥 GET ALL USERS (HR, MANAGER, EMPLOYEES)
+//
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    const result = await service.getAllUsers(req.user);
+    res.json({
+      success: true,
+      data: result,
+      message: "Users fetched successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};

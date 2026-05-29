@@ -51,6 +51,17 @@ router.get(
 );
 
 //
+// 🔥 GET ALL USERS (HR, MANAGER, EMPLOYEES)
+// Coordinator can see all users to assign tasks to
+//
+router.get(
+  "/users/list",
+  auth,
+  role("COORDINATOR"),
+  controller.getAllUsers
+);
+
+//
 // 🔥 GET SINGLE ASSIGNMENT
 // Get assignment details
 //

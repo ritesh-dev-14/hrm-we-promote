@@ -440,7 +440,75 @@ Content-Type: application/json
 
 ---
 
-## 👥 APIs for EMPLOYEES / HR / MANAGER to View Their Assigned Tasks
+## � Coordinator - Get All Users (HR, Manager, Employees)
+
+**GET** `http://localhost:8000/api/coordinator-assignments/users/list`
+
+**Headers:**
+```
+Authorization: Bearer <coordinator_token>
+Content-Type: application/json
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data": [
+      {
+        "id": "5f563799-6d77-40cf-b018-ab2fae317e3e",
+        "name": "Manager User",
+        "email": "manager@test.com",
+        "employeeId": "MGR-001",
+        "role": "MANAGER",
+        "department": "Operations"
+      },
+      {
+        "id": "ed43f911-5d71-4707-a2b9-a4d86c0444c9",
+        "name": "HR User",
+        "email": "hrwepromote@gmail.com",
+        "employeeId": "HR-001",
+        "role": "HR",
+        "department": "Human Resources"
+      },
+      {
+        "id": "fe0a33a4-5440-4154-b7c8-b6e9b22a2e4b",
+        "name": "Employee 1",
+        "email": "employee1@test.com",
+        "employeeId": "EMP-001",
+        "role": "EMPLOYEE",
+        "department": "IT"
+      },
+      {
+        "id": "9b9b62f2-5222-4313-ad5f-c05c91ef7137",
+        "name": "Employee 2",
+        "email": "employee2@test.com",
+        "employeeId": "EMP-002",
+        "role": "EMPLOYEE",
+        "department": "IT"
+      },
+      {
+        "id": "d53008c9-9c17-4a7e-b166-fdffac9da8c0",
+        "name": "Employee 3",
+        "email": "employee3@test.com",
+        "employeeId": "EMP-003",
+        "role": "EMPLOYEE",
+        "department": "Marketing"
+      }
+    ],
+    "total": 5
+  },
+  "message": "Users fetched successfully"
+}
+```
+
+**Use Case:**
+- Coordinator calls this API to get a list of all users (HR, Manager, Employees)
+- Returns user ID, name, email, employeeId, role, and department
+- Coordinator can then use the `id` field to assign tasks to any of these users
+
+---
 
 ### **API 1: Get All Tasks Assigned to Me**
 
