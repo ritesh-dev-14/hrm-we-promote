@@ -31,6 +31,10 @@ app.use(
   )
 );
 app.use(
+  "/api/coordinator-assignments",
+  require("./modules/coordinator-assignment/coordinator-assignment.routes")
+);
+app.use(
   "/api/employee-dashboard",
   require("./modules/employee-dashboard/employee-dashboard.routes")
 );

@@ -23,12 +23,12 @@ async function main() {
 
   // 🔹 HR
   await prisma.user.upsert({
-    where: { email: "hr@test.com" },
+    where: { email: "hrwepromote@gmail.com" },
     update: { password },
     create: {
       employeeId: "HR-001",
       name: "HR User",
-      email: "hr@test.com",
+      email: "hrwepromote@gmail.com",
       password,
       role: "HR",
     },
@@ -44,6 +44,19 @@ async function main() {
       email: "manager@test.com",
       password,
       role: "MANAGER",
+    },
+  });
+
+  // 🔹 COORDINATOR
+  await prisma.user.upsert({
+    where: { email: "coordinator@test.com" },
+    update: { password },
+    create: {
+      employeeId: "COORD-001",
+      name: "Coordinator User",
+      email: "coordinator@test.com",
+      password,
+      role: "COORDINATOR",
     },
   });
 

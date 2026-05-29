@@ -8,34 +8,36 @@ datasource db {
 }
 
 model User {
-  id                  String                 @id @default(uuid())
-  employeeId          String                 @unique
-  name                String
-  email               String                 @unique
-  password            String
-  role                Role
-  position            String?
-  managerId           String?
-  createdById         String?
-  createdAt           DateTime               @default(now())
-  departmentId        String?
-  attendances         Attendance[]
-  employeeCoverages   EmployeeTaskCoverage[] @relation("EmployeeCoverage")
-  managerCoverages    EmployeeTaskCoverage[] @relation("ManagerCoverage")
-  reviewedLeaves      Leave[]                @relation("LeaveReviewer")
-  leaves              Leave[]
-  leaveBalance        LeaveBalance[]
-  notifications       Notification[]
-  createdTasks        Task[]                 @relation("CreatedTasks")
-  assignments         TaskAssignment[]
-  employeeEscalations TaskEscalation[]       @relation("EmployeeEscalation")
-  managerEscalations  TaskEscalation[]       @relation("ManagerEscalation")
-  taskItemAssignments TaskItemAssignment[]
-  createdBy           User?                  @relation("Hierarchy", fields: [createdById], references: [id])
-  children            User[]                 @relation("Hierarchy")
-  department          Department?            @relation(fields: [departmentId], references: [id])
-  manager             User?                  @relation("UserManager", fields: [managerId], references: [id])
-  subordinates        User[]                 @relation("UserManager")
+  id                      String                    @id @default(uuid())
+  employeeId              String                    @unique
+  name                    String
+  email                   String                    @unique
+  password                String
+  role                    Role
+  position                String?
+  managerId               String?
+  createdById             String?
+  createdAt               DateTime                  @default(now())
+  departmentId            String?
+  attendances             Attendance[]
+  employeeCoverages       EmployeeTaskCoverage[]    @relation("EmployeeCoverage")
+  managerCoverages        EmployeeTaskCoverage[]    @relation("ManagerCoverage")
+  reviewedLeaves          Leave[]                   @relation("LeaveReviewer")
+  leaves                  Leave[]
+  leaveBalance            LeaveBalance[]
+  notifications           Notification[]
+  createdTasks            Task[]                    @relation("CreatedTasks")
+  assignments             TaskAssignment[]
+  employeeEscalations     TaskEscalation[]          @relation("EmployeeEscalation")
+  managerEscalations      TaskEscalation[]          @relation("ManagerEscalation")
+  taskItemAssignments     TaskItemAssignment[]
+  coordinatorAssignments  CoordinatorAssignment[]   @relation("CreatedCoordinatorAssignments")
+  assignedCoordinatorTasks CoordinatorAssignment[]  @relation("AssignedToUser")
+  createdBy               User?                     @relation("Hierarchy", fields: [createdById], references: [id])
+  children                User[]                    @relation("Hierarchy")
+  department              Department?               @relation(fields: [departmentId], references: [id])
+  manager                 User?                     @relation("UserManager", fields: [managerId], references: [id])
+  subordinates            User[]                    @relation("UserManager")
 }
 
 model Attendance {
@@ -75,6 +77,7 @@ model Task {
   startDate   DateTime
   createdBy   User             @relation("CreatedTasks", fields: [createdById], references: [id])
   assignments TaskAssignment[]
+  coordinatorAssignments CoordinatorAssignment[] @relation("CoordinatorAssignments")
   items       TaskItem[]
 
   @@index([createdById])
@@ -272,6 +275,37 @@ model EmployeeTaskCoverage {
   @@index([date])
 }
 
+model CoordinatorAssignment {
+  id               String           @id @default(uuid())
+  taskId           String
+  assignedToId     String
+  createdById      String
+  assignedBy       String           // Text field - coordinator's name entered manually
+  assignedTime     DateTime         @default(now())
+  completionDate   DateTime
+  reason           String?          // Only for incomplete tasks
+  employeeNumber   String
+  employeeEmail    String
+  status           AssignmentStatus @default(ASSIGNED)
+  submittedAt      DateTime?
+  completedAt      DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  startedAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  task             Task             @relation("CoordinatorAssignments", fields: [taskId], references: [id], onDelete: Cascade)
+  assignedTo       User             @relation("AssignedToUser", fields: [assignedToId], references: [id])
+  createdBy        User             @relation("CreatedCoordinatorAssignments", fields: [createdById], references: [id])
+
+  @@unique([taskId, assignedToId])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([assignedTime])
+}
+
 enum EscalationStatus {
   PENDING
   MANAGER_NOTIFIED
@@ -286,6 +320,7 @@ enum Role {
   HR
   MANAGER
   EMPLOYEE
+  COORDINATOR
 }
 
 enum AttendanceStatus {
