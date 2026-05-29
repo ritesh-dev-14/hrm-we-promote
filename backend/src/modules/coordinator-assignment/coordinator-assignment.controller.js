@@ -137,3 +137,50 @@ exports.getAllUsers = async (req, res, next) => {
     next(error);
   }
 };
+
+//
+// 🔥 SEND FOLLOW-UP MESSAGE (Coordinator -> Assigned User)
+//
+exports.sendFollowUpMessage = async (req, res, next) => {
+  try {
+    const result = await service.sendFollowUpMessage(
+      req.user,
+      req.params.assignmentId,
+      req.body
+    );
+    res.status(201).json({ success: true, data: result, message: "Follow-up sent" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//
+// 🔥 REPLY TO FOLLOW-UP (Assigned User -> Coordinator)
+//
+exports.replyToFollowUp = async (req, res, next) => {
+  try {
+    const result = await service.replyToFollowUp(
+      req.user,
+      req.params.assignmentId,
+      req.body
+    );
+    res.status(201).json({ success: true, data: result, message: "Reply sent" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//
+// 🔥 GET FOLLOW-UP MESSAGES
+//
+exports.getFollowUpMessages = async (req, res, next) => {
+  try {
+    const result = await service.getFollowUpMessages(
+      req.user,
+      req.params.assignmentId
+    );
+    res.json({ success: true, data: result, message: "Messages fetched" });
+  } catch (error) {
+    next(error);
+  }
+};

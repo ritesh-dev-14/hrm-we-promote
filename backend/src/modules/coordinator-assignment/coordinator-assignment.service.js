@@ -585,3 +585,147 @@ exports.getAllUsers = async (user) => {
     total: users.length,
   };
 };
+
+  //
+  // 🔥 SEND FOLLOW-UP MESSAGE (Coordinator -> Assigned User)
+  //
+  exports.sendFollowUpMessage = async (user, assignmentId, body) => {
+    const { message } = body;
+
+    if (user.role !== "COORDINATOR") {
+      throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+    }
+
+    const assignment = await prisma.coordinatorAssignment.findUnique({
+      where: { id: assignmentId },
+      include: { assignedTo: true, createdBy: true },
+    });
+
+    if (!assignment) {
+      throw new ApiError(404, "Assignment not found");
+    }
+
+    // Create follow-up message
+    const followUp = await prisma.coordinatorFollowUp.create({
+      data: {
+        assignmentId: assignmentId,
+        senderId: user.id,
+        message,
+        messageType: "FOLLOW_UP",
+        senderRole: user.role,
+      },
+    });
+
+    // Notify assigned user
+    await prisma.notification.create({
+      data: {
+        userId: assignment.assignedToId,
+        title: "Follow-up from Coordinator",
+        message: `${user.name} sent a follow-up on task: ${assignment.taskId}`,
+        type: "GENERAL",
+        level: "INFO",
+        entityId: assignmentId,
+      },
+    });
+
+    return {
+      id: followUp.id,
+      assignmentId: followUp.assignmentId,
+      senderId: followUp.senderId,
+      message: followUp.message,
+      messageType: followUp.messageType,
+      senderRole: followUp.senderRole,
+      createdAt: followUp.createdAt,
+    };
+  };
+
+  //
+  // 🔥 REPLY TO FOLLOW-UP (Assigned User -> Coordinator)
+  //
+  exports.replyToFollowUp = async (user, assignmentId, body) => {
+    const { message } = body;
+
+    const assignment = await prisma.coordinatorAssignment.findUnique({
+      where: { id: assignmentId },
+      include: { assignedTo: true, createdBy: true },
+    });
+
+    if (!assignment) {
+      throw new ApiError(404, "Assignment not found");
+    }
+
+    // Only the assigned user can reply
+    if (user.id !== assignment.assignedToId) {
+      throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+    }
+
+    const followUp = await prisma.coordinatorFollowUp.create({
+      data: {
+        assignmentId: assignmentId,
+        senderId: user.id,
+        message,
+        messageType: "REPLY",
+        senderRole: user.role,
+      },
+    });
+
+    // Notify coordinator
+    await prisma.notification.create({
+      data: {
+        userId: assignment.createdById,
+        title: "Reply to Follow-up",
+        message: `${user.name} replied to your follow-up on task: ${assignment.taskId}`,
+        type: "GENERAL",
+        level: "INFO",
+        entityId: assignmentId,
+      },
+    });
+
+    return {
+      id: followUp.id,
+      assignmentId: followUp.assignmentId,
+      senderId: followUp.senderId,
+      message: followUp.message,
+      messageType: followUp.messageType,
+      senderRole: followUp.senderRole,
+      createdAt: followUp.createdAt,
+    };
+  };
+
+  //
+  // 🔥 GET FOLLOW-UP MESSAGES FOR AN ASSIGNMENT
+  //
+  exports.getFollowUpMessages = async (user, assignmentId) => {
+    const assignment = await prisma.coordinatorAssignment.findUnique({
+      where: { id: assignmentId },
+    });
+
+    if (!assignment) {
+      throw new ApiError(404, "Assignment not found");
+    }
+
+    // Only coordinator who created or assigned user can view messages
+    if (user.id !== assignment.createdById && user.id !== assignment.assignedToId) {
+      throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+    }
+
+    const messages = await prisma.coordinatorFollowUp.findMany({
+      where: { assignmentId },
+      include: { sender: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return messages.map((m) => ({
+      id: m.id,
+      assignmentId: m.assignmentId,
+      sender: {
+        id: m.sender.id,
+        name: m.sender.name,
+        role: m.sender.role,
+      },
+      message: m.message,
+      messageType: m.messageType,
+      senderRole: m.senderRole,
+      createdAt: m.createdAt,
+    }));
+  };

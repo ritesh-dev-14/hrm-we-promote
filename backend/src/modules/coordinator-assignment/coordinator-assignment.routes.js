@@ -16,6 +16,10 @@ const {
   createAssignmentSchema,
   updateAssignmentStatusSchema,
 } = require("./coordinator-assignment.validation");
+const {
+  sendFollowUpMessageSchema,
+  replyFollowUpMessageSchema,
+} = require("./coordinator-assignment.validation");
 
 //
 // 🔥 CREATE COORDINATOR ASSIGNMENT
@@ -48,6 +52,28 @@ router.get(
   "/assigned-to/:userId",
   auth,
   controller.getAssignmentsByAssignedTo
+);
+
+// Follow-up messaging endpoints (must come before "/:assignmentId")
+router.post(
+  "/:assignmentId/follow-up",
+  auth,
+  role("COORDINATOR"),
+  validate(sendFollowUpMessageSchema),
+  controller.sendFollowUpMessage
+);
+
+router.patch(
+  "/:assignmentId/reply",
+  auth,
+  validate(replyFollowUpMessageSchema),
+  controller.replyToFollowUp
+);
+
+router.get(
+  "/:assignmentId/follow-up-messages",
+  auth,
+  controller.getFollowUpMessages
 );
 
 //

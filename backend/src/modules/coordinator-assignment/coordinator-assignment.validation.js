@@ -82,3 +82,22 @@ exports.updateAssignmentStatusSchema = Joi.object({
     }),
 })
   .unknown(false);
+
+//
+// 🔥 SEND FOLLOW-UP MESSAGE / REPLY
+//
+exports.sendFollowUpMessageSchema = Joi.object({
+  message: Joi.string().min(1).max(1000).required().messages({
+    "any.required": "Message is required",
+    "string.min": "Message cannot be empty",
+    "string.max": "Message cannot exceed 1000 characters",
+  }),
+}).unknown(false);
+
+exports.replyFollowUpMessageSchema = Joi.object({
+  message: Joi.string().min(1).max(1000).required().messages({
+    "any.required": "Message is required",
+    "string.min": "Message cannot be empty",
+    "string.max": "Message cannot exceed 1000 characters",
+  }),
+}).unknown(false);

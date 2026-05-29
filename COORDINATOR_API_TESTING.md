@@ -692,6 +692,66 @@ Content-Type: application/json
 ---
 
 ## 💡 Key Points
+## 📌 Follow-up Messaging (Coordinator ⇄ Assigned User)
+
+### Send Follow-up (Coordinator)
+
+**POST** `http://localhost:8000/api/coordinator-assignments/{assignmentId}/follow-up`
+
+Headers:
+```
+Authorization: Bearer <coordinator_token>
+Content-Type: application/json
+```
+
+Body:
+```json
+{
+  "message": "Please update on this task - urgent follow-up"
+}
+```
+
+### Reply to Follow-up (Assigned User)
+
+**PATCH** `http://localhost:8000/api/coordinator-assignments/{assignmentId}/reply`
+
+Headers:
+```
+Authorization: Bearer <employee_token>
+Content-Type: application/json
+```
+
+Body:
+```json
+{
+  "message": "No, not yet. Waiting for documents."
+}
+```
+
+### Get Message History
+
+**GET** `http://localhost:8000/api/coordinator-assignments/{assignmentId}/follow-up-messages`
+
+Headers:
+```
+Authorization: Bearer <coordinator_token_or_assigned_user_token>
+```
+
+Response example:
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "1", "sender": { "id": "...", "name": "Coordinator User" }, "message": "Please update", "messageType": "FOLLOW_UP", "createdAt": "..." },
+    { "id": "2", "sender": { "id": "...", "name": "Employee 1" }, "message": "No, not yet", "messageType": "REPLY", "createdAt": "..." }
+  ],
+  "message": "Messages fetched"
+}
+```
+
+---
+
+## 💡 Key Points
 
 1. **One Call Creation**: Coordinator calls ONE API to create task + assign it
 2. **No Task Pre-Creation**: No need to call `/api/manager/tasks` first
