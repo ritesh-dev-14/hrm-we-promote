@@ -36,6 +36,12 @@ import ManagerPayslips from "../pages/Manager/ManagerPayslips";
 import ManagerSettings from "../pages/Manager/ManagerSettings";
 import ManagerTaskPage from "../pages/Manager/ManagerTasksPage.jsx";
 import ManagerTaskDetailsPage from "../pages/Manager/tasks/ManagerTaskDetails.jsx";
+/* NEW — COORDINATOR */
+import CoordinatorHomePage from "../pages/Coordinator/CoordinatorHomePage.jsx";
+import CoordinatorPriorityActions from "../pages/Coordinator/CoordinatorPriorityActions.jsx";
+
+/* NEW — EMPLOYEE ACTIONS */
+import AssignedActionsPage from "../pages/Employee/AssignedActionsPage.jsx";
 
 export const AppRoutes = () => {
   const { role, user, token, isLoading } = useAuth();
@@ -73,6 +79,8 @@ export const AppRoutes = () => {
                 <HrHomePage />
               ) : role === "MANAGER" ? (
                 <ManagerHomePage />
+              ) : role === "COORDINATOR" ? (
+                <CoordinatorHomePage />
               ) : (
                 <EmployeHomePage />
               )
@@ -89,11 +97,35 @@ export const AppRoutes = () => {
                 <HrTaskCreation />
               ) : role === "MANAGER" ? (
                 <ManagerTaskPage />
+              ) : role === "COORDINATOR" ? (
+                <EmployeeTaskPage />
               ) : (
                 <EmployeeTaskPage />
               )
             }
           />
+
+          <Route
+            path="/priority-actions"
+            element={
+              role === "COORDINATOR" ? (
+                <CoordinatorPriorityActions />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
+            }
+          />
+
+          <Route
+  path="/assigned-actions"
+  element={
+    ["EMPLOYEE", "MANAGER", "HR"].includes(role) ? (
+      <AssignedActionsPage />
+    ) : (
+      <Navigate to="/dashboard" replace />
+    )
+  }
+/>
 
           {/* DYNAMIC TASK DETAILS */}
           <Route
@@ -119,6 +151,8 @@ export const AppRoutes = () => {
                 <ManagerAttendence />
               ) : role === "HR" ? (
                 <HrAttendance />
+              ) : role === "COORDINATOR" ? (
+                <EmployeeAttendence />
               ) : null
             }
           />
@@ -133,6 +167,8 @@ export const AppRoutes = () => {
                 <ManagerLeave />
               ) : role === "HR" ? (
                 <HrLeaves />
+              ) : role === "COORDINATOR" ? (
+                <EmployeeLeave />
               ) : null
             }
           />
@@ -147,6 +183,8 @@ export const AppRoutes = () => {
                 <ManagerPayslips />
               ) : role === "HR" ? (
                 <HrPayslips />
+              ) : role === "COORDINATOR" ? (
+                <EmployeePayslips />
               ) : null
             }
           />
@@ -161,6 +199,8 @@ export const AppRoutes = () => {
                 <ManagerSettings />
               ) : role === "HR" ? (
                 <HrSettings />
+              ) : role === "COORDINATOR" ? (
+                <EmployeeSettings />
               ) : null
             }
           />
@@ -173,57 +213,36 @@ export const AppRoutes = () => {
                 element={<HrAllEmployeeAttendence />}
               />
 
-              <Route
-                path="/hr/team/:id"
-                element={<EmployeeDetails />}
-              />
+              <Route path="/hr/team/:id" element={<EmployeeDetails />} />
 
               <Route
                 path="/hr/employees-leaves"
                 element={<HrLeaveManagement />}
               />
 
-              <Route
-                path="/hr/team"
-                element={<HrTeamPage />}
-              />
+              <Route path="/hr/team" element={<HrTeamPage />} />
             </>
           )}
 
           {/* ADMIN */}
           {role === "ADMIN" && (
-            <Route
-              path="/admin/settings"
-              element={<AdminHomePage />}
-            />
+            <Route path="/admin/settings" element={<AdminHomePage />} />
           )}
 
           {/* ROOT */}
-          <Route
-            path="/"
-            element={<Navigate to="/dashboard" replace />}
-          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* FALLBACK */}
-          <Route
-            path="*"
-            element={<Navigate to="/dashboard" replace />}
-          />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </>
       )}
 
       {/* UNAUTH */}
       {!isAuthenticated && (
         <>
-          <Route
-            path="/"
-            element={<Navigate to="/login" replace />}
-          />
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-          <Route
-            path="*"
-            element={<Navigate to="/login" replace />}
-          />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       )}
     </Routes>

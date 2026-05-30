@@ -15,10 +15,93 @@ import {
   BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
+  BellRing,
+  Zap,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
+import API from "../services/api";
 import MainLogo from "../assets/logo.jpeg";
+
+// const NAV_CONFIG = [
+//   {
+//     id: "dashboard",
+//     label: "Dashboard",
+//     icon: LayoutGrid,
+//     path: "/dashboard",
+//     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+//   },
+//   {
+//     id: "tasks",
+//     label: "Projects",
+//     icon: BriefcaseBusiness,
+//     path: "/tasks",
+//     roles: ["ADMIN", "HR", "MANAGER"],
+//   },
+//   {
+//     id: "tasks-emp",
+//     label: "Tasks",
+//     icon: BriefcaseBusiness,
+//     path: "/tasks",
+//     roles: ["EMPLOYEE"],
+//   },
+//   {
+//     id: "attendance",
+//     label: "Attendance",
+//     icon: CalendarDays,
+//     path: "/attendance",
+//     roles: ["EMPLOYEE", "MANAGER", "HR"],
+//   },
+//   {
+//     id: "employee-attendance",
+//     label: "Employee Attendance",
+//     icon: CalendarDays,
+//     path: "/hr/employees-attendance",
+//     roles: ["HR"],
+//   },
+//   {
+//     id: "employee-leaves",
+//     label: "Employee Leaves",
+//     icon: FileText,
+//     path: "/hr/employees-leaves",
+//     roles: ["HR"],
+//   },
+//   {
+//     id: "team",
+//     label: "Team",
+//     icon: Users,
+//     path: "/hr/team",
+//     roles: ["HR", "ADMIN"],
+//   },
+//   {
+//     id: "leave",
+//     label: "Leave",
+//     icon: FileText,
+//     path: "/leave",
+//     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+//   },
+//   {
+//     id: "payslips",
+//     label: "Payslips",
+//     icon: CircleDollarSign,
+//     path: "/payslips",
+//     roles: ["EMPLOYEE", "MANAGER", "HR"],
+//   },
+//   {
+//     id: "admin-panel",
+//     label: "Admin",
+//     icon: ShieldCheck,
+//     path: "/admin/settings",
+//     roles: ["ADMIN"],
+//   },
+//   {
+//     id: "settings",
+//     label: "Settings",
+//     icon: Settings,
+//     path: "/settings",
+//     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+//   },
+// ];
 
 const NAV_CONFIG = [
   {
@@ -26,8 +109,9 @@ const NAV_CONFIG = [
     label: "Dashboard",
     icon: LayoutGrid,
     path: "/dashboard",
-    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
   },
+
   {
     id: "tasks",
     label: "Projects",
@@ -35,20 +119,40 @@ const NAV_CONFIG = [
     path: "/tasks",
     roles: ["ADMIN", "HR", "MANAGER"],
   },
+
   {
     id: "tasks-emp",
     label: "Tasks",
     icon: BriefcaseBusiness,
     path: "/tasks",
-    roles: ["EMPLOYEE"],
+    roles: ["EMPLOYEE", "COORDINATOR"],
   },
+
+  {
+    id: "priority-actions",
+    label: "Priority Actions",
+    icon: Zap,
+    path: "/priority-actions",
+    roles: ["COORDINATOR"],
+    notificationCount: 4,
+  },
+
+  {
+    id: "assigned-actions",
+    label: "Assigned Actions",
+    icon: BellRing,
+    path: "/assigned-actions",
+    roles: ["EMPLOYEE", "MANAGER", "HR"],
+  },
+
   {
     id: "attendance",
     label: "Attendance",
     icon: CalendarDays,
     path: "/attendance",
-    roles: ["EMPLOYEE", "MANAGER", "HR"],
+    roles: ["EMPLOYEE", "MANAGER", "HR", "COORDINATOR"],
   },
+
   {
     id: "employee-attendance",
     label: "Employee Attendance",
@@ -56,6 +160,7 @@ const NAV_CONFIG = [
     path: "/hr/employees-attendance",
     roles: ["HR"],
   },
+
   {
     id: "employee-leaves",
     label: "Employee Leaves",
@@ -63,6 +168,7 @@ const NAV_CONFIG = [
     path: "/hr/employees-leaves",
     roles: ["HR"],
   },
+
   {
     id: "team",
     label: "Team",
@@ -70,20 +176,23 @@ const NAV_CONFIG = [
     path: "/hr/team",
     roles: ["HR", "ADMIN"],
   },
+
   {
     id: "leave",
     label: "Leave",
     icon: FileText,
     path: "/leave",
-    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
   },
+
   {
     id: "payslips",
     label: "Payslips",
     icon: CircleDollarSign,
     path: "/payslips",
-    roles: ["EMPLOYEE", "MANAGER", "HR"],
+    roles: ["EMPLOYEE", "MANAGER", "HR", "COORDINATOR"],
   },
+
   {
     id: "admin-panel",
     label: "Admin",
@@ -91,12 +200,13 @@ const NAV_CONFIG = [
     path: "/admin/settings",
     roles: ["ADMIN"],
   },
+
   {
     id: "settings",
     label: "Settings",
     icon: Settings,
     path: "/settings",
-    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
+    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
   },
 ];
 
@@ -106,12 +216,51 @@ const COLLAPSED = 78;
 export default function ProfessionalSidebar({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem("sidebar") === "collapsed"
+    () => localStorage.getItem("sidebar") === "collapsed",
   );
 
   const { role, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [assignedActionsCount, setAssignedActionsCount] = useState(0);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    let interval;
+
+    const fetchAssignedActionsCount = async () => {
+      try {
+        if (role !== "EMPLOYEE" && role !== "MANAGER" && role !== "HR") {
+          return;
+        }
+
+        if (!user?.id) return;
+
+        const res = await API.get(
+          `/api/coordinator-assignments/assigned-to/${user.id}`,
+        );
+
+        const assignments = res?.data?.data?.data || [];
+
+        // ONLY NEW ASSIGNED
+        const assignedOnly = assignments.filter(
+          (item) => item.status === "ASSIGNED",
+        );
+
+        setAssignedActionsCount(assignedOnly.length);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    fetchAssignedActionsCount();
+
+    interval = setInterval(() => {
+      fetchAssignedActionsCount();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [role, user?.id]);
 
   useEffect(() => {
     localStorage.setItem("sidebar", collapsed ? "collapsed" : "open");
@@ -123,24 +272,36 @@ export default function ProfessionalSidebar({ children }) {
 
   const allowedNav = useMemo(
     () => NAV_CONFIG.filter((i) => i.roles.includes(role)),
-    [role]
+    [role],
   );
 
-  const activeId = useMemo(
-    () =>
-      allowedNav.find((i) =>
-        location.pathname.startsWith(i.path)
-      )?.id || "dashboard",
-    [location.pathname, allowedNav]
-  );
+  const activeId = useMemo(() => {
+    const sortedRoutes = [...allowedNav].sort(
+      (a, b) => b.path.length - a.path.length,
+    );
 
+    const matched = sortedRoutes.find((item) => {
+      if (item.path === "/dashboard") {
+        return location.pathname === "/dashboard";
+      }
+
+      return (
+        location.pathname === item.path ||
+        location.pathname.startsWith(`${item.path}/`)
+      );
+    });
+
+    return matched?.id || null;
+  }, [location.pathname, allowedNav]);
+  
   const Sidebar = ({ mobile = false }) => {
     const width = mobile ? WIDE : collapsed ? COLLAPSED : WIDE;
 
     return (
       <motion.div
+        initial={false}
         animate={{ width }}
-        transition={{ type: "spring", stiffness: 260, damping: 30 }}
+        transition={{ duration: 0 }}
         className="h-full bg-[#0B1220] text-white flex flex-col border-r border-white/5 relative"
       >
         {/* TOP */}
@@ -158,7 +319,8 @@ export default function ProfessionalSidebar({ children }) {
         {/* NAV */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {allowedNav.map((item) => {
-            const active = activeId === item.id;
+            // const active = activeId === item.id;
+            const active = activeId !== null && activeId === item.id;
 
             return (
               <button
@@ -167,13 +329,23 @@ export default function ProfessionalSidebar({ children }) {
                   navigate(item.path);
                   setMobileOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition
-                ${active ? "bg-white/10 text-white" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition
+${active ? "bg-white/10 text-white" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
               >
-                <item.icon size={18} />
-                {(!collapsed || mobile) && (
-                  <span className="text-sm">{item.label}</span>
-                )}
+                <div className="flex items-center gap-3">
+                  <item.icon size={18} />
+                  {(!collapsed || mobile) && (
+                    <span className="text-sm">{item.label}</span>
+                  )}
+                </div>
+
+                {item.id === "assigned-actions" &&
+                  assignedActionsCount > 0 &&
+                  (!collapsed || mobile) && (
+                    <span className="min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-semibold">
+                      {assignedActionsCount}
+                    </span>
+                  )}
               </button>
             );
           })}
@@ -199,11 +371,7 @@ export default function ProfessionalSidebar({ children }) {
             onClick={() => setCollapsed((p) => !p)}
             className="absolute top-6 -right-3 w-7 h-7 bg-white text-black rounded-full shadow flex items-center justify-center border"
           >
-            {collapsed ? (
-              <ChevronRight size={16} />
-            ) : (
-              <ChevronLeft size={16} />
-            )}
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         )}
       </motion.div>
@@ -213,7 +381,12 @@ export default function ProfessionalSidebar({ children }) {
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* DESKTOP */}
-      <aside className="hidden lg:block h-screen sticky top-0">
+      <aside
+        className="hidden lg:block h-screen sticky top-0 shrink-0"
+        style={{
+          width: collapsed ? COLLAPSED : WIDE,
+        }}
+      >
         <Sidebar />
       </aside>
 

@@ -500,7 +500,7 @@ const ManagerTaskDetailPage = () => {
             </div>
           ))}
         </div>
-
+          
         {/* ACTION BAR */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm mt-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
