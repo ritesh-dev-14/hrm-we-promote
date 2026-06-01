@@ -1,6 +1,15 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const mailService = require("../mail/mail.service");
+
+const sendBestEffortMail = async (operation, context) => {
+  try {
+    await operation();
+  } catch (error) {
+    console.error(`Mail notification failed for ${context}:`, error);
+  }
+};
 
 //
 // 🔥 CREATE COORDINATOR ASSIGNMENT (With Inline Task Creation)
@@ -116,6 +125,19 @@ exports.createAssignment = async (user, body) => {
       entityId: assignment.id,
     },
   });
+
+  await sendBestEffortMail(
+    () => mailService.sendCoordinatorAssignmentMail({
+      email: assignment.assignedTo.email,
+      recipientName: assignment.assignedTo.name,
+      coordinatorName: assignment.createdBy.name,
+      taskTitle: assignment.task.projectName,
+      completionDate: assignment.completionDate,
+      assignedBy: assignment.assignedBy,
+      recipientRole: assignment.assignedTo.role,
+    }),
+    `coordinator assignment ${assignment.id}`
+  );
 
   return {
     id: assignment.id,
@@ -598,7 +620,7 @@ exports.getAllUsers = async (user) => {
 
     const assignment = await prisma.coordinatorAssignment.findUnique({
       where: { id: assignmentId },
-      include: { assignedTo: true, createdBy: true },
+      include: { assignedTo: true, createdBy: true, task: true },
     });
 
     if (!assignment) {
@@ -628,6 +650,17 @@ exports.getAllUsers = async (user) => {
       },
     });
 
+    await sendBestEffortMail(
+      () => mailService.sendCoordinatorFollowUpMail({
+        email: assignment.assignedTo.email,
+        employeeName: assignment.assignedTo.name,
+        coordinatorName: user.name,
+        taskTitle: assignment.task?.projectName || `Task ${assignment.taskId}`,
+        message,
+      }),
+      `follow-up ${followUp.id}`
+    );
+
     return {
       id: followUp.id,
       assignmentId: followUp.assignmentId,
@@ -647,7 +680,7 @@ exports.getAllUsers = async (user) => {
 
     const assignment = await prisma.coordinatorAssignment.findUnique({
       where: { id: assignmentId },
-      include: { assignedTo: true, createdBy: true },
+      include: { assignedTo: true, createdBy: true, task: true },
     });
 
     if (!assignment) {
@@ -680,6 +713,17 @@ exports.getAllUsers = async (user) => {
         entityId: assignmentId,
       },
     });
+
+    await sendBestEffortMail(
+      () => mailService.sendEmployeeReplyMail({
+        email: assignment.createdBy.email,
+        coordinatorName: assignment.createdBy.name,
+        employeeName: user.name,
+        taskTitle: assignment.task?.projectName || `Task ${assignment.taskId}`,
+        message,
+      }),
+      `reply ${followUp.id}`
+    );
 
     return {
       id: followUp.id,
