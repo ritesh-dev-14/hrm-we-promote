@@ -49,12 +49,12 @@ async function main() {
 
   // 🔹 COORDINATOR
   await prisma.user.upsert({
-    where: { email: "coordinator@test.com" },
+    where: { email: "jasdeepsingh8077@gmail.com" },
     update: { password },
     create: {
       employeeId: "COORD-001",
       name: "Coordinator User",
-      email: "coordinator@test.com",
+      email: "jasdeepsingh8077@gmail.com",
       password,
       role: "COORDINATOR",
     },
