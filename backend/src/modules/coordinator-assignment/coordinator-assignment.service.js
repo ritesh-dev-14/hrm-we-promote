@@ -110,18 +110,10 @@ exports.createAssignment = async (user, body) => {
         employeeEmail: body.employeeEmail,
         status: "ASSIGNED",
       },
-      select: {
-        id: true,
-        taskId: true,
+      include: {
         task: true,
-        assignedToId: true,
         assignedTo: true,
         createdBy: true,
-        assignedBy: true,
-        completionDate: true,
-        employeeNumber: true,
-        employeeEmail: true,
-        status: true,
       },
     });
   } else {
@@ -135,17 +127,9 @@ exports.createAssignment = async (user, body) => {
         employeeEmail: body.employeeEmail,
         status: "ASSIGNED",
       },
-      select: {
-        id: true,
-        taskId: true,
+      include: {
         task: true,
-        assignedToId: true,
         assignedTo: true,
-        assignedBy: true,
-        completionDate: true,
-        employeeNumber: true,
-        employeeEmail: true,
-        status: true,
       },
     });
   }
@@ -354,6 +338,7 @@ exports.getAssignmentById = async (user, assignmentId) => {
       include: {
         task: true,
         assignedTo: true,
+        createdBy: true,
       },
     });
 
@@ -387,10 +372,12 @@ exports.getAssignmentById = async (user, assignmentId) => {
       employeeId: assignment.assignedTo.employeeId,
       role: assignment.assignedTo.role,
     },
-    createdBy: {
-      id: assignment.createdBy.id,
-      name: assignment.createdBy.name,
-    },
+    ...(assignment.createdBy ? {
+      createdBy: {
+        id: assignment.createdBy.id,
+        name: assignment.createdBy.name,
+      },
+    } : {}),
     assignedBy: assignment.assignedBy,
     assignedTime: assignment.assignedTime,
     completionDate: assignment.completionDate,
@@ -565,6 +552,7 @@ exports.listAllAssignments = async (user, filters = {}) => {
       include: {
         task: true,
         assignedTo: true,
+        createdBy: true,
       },
       skip: parseInt(skip),
       take: parseInt(take),
