@@ -354,7 +354,6 @@ exports.getAssignmentById = async (user, assignmentId) => {
       include: {
         task: true,
         assignedTo: true,
-        createdBy: true,
       },
     });
 
@@ -366,7 +365,7 @@ exports.getAssignmentById = async (user, assignmentId) => {
   // ✅ AUTHORIZATION: Only coordinator who created it or assigned user can view
   //
   if (
-    user.id !== assignment.createdById &&
+    assignment.createdById && user.id !== assignment.createdById &&
     user.id !== assignment.assignedToId
   ) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
@@ -566,7 +565,6 @@ exports.listAllAssignments = async (user, filters = {}) => {
       include: {
         task: true,
         assignedTo: true,
-        createdBy: true,
       },
       skip: parseInt(skip),
       take: parseInt(take),
@@ -589,10 +587,12 @@ exports.listAllAssignments = async (user, filters = {}) => {
         email: a.assignedTo.email,
         role: a.assignedTo.role,
       },
-      createdBy: {
-        id: a.createdBy.id,
-        name: a.createdBy.name,
-      },
+      ...(a.createdBy ? {
+        createdBy: {
+          id: a.createdBy.id,
+          name: a.createdBy.name,
+        },
+      } : {}),
       assignedBy: a.assignedBy,
       status: a.status,
       completionDate: a.completionDate,
@@ -662,7 +662,7 @@ exports.getAllUsers = async (user) => {
 
     const assignment = await prisma.coordinatorAssignment.findUnique({
       where: { id: assignmentId },
-      include: { assignedTo: true, createdBy: true, task: true },
+      include: { assignedTo: true, task: true },
     });
 
     if (!assignment) {
@@ -722,7 +722,7 @@ exports.getAllUsers = async (user) => {
 
     const assignment = await prisma.coordinatorAssignment.findUnique({
       where: { id: assignmentId },
-      include: { assignedTo: true, createdBy: true, task: true },
+      include: { assignedTo: true, task: true },
     });
 
     if (!assignment) {
@@ -745,27 +745,37 @@ exports.getAllUsers = async (user) => {
     });
 
     // Notify coordinator
-    await prisma.notification.create({
-      data: {
-        userId: assignment.createdById,
-        title: "Reply to Follow-up",
-        message: `${user.name} replied to your follow-up on task: ${assignment.taskId}`,
-        type: "GENERAL",
-        level: "INFO",
-        entityId: assignmentId,
-      },
-    });
+    if (assignment.createdById) {
+      await prisma.notification.create({
+        data: {
+          userId: assignment.createdById,
+          title: "Reply to Follow-up",
+          message: `${user.name} replied to your follow-up on task: ${assignment.taskId}`,
+          type: "GENERAL",
+          level: "INFO",
+          entityId: assignmentId,
+        },
+      });
 
-    await sendBestEffortMail(
-      () => mailService.sendEmployeeReplyMail({
-        email: assignment.createdBy.email,
-        coordinatorName: assignment.createdBy.name,
-        employeeName: user.name,
-        taskTitle: assignment.task?.projectName || `Task ${assignment.taskId}`,
-        message,
-      }),
-      `reply ${followUp.id}`
-    );
+      // Fetch coordinator for email
+      const coordinator = await prisma.user.findUnique({
+        where: { id: assignment.createdById },
+        select: { email: true, name: true },
+      });
+
+      if (coordinator) {
+        await sendBestEffortMail(
+          () => mailService.sendEmployeeReplyMail({
+            email: coordinator.email,
+            coordinatorName: coordinator.name,
+            employeeName: user.name,
+            taskTitle: assignment.task?.projectName || `Task ${assignment.taskId}`,
+            message,
+          }),
+          `reply ${followUp.id}`
+        );
+      }
+    }
 
     return {
       id: followUp.id,
