@@ -235,23 +235,41 @@ async function main() {
   // SOCIAL MEDIA MANAGER - ABHIJEET
   // =========================
 
+  // await prisma.user.upsert({
+  //   where: { email: "smm02wepromote@gmail.com" },
+  //   update: {
+  //     password,
+  //     departmentId: departments["Social Media"].id,
+  //     position: "Social Media Manager",
+  //   },
+  //   create: {
+  //     employeeId: "SM-MGR-002",
+  //     name: "Abhijeet",
+  //     email: "smm02wepromote@gmail.com",
+  //     password,
+  //     role: "MANAGER",
+  //     position: "Social Media Manager",
+  //     departmentId: departments["Social Media"].id,
+  //   },
+  // });
+
   await prisma.user.upsert({
-    where: { email: "smm02wepromote@gmail.com" },
-    update: {
-      password,
-      departmentId: departments["Social Media"].id,
-      position: "Social Media Manager",
-    },
-    create: {
-      employeeId: "SM-MGR-002",
-      name: "Abhijeet",
-      email: "smm02wepromote@gmail.com",
-      password,
-      role: "MANAGER",
-      position: "Social Media Manager",
-      departmentId: departments["Social Media"].id,
-    },
-  });
+  where: { email: "smm02wepromote@gmail.com" },
+  update: {
+    password,
+    departmentId: departments["Content & Creative"].id,
+    position: "Content & Creative Manager",
+  },
+  create: {
+    employeeId: "CC-MGR-001",
+    name: "Abhijeet",
+    email: "smm02wepromote@gmail.com",
+    password,
+    role: "MANAGER",
+    position: "Content & Creative Manager",
+    departmentId: departments["Content & Creative"].id,
+  },
+});
 
   // =========================
   // COORDINATOR - SONALI

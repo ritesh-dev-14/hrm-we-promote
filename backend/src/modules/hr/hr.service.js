@@ -279,14 +279,21 @@ exports.createEmployee = async (user, body) => {
     managerId = manager.id;
   }
 
-  const hashed = await bcrypt.hash(body.password, 10);
+  // Hash password only if provided
+  let hashed;
+  if (body.password) {
+    hashed = await bcrypt.hash(body.password, 10);
+  }
+
+  // Check if calling user exists before connecting createdBy to avoid P2025
+  const creator = user && user.id ? await prisma.user.findUnique({ where: { id: user.id } }) : null;
 
   const newUser = await prisma.user.create({
     data: {
       employeeId: body.employeeId || "EMP-" + Date.now(),
       name: body.name,
       email: body.email,
-      password: hashed,
+      ...(hashed && { password: hashed }),
 
       role: body.role,
       ...(body.department && {
@@ -300,11 +307,7 @@ exports.createEmployee = async (user, body) => {
       position: body.position,
 
       ...(managerId ? { manager: { connect: { id: managerId } } } : {}),
-      createdBy: {
-        connect: {
-          id: user.id,
-        },
-      },
+      ...(creator ? { createdBy: { connect: { id: creator.id } } } : {}),
     },
     select: {
       id: true,
