@@ -322,9 +322,11 @@ exports.getAssignmentsByAssignedTo = async (
         description: a.task.description,
         status: a.task.status,
       },
-      createdBy: {
-        name: a.createdBy.name,
-      },
+      ...(a.createdBy ? {
+        createdBy: {
+          name: a.createdBy.name,
+        },
+      } : {}),
       assignedBy: a.assignedBy,
       assignedTime: a.assignedTime,
       completionDate: a.completionDate,
