@@ -96,12 +96,14 @@ exports.createAssignment = async (user, body) => {
   //
   // ✅ CREATE ASSIGNMENT
   //
-  const assignment =
-    await prisma.coordinatorAssignment.create({
+  let assignment;
+
+  if (coordinatorExists) {
+    assignment = await prisma.coordinatorAssignment.create({
       data: {
         taskId: task.id,
         assignedToId: body.assignedToId,
-        ...(coordinatorExists ? { createdById: coordinatorExists.id } : {}),
+        createdById: coordinatorExists.id,
         assignedBy: body.assignedBy,
         completionDate: new Date(body.completionDate),
         employeeNumber: body.employeeNumber,
@@ -114,7 +116,7 @@ exports.createAssignment = async (user, body) => {
         task: true,
         assignedToId: true,
         assignedTo: true,
-        ...(coordinatorExists ? { createdBy: true } : {}),
+        createdBy: true,
         assignedBy: true,
         completionDate: true,
         employeeNumber: true,
@@ -122,6 +124,31 @@ exports.createAssignment = async (user, body) => {
         status: true,
       },
     });
+  } else {
+    assignment = await prisma.coordinatorAssignment.create({
+      data: {
+        taskId: task.id,
+        assignedToId: body.assignedToId,
+        assignedBy: body.assignedBy,
+        completionDate: new Date(body.completionDate),
+        employeeNumber: body.employeeNumber,
+        employeeEmail: body.employeeEmail,
+        status: "ASSIGNED",
+      },
+      select: {
+        id: true,
+        taskId: true,
+        task: true,
+        assignedToId: true,
+        assignedTo: true,
+        assignedBy: true,
+        completionDate: true,
+        employeeNumber: true,
+        employeeEmail: true,
+        status: true,
+      },
+    });
+  }
 
   //
   // ✅ SEND NOTIFICATION TO ASSIGNED USER
