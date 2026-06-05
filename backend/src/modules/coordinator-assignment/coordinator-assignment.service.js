@@ -108,10 +108,18 @@ exports.createAssignment = async (user, body) => {
         employeeEmail: body.employeeEmail,
         status: "ASSIGNED",
       },
-      include: {
+      select: {
+        id: true,
+        taskId: true,
         task: true,
+        assignedToId: true,
         assignedTo: true,
-        createdBy: true,
+        ...(coordinatorExists ? { createdBy: true } : {}),
+        assignedBy: true,
+        completionDate: true,
+        employeeNumber: true,
+        employeeEmail: true,
+        status: true,
       },
     });
 
@@ -133,7 +141,7 @@ exports.createAssignment = async (user, body) => {
     () => mailService.sendCoordinatorAssignmentMail({
       email: assignment.assignedTo.email,
       recipientName: assignment.assignedTo.name,
-      coordinatorName: assignment.createdBy.name,
+      coordinatorName: assignment.createdBy?.name || body.assignedBy,
       taskTitle: assignment.task.projectName,
       completionDate: assignment.completionDate,
       assignedBy: assignment.assignedBy,
@@ -161,10 +169,12 @@ exports.createAssignment = async (user, body) => {
     assignedTime: assignment.assignedTime,
     completionDate: assignment.completionDate,
     status: assignment.status,
-    createdBy: {
-      id: assignment.createdBy.id,
-      name: assignment.createdBy.name,
-    },
+    ...(assignment.createdBy ? {
+      createdBy: {
+        id: assignment.createdBy.id,
+        name: assignment.createdBy.name,
+      },
+    } : {}),
   };
 };
 
