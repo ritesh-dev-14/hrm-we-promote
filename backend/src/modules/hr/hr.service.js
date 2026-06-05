@@ -9,19 +9,25 @@ exports.createManager = async (user, body) => {
   const existingUser = await prisma.user.findUnique({
     where: { email: body.email },
   });
-
   if (existingUser) {
     throw new ApiError(400, ERRORS.USER.DUPLICATE_EMAIL);
   }
 
-  const hashed = await bcrypt.hash(body.password, 10);
+  // Hash password only if provided
+  let hashed;
+  if (body.password) {
+    hashed = await bcrypt.hash(body.password, 10);
+  }
+
+  // Check if calling user exists before connecting createdBy to avoid P2025
+  const creator = user && user.id ? await prisma.user.findUnique({ where: { id: user.id } }) : null;
 
   return prisma.user.create({
     data: {
       employeeId: body.employeeId || "MGR-" + Date.now(),
       name: body.name,
       email: body.email,
-      password: hashed,
+      ...(hashed && { password: hashed }),
       role: "MANAGER",
       ...(body.department && {
         department: {
@@ -31,11 +37,7 @@ exports.createManager = async (user, body) => {
           },
         },
       }),
-      createdBy: {
-        connect: {
-          id: user.id,
-        },
-      },
+      ...(creator ? { createdBy: { connect: { id: creator.id } } } : {}),
     },
     select: {
       id: true,

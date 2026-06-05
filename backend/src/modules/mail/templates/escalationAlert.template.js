@@ -17,108 +17,90 @@ module.exports = ({
     <html>
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Task Assignment Escalation - ${escalationLevel}</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          line-height: 1.6;
-          color: #333;
-        }
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 20px;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-        }
-        .header {
-          background-color: #f8f9fa;
-          padding: 15px;
-          border-radius: 5px;
-          margin-bottom: 20px;
-        }
-        .alert {
-          background-color: #f8d7da;
-          border: 1px solid #f5c6cb;
-          color: #721c24;
-          padding: 15px;
-          border-radius: 5px;
-          margin-bottom: 20px;
-          font-weight: bold;
-        }
-        .escalation-info {
-          background-color: #e7f3ff;
-          border-left: 4px solid #dc3545;
-          padding: 15px;
-          margin: 20px 0;
-        }
-        .content {
-          margin: 20px 0;
-        }
-        .details {
-          background-color: #f9f9f9;
-          padding: 15px;
-          border-radius: 5px;
-          margin: 15px 0;
-        }
-        .button {
-          display: inline-block;
-          background-color: #dc3545;
-          color: white;
-          padding: 10px 20px;
-          text-decoration: none;
-          border-radius: 5px;
-          margin-top: 10px;
-        }
-        .footer {
-          border-top: 1px solid #ddd;
-          margin-top: 20px;
-          padding-top: 15px;
-          font-size: 12px;
-          color: #666;
-        }
-      </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2>⚠️ ESCALATION ALERT - Task Assignment Issue</h2>
-        </div>
-
-        <div class="alert">
-          ESCALATION LEVEL: ${escalationLevel}
-        </div>
-
-        <div class="content">
-          <p>Hello <strong>${hrName}</strong>,</p>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+      <div style="width: 100%; background-color: #f5f5f5; padding: 20px 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); overflow: hidden;">
           
-          <p>${escalationMessages[escalationLevel]}</p>
-          
-          <div class="escalation-info">
-            <h3>Escalation Details:</h3>
-            <strong>Manager:</strong> ${managerName}<br>
-            <strong>Employee:</strong> ${employeeName}<br>
-            <strong>Date Affected:</strong> ${date}<br>
-            <strong>Issue:</strong> No tasks assigned
+          <!-- Header Section -->
+          <div style="background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%); padding: 40px 30px; text-align: center; color: #ffffff;">
+            <div style="font-size: 28px; font-weight: bold; margin-bottom: 10px;">⚠️ ESCALATION ALERT</div>
+            <div style="font-size: 14px; opacity: 0.95;">Task Assignment Issue Escalation - Level: <span style="font-weight: 700;">${escalationLevel}</span></div>
           </div>
 
-          <div class="details">
-            <h4>Action Required:</h4>
-            <ul>
-              <li>Review the manager's task assignment activity</li>
-              <li>Contact the manager for explanation</li>
-              <li>Ensure tasks are assigned for the specified date</li>
-            </ul>
-          </div>
-          
-          <center>
-            <a href="${applicationUrl}" class="button">View in System</a>
-          </center>
-        </div>
+          <!-- Main Content -->
+          <div style="padding: 40px 30px;">
+            
+            <!-- Greeting -->
+            <p style="color: #333333; font-size: 16px; margin-bottom: 30px; line-height: 1.6;">
+              Hi <span style="color: #D32F2F; font-weight: 600;">${hrName}</span>,
+            </p>
 
-        <div class="footer">
-          <p>This is an automated escalation notification. Please review and take appropriate action.</p>
-          <p>Escalation Level: ${escalationLevel}</p>
+            <!-- Alert Box -->
+            <div style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); border-left: 5px solid #D32F2F; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+              <p style="margin: 0; color: #B71C1C; font-size: 15px; line-height: 1.6; font-weight: 500;">
+                🚨 ${escalationMessages[escalationLevel]}
+              </p>
+            </div>
+
+            <!-- Escalation Details -->
+            <div style="background-color: #fafafa; padding: 25px; border-radius: 8px; border: 2px solid #D32F2F; margin-bottom: 30px;">
+              <div style="font-size: 12px; color: #D32F2F; text-transform: uppercase; font-weight: 700; margin-bottom: 20px; letter-spacing: 1px;">Escalation Details</div>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="padding: 12px; background-color: #ffffff; border-radius: 5px; border-left: 3px solid #D32F2F;">
+                  <p style="margin: 0 0 5px 0; color: #999999; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Manager</p>
+                  <p style="margin: 0; color: #333333; font-size: 14px; font-weight: 600;">${managerName}</p>
+                </div>
+                <div style="padding: 12px; background-color: #ffffff; border-radius: 5px; border-left: 3px solid #D32F2F;">
+                  <p style="margin: 0 0 5px 0; color: #999999; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Employee</p>
+                  <p style="margin: 0; color: #333333; font-size: 14px; font-weight: 600;">${employeeName}</p>
+                </div>
+                <div style="padding: 12px; background-color: #ffffff; border-radius: 5px; border-left: 3px solid #D32F2F;">
+                  <p style="margin: 0 0 5px 0; color: #999999; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Date Affected</p>
+                  <p style="margin: 0; color: #333333; font-size: 14px; font-weight: 600;">${date}</p>
+                </div>
+                <div style="padding: 12px; background-color: #ffffff; border-radius: 5px; border-left: 3px solid #D32F2F;">
+                  <p style="margin: 0 0 5px 0; color: #999999; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Issue</p>
+                  <p style="margin: 0; color: #333333; font-size: 14px; font-weight: 600;">No Tasks Assigned</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Required -->
+            <div style="background-color: #fff3e0; border-left: 4px solid #FF9800; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+              <p style="margin: 0 0 15px 0; color: #E65100; font-size: 13px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">📝 Action Required</p>
+              <ul style="margin: 0; padding-left: 20px; color: #E65100; font-size: 14px;">
+                <li style="margin-bottom: 8px;">Review manager's task assignment activity</li>
+                <li style="margin-bottom: 8px;">Contact the manager for explanation</li>
+                <li>Ensure tasks are assigned for the specified date</li>
+              </ul>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin-bottom: 30px;">
+              <a href="${applicationUrl}" style="display: inline-block; background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%); color: #ffffff; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: 600; font-size: 14px;">
+                📂 View in System
+              </a>
+            </div>
+
+          </div>
+
+          <!-- Footer Section -->
+          <div style="background-color: #f8f9fa; padding: 30px; border-top: 2px solid #ffebee; text-align: center;">
+            <p style="margin: 0 0 15px 0; color: #666666; font-size: 13px; font-weight: 500;">
+              This is an automated escalation notification
+            </p>
+            <p style="margin: 0 0 10px 0; color: #999999; font-size: 12px;">
+              <strong>Escalation Level:</strong> ${escalationLevel}
+            </p>
+            <p style="margin: 0; color: #999999; font-size: 12px; line-height: 1.6;">
+              Please do not reply to this email. Contact your HR department if you have questions.
+            </p>
+          </div>
+
         </div>
       </div>
     </body>
