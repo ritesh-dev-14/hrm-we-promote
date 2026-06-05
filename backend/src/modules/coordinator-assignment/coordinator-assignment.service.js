@@ -59,13 +59,16 @@ exports.createAssignment = async (user, body) => {
   //
   // ✅ CREATE NEW TASK (as coordinator's urgent task)
   //
+  // Check if coordinator user exists in DB before connecting
+  const coordinatorExists = user && user.id ? await prisma.user.findUnique({ where: { id: user.id } }) : null;
+
   const task = await prisma.task.create({
     data: {
       projectName: body.task, // Use task name as project name
       description: body.task, // Use task name as description
       startDate: new Date(),
       endDate: new Date(body.completionDate),
-      createdById: user.id,
+      ...(coordinatorExists ? { createdById: coordinatorExists.id } : {}),
       status: "DRAFT",
     },
   });
@@ -98,7 +101,7 @@ exports.createAssignment = async (user, body) => {
       data: {
         taskId: task.id,
         assignedToId: body.assignedToId,
-        createdById: user.id,
+        ...(coordinatorExists ? { createdById: coordinatorExists.id } : {}),
         assignedBy: body.assignedBy,
         completionDate: new Date(body.completionDate),
         employeeNumber: body.employeeNumber,
