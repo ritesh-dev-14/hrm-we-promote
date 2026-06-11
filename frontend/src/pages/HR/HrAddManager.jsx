@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { useEffect } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, ChevronDown, Eye, EyeOff } from "lucide-react";
 import API from "../../services/api";
 import { notifySuccess, notifyError } from "../../utils/toast";
 
@@ -12,38 +11,60 @@ function Field({
   placeholder,
   required = false,
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPasswordType = type === "password";
+
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1">
+      <label className="text-xs font-medium text-slate-700">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
 
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        className="w-full h-12 sm:h-13 bg-[#F8FAFC] border border-slate-200 rounded-2xl px-4 text-sm font-medium text-slate-700 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
-      />
+      <div className="relative">
+        <input
+          type={isPasswordType && showPassword ? "text" : type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          className="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-colors focus:border-slate-900"
+        />
+
+        {isPasswordType && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          >
+            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
-function SelectField({ label, value, onChange, children }) {
+function SelectField({ label, value, onChange, children, disabled = false }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1">
+      <label className="text-xs font-medium text-slate-700">
         {label}
       </label>
 
-      <select
-        value={value}
-        onChange={onChange}
-        className="w-full h-12 sm:h-13 bg-[#F8FAFC] border border-slate-200 rounded-2xl px-4 text-sm font-medium text-slate-700 outline-none transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 cursor-pointer"
-      >
-        {children}
-      </select>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className="appearance-none w-full h-10 bg-white border border-slate-200 rounded-xl px-3 pr-10 text-sm text-slate-800 outline-none transition-colors hover:border-slate-300 focus:border-slate-900 disabled:opacity-50 cursor-pointer"
+        >
+          {children}
+        </select>
+
+        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+          <ChevronDown size={15} className="text-slate-400" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -59,16 +80,14 @@ export default function HrAddManager({ isOpen, onClose, onSave }) {
   });
 
   const [loading, setLoading] = useState(false);
+
   const fetchDepartments = async () => {
     try {
       setFetchingDepartments(true);
-
       const res = await API.get("/api/departments");
-
       setDepartments(res.data?.data || []);
     } catch (err) {
       console.error(err);
-
       notifyError("Failed to load departments");
     } finally {
       setFetchingDepartments(false);
@@ -78,32 +97,28 @@ export default function HrAddManager({ isOpen, onClose, onSave }) {
   useEffect(() => {
     if (isOpen) {
       fetchDepartments();
+      // Reset form variables when modal is triggered open
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        department: "",
+      });
     }
   }, [isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
 
     try {
       const res = await API.post("/api/hr/manager", form);
-
       notifySuccess("Manager account created successfully!");
 
       if (onSave) onSave(res.data.data);
-
-      setForm({
-        name: "",
-        email: "",
-        password: "",
-        department: "Engineering",
-      });
-
       onClose();
     } catch (err) {
       const errorMsg = err.response?.data?.message || "Failed to add manager";
-
       notifyError(errorMsg);
     } finally {
       setLoading(false);
@@ -113,30 +128,30 @@ export default function HrAddManager({ isOpen, onClose, onSave }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-slate-950/50 backdrop-blur-md p-0 sm:p-4">
-      <div className="w-full sm:max-w-xl bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-screen overflow-y-auto">
-        {/* HEADER */}
-        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-100 px-5 sm:px-8 py-5 flex items-start justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-xs p-4">
+      <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden max-h-[90vh] border border-slate-100">
+        
+        {/* MODAL HEADER */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Add Manager</h2>
-
-            <p className="text-sm text-slate-500 mt-1">
-              Create manager-level access and permissions.
+            <h2 className="text-xl font-bold text-slate-900">Add Manager</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Create manager-level access and corporate permissions.
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition-all"
+            className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
           >
-            <X size={20} className="text-slate-500" />
+            <X size={15} />
           </button>
         </div>
 
-        {/* BODY */}
+        {/* MODAL FORM BODY */}
         <form
           onSubmit={handleSubmit}
-          className="p-5 sm:p-8 space-y-5 sm:space-y-6"
+          className="p-6 flex-1 space-y-4 overflow-y-auto bg-white"
         >
           <Field
             label="Full Name"
@@ -167,6 +182,7 @@ export default function HrAddManager({ isOpen, onClose, onSave }) {
           <SelectField
             label="Department"
             value={form.department}
+            disabled={fetchingDepartments}
             onChange={(e) =>
               setForm({
                 ...form,
@@ -175,9 +191,7 @@ export default function HrAddManager({ isOpen, onClose, onSave }) {
             }
           >
             <option value="">
-              {fetchingDepartments
-                ? "Loading departments..."
-                : "Select Department"}
+              {fetchingDepartments ? "Loading departments..." : "Select Department"}
             </option>
 
             {departments.map((dept) => (
@@ -186,26 +200,26 @@ export default function HrAddManager({ isOpen, onClose, onSave }) {
               </option>
             ))}
           </SelectField>
-
-          {/* FOOTER */}
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full sm:flex-1 h-12 rounded-2xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-all"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:flex-1 h-12 rounded-2xl bg-slate-900 hover:bg-black disabled:bg-slate-400 text-white font-bold shadow-xl transition-all"
-            >
-              {loading ? "Creating..." : "Create Manager"}
-            </button>
-          </div>
         </form>
+
+        {/* MODAL FOOTER */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors disabled:bg-slate-300 cursor-pointer"
+          >
+            {loading ? "Creating..." : "Create Manager"}
+          </button>
+        </div>
       </div>
     </div>
   );

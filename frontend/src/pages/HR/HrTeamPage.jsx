@@ -10,20 +10,24 @@ import {
   Briefcase,
   ChevronRight,
   Filter,
+  Layers,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTeamData } from "./hooks/useTeamData";
+import API from "../../services/api"; // 👈 Imported your API client instance
 
 import HrAddEmployee from "./HrAddEmployee";
 import HrAddManager from "./HrAddManager";
 import HrAddDepartment from "./HrAddDepartment.jsx";
+import HrViewDepartments from "./HrViewDepartments.jsx";
+import HrEditEmployee from "./HrEditEmployee.jsx";
 
 export default function HrTeamPage() {
   const navigate = useNavigate();
   const { staff, loading, error, refresh } = useTeamData();
 
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("ALL"); // ALL | MANAGER | EMPLOYEE
+  const [roleFilter, setRoleFilter] = useState("ALL");
 
   const [modal, setModal] = useState({
     type: null,
@@ -40,12 +44,10 @@ export default function HrTeamPage() {
   const filteredStaff = useMemo(() => {
     let result = staff || [];
 
-    // 1. Apply Role Filter Tabs
     if (roleFilter !== "ALL") {
       result = result.filter((p) => p.role === roleFilter);
     }
 
-    // 2. Apply Text Search
     const term = search.toLowerCase().trim();
     if (term) {
       result = result.filter(
@@ -68,6 +70,31 @@ export default function HrTeamPage() {
     });
   }, []);
 
+  // 🛠️ NEW: Dynamic resource removal handler with sanitized key tokens
+  const handleDelete = useCallback(async (e, person) => {
+    e.stopPropagation();
+    
+    const rawId = person.employeeId || person.id || "";
+    const cleanId = rawId.split(":")[0]; // Strips any unexpected tracking modifiers (like :1)
+    
+    const confirmDelete = window.confirm(`Are you sure you want to permanently remove ${person.name || "this staff member"}?`);
+    if (!confirmDelete) return;
+
+    try {
+      // Direct integration matching your target route template configuration
+      const res = await API.delete(`/api/hr/employee/${cleanId}`);
+      
+      if (res?.data?.success || res?.status === 200) {
+        refresh(); // Refresh state values down the component line smoothly
+      } else {
+        alert("Server processed request but failed to confirm document dropping.");
+      }
+    } catch (err) {
+      console.error("Deletion lifecycle failure:", err);
+      alert(err?.response?.data?.message || "Internal record purging failure.");
+    }
+  }, [refresh]);
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -82,22 +109,29 @@ export default function HrTeamPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
+              onClick={(e) => handleAction(e, "VIEW_DEPARTMENTS")}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors shadow-xs cursor-pointer"
+            >
+              <Layers size={14} />
+              View Departments
+            </button>
+            <button
               onClick={(e) => handleAction(e, "DEPARTMENT")}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
             >
               <Briefcase size={14} />
               Add Department
             </button>
             <button
               onClick={(e) => handleAction(e, "MANAGER")}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
             >
               <UserPlus size={14} />
               Add Manager
             </button>
             <button
               onClick={(e) => handleAction(e, "EMPLOYEE")}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors shadow-xs"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors shadow-xs cursor-pointer"
             >
               <Plus size={14} />
               Add Employee
@@ -107,7 +141,6 @@ export default function HrTeamPage() {
 
         {/* UTILITIES & FILTERING ROW */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
-          {/* SEARCH FIELD */}
           <div className="relative w-full md:max-w-md">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -119,23 +152,22 @@ export default function HrTeamPage() {
             />
           </div>
 
-          {/* DYNAMIC TAB FILTERS */}
           <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-xl self-start md:self-auto">
             <button
               onClick={() => setRoleFilter("ALL")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${roleFilter === "ALL" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${roleFilter === "ALL" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
             >
               All Members ({staff?.length || 0})
             </button>
             <button
               onClick={() => setRoleFilter("MANAGER")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${roleFilter === "MANAGER" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${roleFilter === "MANAGER" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
             >
               Managers ({staff?.filter(p => p.role === "MANAGER").length || 0})
             </button>
             <button
               onClick={() => setRoleFilter("EMPLOYEE")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${roleFilter === "EMPLOYEE" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${roleFilter === "EMPLOYEE" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
             >
               Employees ({staff?.filter(p => p.role === "EMPLOYEE").length || 0})
             </button>
@@ -172,7 +204,6 @@ export default function HrTeamPage() {
               <p className="text-xs text-slate-500 mt-1">Adjust or clear your search input text to verify broader database scopes.</p>
             </div>
           ) : (
-            /* TABULAR ROW LAYOUT MATRIX */
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px] text-left border-collapse">
@@ -192,7 +223,6 @@ export default function HrTeamPage() {
                         onClick={() => navigate(`/hr/team/${person.employeeId || person.id}`)}
                         className="hover:bg-slate-50/60 cursor-pointer transition-colors group"
                       >
-                        {/* AVATAR & NAME */}
                         <td className="px-6 py-3.5 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <div
@@ -210,17 +240,14 @@ export default function HrTeamPage() {
                           </div>
                         </td>
 
-                        {/* EMPLOYEE REFERENCE ID */}
                         <td className="px-6 py-3.5 whitespace-nowrap font-mono text-xs text-slate-500">
                           {person.employeeId || person.id?.substring(0, 8)}
                         </td>
 
-                        {/* DEPARTMENT LINK */}
                         <td className="px-6 py-3.5 whitespace-nowrap text-slate-600 font-medium">
                           {person?.department?.name || "General"}
                         </td>
 
-                        {/* ROLE DESIGNATION */}
                         <td className="px-6 py-3.5 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border uppercase ${
@@ -234,20 +261,20 @@ export default function HrTeamPage() {
                           </span>
                         </td>
 
-                        {/* ROW LEVEL INLINE MANAGEMENT ACTIONS */}
                         <td className="px-6 py-3.5 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="inline-flex items-center justify-end gap-1.5">
                             <button
-                              onClick={(e) => handleAction(e, "EMPLOYEE", person)}
+                              onClick={(e) => handleAction(e, "EDIT_EMPLOYEE", person)}
                               title="Modify Profile Parameters"
-                              className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
+                              className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
                             >
                               <Edit3 size={13} />
                             </button>
+                            {/* 🛠️ UPDATED: Wired up to delete resource callback functionality */}
                             <button
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => handleDelete(e, person)}
                               title="Delete Resource Entry"
-                              className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-red-50 hover:border-red-200 flex items-center justify-center text-slate-500 hover:text-red-600 transition-colors"
+                              className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-red-50 hover:border-red-200 flex items-center justify-center text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -268,8 +295,10 @@ export default function HrTeamPage() {
 
       {/* COMPONENT DRAWER EXTENSIONS */}
       <HrAddDepartment isOpen={modal.type === "DEPARTMENT"} onClose={closeModal} onSave={refresh} />
-      <HrAddEmployee isOpen={modal.type === "EMPLOYEE"} initialData={modal.data} onClose={closeModal} onSave={refresh} />
+      <HrAddEmployee isOpen={modal.type === "EMPLOYEE"} onClose={closeModal} onSave={refresh} />
       <HrAddManager isOpen={modal.type === "MANAGER"} onClose={closeModal} onSave={refresh} />
+      <HrViewDepartments isOpen={modal.type === "VIEW_DEPARTMENTS"} onClose={closeModal} />
+      <HrEditEmployee isOpen={modal.type === "EDIT_EMPLOYEE"} employeeData={modal.data} onClose={closeModal} onSave={refresh} />
     </div>
   );
 }

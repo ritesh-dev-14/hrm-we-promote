@@ -23,86 +23,6 @@ import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 import MainLogo from "../assets/logo.jpeg";
 
-// const NAV_CONFIG = [
-//   {
-//     id: "dashboard",
-//     label: "Dashboard",
-//     icon: LayoutGrid,
-//     path: "/dashboard",
-//     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
-//   },
-//   {
-//     id: "tasks",
-//     label: "Projects",
-//     icon: BriefcaseBusiness,
-//     path: "/tasks",
-//     roles: ["ADMIN", "HR", "MANAGER"],
-//   },
-//   {
-//     id: "tasks-emp",
-//     label: "Tasks",
-//     icon: BriefcaseBusiness,
-//     path: "/tasks",
-//     roles: ["EMPLOYEE"],
-//   },
-//   {
-//     id: "attendance",
-//     label: "Attendance",
-//     icon: CalendarDays,
-//     path: "/attendance",
-//     roles: ["EMPLOYEE", "MANAGER", "HR"],
-//   },
-//   {
-//     id: "employee-attendance",
-//     label: "Employee Attendance",
-//     icon: CalendarDays,
-//     path: "/hr/employees-attendance",
-//     roles: ["HR"],
-//   },
-//   {
-//     id: "employee-leaves",
-//     label: "Employee Leaves",
-//     icon: FileText,
-//     path: "/hr/employees-leaves",
-//     roles: ["HR"],
-//   },
-//   {
-//     id: "team",
-//     label: "Team",
-//     icon: Users,
-//     path: "/hr/team",
-//     roles: ["HR", "ADMIN"],
-//   },
-//   {
-//     id: "leave",
-//     label: "Leave",
-//     icon: FileText,
-//     path: "/leave",
-//     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
-//   },
-//   {
-//     id: "payslips",
-//     label: "Payslips",
-//     icon: CircleDollarSign,
-//     path: "/payslips",
-//     roles: ["EMPLOYEE", "MANAGER", "HR"],
-//   },
-//   {
-//     id: "admin-panel",
-//     label: "Admin",
-//     icon: ShieldCheck,
-//     path: "/admin/settings",
-//     roles: ["ADMIN"],
-//   },
-//   {
-//     id: "settings",
-//     label: "Settings",
-//     icon: Settings,
-//     path: "/settings",
-//     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE"],
-//   },
-// ];
-
 const NAV_CONFIG = [
   {
     id: "dashboard",
@@ -306,7 +226,7 @@ export default function ProfessionalSidebar({ children }) {
       >
         {/* TOP */}
         <div className="flex items-center gap-3 p-4 border-b border-white/5">
-          <img src={MainLogo} className="w-9 h-9 rounded-lg" />
+          <img src={MainLogo} className="w-9 h-9 rounded-lg " />
 
           {(!collapsed || mobile) && (
             <div>
