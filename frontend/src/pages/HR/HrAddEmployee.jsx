@@ -3,10 +3,7 @@ import { X, ChevronDown, Eye, EyeOff } from "lucide-react";
 
 import API from "../../services/api";
 
-import {
-  notifySuccess,
-  notifyError,
-} from "../../utils/toast";
+import { notifySuccess, notifyError } from "../../utils/toast";
 
 function Field({
   label,
@@ -23,23 +20,20 @@ function Field({
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-medium text-slate-700">
-        {label}{" "}
-        {required && (
-          <span className="text-red-500">*</span>
-        )}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
 
       <div className="relative">
         <input
           type={isPasswordType && showPassword ? "text" : type}
           value={value}
-          onChange={(e) =>
-            onChange(e.target.value)
-          }
+          onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           required={required}
           className={`w-full h-10 bg-white border rounded-xl px-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-colors ${
-            error ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-slate-900"
+            error
+              ? "border-red-500 focus:border-red-500"
+              : "border-slate-200 focus:border-slate-900"
           }`}
         />
 
@@ -54,27 +48,15 @@ function Field({
         )}
       </div>
 
-      {error && (
-        <p className="text-xs text-red-500">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
 }
 
-function SelectField({
-  label,
-  value,
-  onChange,
-  children,
-  disabled = false,
-}) {
+function SelectField({ label, value, onChange, children, disabled = false }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-slate-700">
-        {label}
-      </label>
+      <label className="text-xs font-medium text-slate-700">{label}</label>
 
       <div className="relative">
         <select
@@ -105,10 +87,7 @@ function SelectField({
         </select>
 
         <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-          <ChevronDown
-            size={15}
-            className="text-slate-400"
-          />
+          <ChevronDown size={15} className="text-slate-400" />
         </div>
       </div>
     </div>
@@ -222,7 +201,7 @@ export default function HrAddEmployee({
       const res = await API.post("/api/hr/employee", payload);
 
       notifySuccess("Employee added successfully!");
-      
+
       setForm({
         name: "",
         email: "",
@@ -252,13 +231,10 @@ export default function HrAddEmployee({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-xs p-4">
       <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden max-h-[90vh] border border-slate-100">
-        
         {/* MODAL HEADER */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Add Employee
-            </h2>
+            <h2 className="text-xl font-bold text-slate-900">Add Employee</h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Create a new employee system access account profile.
             </p>
@@ -352,26 +328,24 @@ export default function HrAddEmployee({
               {error}
             </div>
           )}
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors disabled:bg-slate-300 cursor-pointer"
+            >
+              {loading ? "Creating..." : "Create Employee"}
+            </button>
+          </div>
         </form>
-
-        {/* MODAL FOOTER */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors disabled:bg-slate-300 cursor-pointer"
-          >
-            {loading ? "Creating..." : "Create Employee"}
-          </button>
-        </div>
       </div>
     </div>
   );
