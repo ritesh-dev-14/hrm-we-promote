@@ -101,3 +101,50 @@ exports.replyFollowUpMessageSchema = Joi.object({
     "string.max": "Message cannot exceed 1000 characters",
   }),
 }).unknown(false);
+
+//
+// 🔥 CREATE COORDINATOR TASK (By Any User)
+// Employees, HR, Managers can create tasks/requirements for coordinator
+//
+exports.createCoordinatorTaskSchema = Joi.object({
+  taskName: Joi.string()
+    .min(3)
+    .max(200)
+    .required()
+    .messages({
+      "string.min": "Task name must be at least 3 characters",
+      "string.max": "Task name cannot exceed 200 characters",
+      "any.required": "Task name is required",
+    }),
+
+  description: Joi.string()
+    .min(5)
+    .max(1000)
+    .required()
+    .messages({
+      "string.min": "Description must be at least 5 characters",
+      "string.max": "Description cannot exceed 1000 characters",
+      "any.required": "Description is required",
+    }),
+
+  startDate: Joi.date()
+    .required()
+    .messages({
+      "any.required": "Start date is required",
+    }),
+
+  endDate: Joi.date()
+    .min(Joi.ref("startDate"))
+    .required()
+    .messages({
+      "any.required": "End date (till date) is required",
+      "date.min": "End date must be after or equal to start date",
+    }),
+
+  assignedToCoordinatorId: Joi.string()
+    .required()
+    .messages({
+      "any.required": "Coordinator ID is required",
+    }),
+})
+  .unknown(false);

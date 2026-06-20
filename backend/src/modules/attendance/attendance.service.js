@@ -85,100 +85,6 @@ exports.startWork = async (userId) => {
   });
 };
 
-// 🔹 STOP WORK
-// exports.stopWork = async (userId) => {
-//   const today = getToday();
-
-//   const attendance = await prisma.attendance.findUnique({
-//     where: { userId_date: { userId, date: today } },
-//     include: { breaks: true },
-//   });
-
-//   if (!attendance || !attendance.startTime) {
-//     throw new ApiError(400, ERRORS.ATTENDANCE.NOT_STARTED);
-//   }
-
-//   const endTime = new Date();
-
-//   let totalHours =
-//     (endTime - attendance.startTime) / (1000 * 60 * 60);
-
-//   let breakHours = 0;
-
-//   attendance.breaks.forEach((b) => {
-//     if (b.endTime) {
-//       breakHours += (b.endTime - b.startTime) / (1000 * 60 * 60);
-//     }
-//   });
-
-//   totalHours -= breakHours;
-
-//   const status = totalHours < 5 ? "HALF_DAY" : "PRESENT";
-
-//   return prisma.attendance.update({
-//     where: { id: attendance.id },
-//     data: {
-//       endTime,
-//       totalHours,
-//       breakHours,
-//       status,
-//     },
-//   });
-// };
-
-// exports.stopWork = async (userId) => {
-//   const today = getToday();
-
-//   const attendance = await prisma.attendance.findUnique({
-//     where: { userId_date: { userId, date: today } },
-//     include: { breaks: true },
-//   });
-
-//   if (!attendance || !attendance.startTime) {
-//     throw new ApiError(400, ERRORS.ATTENDANCE.NOT_STARTED);
-//   }
-
-//   if (attendance.endTime) {
-//     throw new ApiError(400, "Work already stopped");
-//   }
-
-//   // ❌ prevent stop if break active
-//   const activeBreak = attendance.breaks.find((b) => !b.endTime);
-//   if (activeBreak) {
-//     throw new ApiError(400, "End break before stopping work");
-//   }
-
-//   const endTime = new Date();
-
-//   let totalHours =
-//     (endTime - attendance.startTime) / (1000 * 60 * 60);
-
-//   let breakHours = 0;
-
-//   attendance.breaks.forEach((b) => {
-//     breakHours += (b.endTime - b.startTime) / (1000 * 60 * 60);
-//   });
-
-//   totalHours -= breakHours;
-
-//   const status =
-//     totalHours < 4
-//       ? "ABSENT"
-//       : totalHours < 7
-//       ? "HALF_DAY"
-//       : "PRESENT";
-
-//   return prisma.attendance.update({
-//     where: { id: attendance.id },
-//     data: {
-//       endTime,
-//       totalHours,
-//       breakHours,
-//       status,
-//     },
-//   });
-// };
-
 exports.stopWork = async (userId) => {
   const today = getToday();
 
@@ -216,11 +122,14 @@ exports.stopWork = async (userId) => {
 
   totalHours = Math.max(0, totalHours - breakHours);
 
-  // 🔥 FINAL STATUS LOGIC (GOOD)
+  // 🔥 FINAL STATUS LOGIC
+  // PRESENT: > 8 hours
+  // HALF_DAY: > 5 hours
+  // ABSENT: <= 5 hours
   let status = "ABSENT";
 
-  if (totalHours >= 7) status = "PRESENT";
-  else if (totalHours >= 4) status = "HALF_DAY";
+  if (totalHours > 8) status = "PRESENT";
+  else if (totalHours > 5) status = "HALF_DAY";
 
   return prisma.attendance.update({
     where: { id: attendance.id },
@@ -445,10 +354,10 @@ exports.getAttendanceSummary = async (userId) => {
     halfDay,
     absent,
     holiday,
-    totalHours,
-    avgHours: records.length
-      ? totalHours / records.length
-      : 0,
+    totalHours: parseFloat(totalHours.toFixed(2)),
+    avgHours: parseFloat(
+      (records.length ? totalHours / records.length : 0).toFixed(2)
+    ),
   };
 };
 

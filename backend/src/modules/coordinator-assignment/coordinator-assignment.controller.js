@@ -20,6 +20,45 @@ exports.createAssignment = async (req, res, next) => {
 };
 
 //
+// 🔥 CREATE COORDINATOR TASK (By Any User - Employee/HR/Manager)
+//
+exports.createCoordinatorTask = async (req, res, next) => {
+  try {
+    const result = await service.createCoordinatorTask(
+      req.user,
+      req.body
+    );
+    res.status(201).json({
+      success: true,
+      data: result,
+      message: "Coordinator task created successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//
+// 🔥 GET MY TASKS (For Coordinator)
+// Get all tasks/requirements assigned to the coordinator
+//
+exports.getMyTasks = async (req, res, next) => {
+  try {
+    const result = await service.getMyTasks(
+      req.user,
+      req.query
+    );
+    res.json({
+      success: true,
+      data: result,
+      message: "Tasks fetched successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//
 // 🔥 GET ASSIGNMENTS BY COORDINATOR
 //
 exports.getAssignmentsByCoordinator = async (req, res, next) => {

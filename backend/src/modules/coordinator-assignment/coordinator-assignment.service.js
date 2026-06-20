@@ -190,7 +190,223 @@ exports.createAssignment = async (user, body) => {
 };
 
 //
-// 🔥 GET ALL ASSIGNMENTS BY COORDINATOR
+// 🔥 CREATE COORDINATOR TASK (By Any User - Employee/HR/Manager)
+//
+// Any user can create a task/requirement that goes to a coordinator
+// Fields:
+// - taskName: String (required) - Task/requirement name
+// - description: String (required) - Task description
+// - startDate: DateTime (required) - Start date
+// - endDate: DateTime (required) - Till date (deadline)
+// - assignedToCoordinatorId: String (required) - Coordinator ID to assign to
+//
+exports.createCoordinatorTask = async (user, body) => {
+  //
+  // ✅ VERIFY USER IS AUTHENTICATED (Any role can create)
+  //
+  if (!user || !user.id) {
+    throw new ApiError(401, ERRORS.AUTH.UNAUTHORIZED);
+  }
+
+  //
+  // ✅ FIND COORDINATOR USER
+  //
+  const coordinator = await prisma.user.findUnique({
+    where: { id: body.assignedToCoordinatorId },
+  });
+
+  if (!coordinator) {
+    throw new ApiError(400, "Coordinator not found");
+  }
+
+  //
+  // ✅ VERIFY COORDINATOR ROLE
+  //
+  if (coordinator.role !== "COORDINATOR") {
+    throw new ApiError(400, "Selected user is not a coordinator");
+  }
+
+  //
+  // ✅ GET CURRENT USER DETAILS
+  //
+  const createdByUser = await prisma.user.findUnique({
+    where: { id: user.id },
+  });
+
+  if (!createdByUser) {
+    throw new ApiError(400, "User not found");
+  }
+
+  //
+  // ✅ CREATE NEW TASK
+  //
+  const task = await prisma.task.create({
+    data: {
+      projectName: body.taskName,
+      description: body.description,
+      startDate: new Date(body.startDate),
+      endDate: new Date(body.endDate),
+      createdById: user.id,
+      status: "DRAFT",
+    },
+  });
+
+  //
+  // ✅ CREATE COORDINATOR ASSIGNMENT
+  //
+  const assignment = await prisma.coordinatorAssignment.create({
+    data: {
+      taskId: task.id,
+      assignedToId: body.assignedToCoordinatorId,
+      createdById: user.id,
+      assignedBy: createdByUser.name, // Use creator's name
+      completionDate: new Date(body.endDate),
+      employeeNumber: coordinator.employeeId,
+      employeeEmail: coordinator.email,
+      status: "ASSIGNED",
+    },
+    include: {
+      task: true,
+      assignedTo: true,
+      createdBy: true,
+    },
+  });
+
+  //
+  // ✅ SEND NOTIFICATION TO COORDINATOR
+  //
+  await prisma.notification.create({
+    data: {
+      userId: body.assignedToCoordinatorId,
+      title: "New Task Requirement",
+      message: `New requirement "${body.taskName}" created by ${createdByUser.name}. Due date: ${new Date(body.endDate).toLocaleDateString()}`,
+      type: "TASK_ASSIGNED",
+      level: "INFO",
+      entityId: assignment.id,
+    },
+  });
+
+  //
+  // ✅ SEND EMAIL NOTIFICATION (Best Effort)
+  //
+  await sendBestEffortMail(
+    () => mailService.sendCoordinatorAssignmentMail({
+      email: coordinator.email,
+      recipientName: coordinator.name,
+      coordinatorName: createdByUser.name,
+      taskTitle: body.taskName,
+      completionDate: new Date(body.endDate),
+      assignedBy: createdByUser.name,
+      recipientRole: coordinator.role,
+    }),
+    `task requirement ${assignment.id}`
+  );
+
+  return {
+    id: assignment.id,
+    taskId: assignment.taskId,
+    task: {
+      id: assignment.task.id,
+      name: assignment.task.projectName,
+      description: assignment.task.description,
+      startDate: assignment.task.startDate,
+      endDate: assignment.task.endDate,
+    },
+    assignedTo: {
+      id: assignment.assignedTo.id,
+      name: assignment.assignedTo.name,
+      email: assignment.assignedTo.email,
+      employeeId: assignment.assignedTo.employeeId,
+      role: assignment.assignedTo.role,
+    },
+    createdBy: {
+      id: assignment.createdBy.id,
+      name: assignment.createdBy.name,
+      email: assignment.createdBy.email,
+      role: assignment.createdBy.role,
+    },
+    assignedBy: assignment.assignedBy,
+    assignedTime: assignment.assignedTime,
+    completionDate: assignment.completionDate,
+    status: assignment.status,
+  };
+};
+
+//
+// 🔥 GET MY TASKS (For Coordinator)
+//
+// Get all tasks/requirements assigned TO this coordinator
+// Created by other users (employees, HR, managers)
+//
+exports.getMyTasks = async (user, filters = {}) => {
+  //
+  // ✅ ONLY COORDINATOR CAN VIEW THEIR TASKS
+  //
+  if (user.role !== "COORDINATOR") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const {
+    status,
+    skip = 0,
+    take = 10,
+    sortBy = "assignedTime",
+    sortOrder = "desc",
+  } = filters;
+
+  const where = {
+    assignedToId: user.id, // Tasks assigned TO this coordinator
+    ...(status && { status }),
+  };
+
+  const [assignments, total] = await Promise.all([
+    prisma.coordinatorAssignment.findMany({
+      where,
+      include: {
+        task: true,
+        createdBy: true,
+      },
+      skip: parseInt(skip),
+      take: parseInt(take),
+      orderBy: { [sortBy]: sortOrder },
+    }),
+    prisma.coordinatorAssignment.count({ where }),
+  ]);
+
+  return {
+    data: assignments.map((a) => ({
+      id: a.id,
+      taskId: a.taskId,
+      task: {
+        id: a.task.id,
+        name: a.task.projectName,
+        description: a.task.description,
+        startDate: a.task.startDate,
+        endDate: a.task.endDate,
+      },
+      createdBy: {
+        id: a.createdBy.id,
+        name: a.createdBy.name,
+        email: a.createdBy.email,
+        role: a.createdBy.role,
+      },
+      assignedBy: a.assignedBy,
+      assignedTime: a.assignedTime,
+      completionDate: a.completionDate,
+      status: a.status,
+      submittedAt: a.submittedAt,
+      completedAt: a.completedAt,
+      reason: a.reason,
+    })),
+    pagination: {
+      skip: parseInt(skip),
+      take: parseInt(take),
+      total,
+      pages: Math.ceil(total / parseInt(take)),
+    },
+  };
+};
+
 //
 exports.getAssignmentsByCoordinator = async (
   user,

@@ -15,6 +15,7 @@ const controller =
 const {
   createAssignmentSchema,
   updateAssignmentStatusSchema,
+  createCoordinatorTaskSchema,
 } = require("./coordinator-assignment.validation");
 const {
   sendFollowUpMessageSchema,
@@ -31,6 +32,28 @@ router.post(
   role("COORDINATOR"),
   validate(createAssignmentSchema),
   controller.createAssignment
+);
+
+//
+// 🔥 CREATE COORDINATOR TASK (By Any User)
+// Employees, HR, Managers can create requirements/tasks for coordinator
+//
+router.post(
+  "/create-requirement",
+  auth,
+  validate(createCoordinatorTaskSchema),
+  controller.createCoordinatorTask
+);
+
+//
+// 🔥 GET MY TASKS (For Coordinator)
+// Get all tasks/requirements assigned to THIS coordinator
+//
+router.get(
+  "/my-tasks",
+  auth,
+  role("COORDINATOR"),
+  controller.getMyTasks
 );
 
 //
