@@ -60,13 +60,29 @@ exports.createEmployeeSchema = Joi.object({
   password: Joi.string().min(6).required(),
 
   role: Joi.string()
-    .valid("EMPLOYEE") // 🔥 restrict here
+    .valid("EMPLOYEE")
     .required(),
 
-  department: Joi.string().min(2).max(50).required(),
+  department: Joi.alternatives()
+    .try(
+      Joi.string().min(2).max(50),
+      Joi.array().items(Joi.string().min(2).max(50)).min(1)
+    )
+    .required(),
+
+  departments: Joi.alternatives()
+    .try(
+      Joi.string().min(2).max(50),
+      Joi.array().items(Joi.string().min(2).max(50)).min(1)
+    ),
+
   position: Joi.string().min(2).max(50).required(),
 
-  managerId: Joi.string().uuid().optional(), // 🔥 UUID validation
+  managerId: Joi.alternatives()
+    .try(Joi.string().uuid(), Joi.array().items(Joi.string().uuid()).min(1)),
+
+  managerIds: Joi.alternatives()
+    .try(Joi.string().uuid(), Joi.array().items(Joi.string().uuid()).min(1)),
 });
 
 // 🔹 Update Employee
@@ -83,11 +99,25 @@ exports.updateEmployeeSchema =
 
     password: Joi.string().min(6),
 
-    department: Joi.string(),
+    department: Joi.alternatives()
+      .try(
+        Joi.string().min(2).max(50),
+        Joi.array().items(Joi.string().min(2).max(50)).min(1)
+      ),
+
+    departments: Joi.alternatives()
+      .try(
+        Joi.string().min(2).max(50),
+        Joi.array().items(Joi.string().min(2).max(50)).min(1)
+      ),
 
     position: Joi.string(),
 
-    managerId: Joi.string(),
+    managerId: Joi.alternatives()
+      .try(Joi.string().uuid(), Joi.array().items(Joi.string().uuid()).min(1)),
+
+    managerIds: Joi.alternatives()
+      .try(Joi.string().uuid(), Joi.array().items(Joi.string().uuid()).min(1)),
 
     role: Joi.string().valid(
       "EMPLOYEE",

@@ -69,6 +69,8 @@ function SelectField({
   onChange,
   children,
   disabled = false,
+  multiple = false,
+  placeholder = "",
 }) {
   return (
     <div className="space-y-1.5">
@@ -81,10 +83,10 @@ function SelectField({
           value={value}
           onChange={onChange}
           disabled={disabled}
-          className="
+          multiple={multiple}
+          className={`
             appearance-none
             w-full
-            h-10
             bg-white
             border
             border-slate-200
@@ -99,18 +101,25 @@ function SelectField({
             focus:border-slate-900
             disabled:opacity-50
             cursor-pointer
-          "
+            ${multiple ? "min-h-[120px] py-2" : "h-10"}
+          `}
         >
           {children}
         </select>
 
-        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-          <ChevronDown
-            size={15}
-            className="text-slate-400"
-          />
-        </div>
+        {!multiple && (
+          <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+            <ChevronDown
+              size={15}
+              className="text-slate-400"
+            />
+          </div>
+        )}
       </div>
+
+      {placeholder && (
+        <p className="text-[11px] text-slate-500">{placeholder}</p>
+      )}
     </div>
   );
 }
@@ -125,9 +134,9 @@ export default function HrAddEmployee({
     name: "",
     email: "",
     password: "",
-    department: "",
+    department: [],
     position: "",
-    managerId: "",
+    managerIds: [],
   });
 
   const [departments, setDepartments] = useState([]);
@@ -183,18 +192,26 @@ export default function HrAddEmployee({
         name: initialData.name || "",
         email: initialData.email || "",
         password: "",
-        department: initialData.department?.name || "",
+        department: initialData.departments?.length
+          ? initialData.departments.map((dept) => dept.name || dept)
+          : initialData.department?.name
+            ? [initialData.department.name]
+            : [],
         position: initialData.position || "",
-        managerId: initialData.managerId || "",
+        managerIds: initialData.managers?.length
+          ? initialData.managers.map((mgr) => mgr.id || mgr)
+          : initialData.managerId
+            ? [initialData.managerId]
+            : [],
       });
     } else {
       setForm({
         name: "",
         email: "",
         password: "",
-        department: "",
+        department: [],
         position: "",
-        managerId: "",
+        managerIds: [],
       });
     }
 
@@ -214,8 +231,8 @@ export default function HrAddEmployee({
         role: "EMPLOYEE",
         department: form.department,
         position: form.position,
-        ...(form.managerId && {
-          managerId: form.managerId,
+        ...(form.managerIds.length > 0 && {
+          managerIds: form.managerIds,
         }),
       };
 
@@ -227,9 +244,9 @@ export default function HrAddEmployee({
         name: "",
         email: "",
         password: "",
-        department: "",
+        department: [],
         position: "",
-        managerId: "",
+        managerIds: [],
       });
 
       onClose();
@@ -307,13 +324,14 @@ export default function HrAddEmployee({
             <SelectField
               label="Department"
               value={form.department}
-              onChange={(e) => updateForm("department", e.target.value)}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+                updateForm("department", selected);
+              }}
               disabled={fetchingDepartments}
+              multiple
+              placeholder="Hold Ctrl/Cmd to select multiple departments"
             >
-              <option value="">
-                {fetchingDepartments ? "Loading..." : "Select Department"}
-              </option>
-
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.name}>
                   {dept.name}
@@ -331,15 +349,16 @@ export default function HrAddEmployee({
           </div>
 
           <SelectField
-            label="Assign Reporting Manager"
-            value={form.managerId}
-            onChange={(e) => updateForm("managerId", e.target.value)}
+            label="Assign Reporting Managers"
+            value={form.managerIds}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+              updateForm("managerIds", selected);
+            }}
             disabled={fetchingManagers}
+            multiple
+            placeholder="Hold Ctrl/Cmd to select multiple managers"
           >
-            <option value="">
-              {fetchingManagers ? "Loading..." : "-- No Reporting Manager --"}
-            </option>
-
             {managers.map((manager) => (
               <option key={manager.id} value={manager.id}>
                 {manager.name}
@@ -365,7 +384,8 @@ export default function HrAddEmployee({
           </button>
 
           <button
-            type="submit"
+            type="button"
+            onClick={(e) => handleSubmit(e)}
             disabled={loading}
             className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors disabled:bg-slate-300 cursor-pointer"
           >
