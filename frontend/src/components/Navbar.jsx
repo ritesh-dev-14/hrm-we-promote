@@ -105,13 +105,13 @@ const NAV_CONFIG = [
     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
   },
 
-  {
-    id: "payslips",
-    label: "Payslips",
-    icon: CircleDollarSign,
-    path: "/payslips",
-    roles: ["EMPLOYEE", "MANAGER", "HR", "COORDINATOR"],
-  },
+  // {
+  //   id: "payslips",
+  //   label: "Payslips",
+  //   icon: CircleDollarSign,
+  //   path: "/payslips",
+  //   roles: ["EMPLOYEE", "MANAGER", "HR", "COORDINATOR"],
+  // },
 
   {
     id: "admin-panel",
@@ -121,13 +121,13 @@ const NAV_CONFIG = [
     roles: ["ADMIN"],
   },
 
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-    path: "/settings",
-    roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
-  },
+  // {
+  //   id: "settings",
+  //   label: "Settings",
+  //   icon: Settings,
+  //   path: "/settings",
+  //   roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
+  // },
 ];
 
 const WIDE = 260;

@@ -3,8 +3,8 @@ import { Download } from "lucide-react";
 const PAYSLIP_DATA = [
   {
     period: "January 2026",
-    basicSalary: "$1,000",
-    netSalary: "$1,000",
+    basicSalary: "$5,000",
+    netSalary: "$5,000",
   }
 ];
 
