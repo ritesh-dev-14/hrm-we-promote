@@ -810,6 +810,37 @@ exports.listAllAssignments = async (user, filters = {}) => {
 };
 
 //
+// 🔥 GET ALL COORDINATORS
+// Accessible to all authenticated users except coordinators
+//
+exports.getAllCoordinators = async (user) => {
+  if (user.role === "COORDINATOR") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const coordinators = await prisma.user.findMany({
+    where: {
+      role: "COORDINATOR",
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      employeeId: true,
+      role: true,
+      department: true,
+      position: true,
+    },
+    orderBy: [{ name: "asc" }],
+  });
+
+  return {
+    data: coordinators,
+    total: coordinators.length,
+  };
+};
+
+//
 // 🔥 GET ALL USERS (HR, MANAGER, EMPLOYEES)
 // Coordinator can see all users to assign tasks
 //

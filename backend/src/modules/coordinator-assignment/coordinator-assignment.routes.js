@@ -100,6 +100,16 @@ router.get(
 );
 
 //
+// 🔥 GET ALL COORDINATORS
+// Accessible to all authenticated users except coordinators
+//
+router.get(
+  "/coordinators",
+  auth,
+  controller.getAllCoordinators
+);
+
+//
 // 🔥 GET ALL USERS (HR, MANAGER, EMPLOYEES)
 // Coordinator can see all users to assign tasks to
 //

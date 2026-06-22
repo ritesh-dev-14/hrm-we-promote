@@ -162,6 +162,23 @@ exports.listAllAssignments = async (req, res, next) => {
 };
 
 //
+// 🔥 GET ALL COORDINATORS
+//
+exports.getAllCoordinators = async (req, res, next) => {
+  try {
+    const result = await service.getAllCoordinators(req.user);
+    res.json({
+      success: true,
+      data: result.data,
+      total: result.total,
+      message: "Coordinators fetched successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//
 // 🔥 GET ALL USERS (HR, MANAGER, EMPLOYEES)
 //
 exports.getAllUsers = async (req, res, next) => {
