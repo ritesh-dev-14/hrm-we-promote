@@ -37,9 +37,20 @@ const serializeEmployeeRecord = (record) => {
   };
 };
 
+const serializeManagerRecord = (record) => {
+  const departments =
+    record.userDepartments?.map((item) => item.department) || [];
+
+  return {
+    ...record,
+    department: departments[0] || record.department || null,
+    departments,
+    userDepartments: undefined,
+  };
+};
+
 // 🔹 Manager Services
 exports.createManager = async (user, body) => {
-  // Check if email already exists
   const existingUser = await prisma.user.findUnique({
     where: { email: body.email },
   });
@@ -47,30 +58,31 @@ exports.createManager = async (user, body) => {
     throw new ApiError(400, ERRORS.USER.DUPLICATE_EMAIL);
   }
 
-  // Hash password only if provided
+  const departmentNames = parseArrayField(
+    body.department || body.departments
+  );
+
+  if (departmentNames.length === 0) {
+    throw new ApiError(400, "At least one department is required");
+  }
+
   let hashed;
   if (body.password) {
     hashed = await bcrypt.hash(body.password, 10);
   }
 
-  // Check if calling user exists before connecting createdBy to avoid P2025
-  const creator = user && user.id ? await prisma.user.findUnique({ where: { id: user.id } }) : null;
+  const creator = user && user.id
+    ? await prisma.user.findUnique({ where: { id: user.id } })
+    : null;
 
-  return prisma.user.create({
+  const createdManager = await prisma.user.create({
     data: {
       employeeId: body.employeeId || "MGR-" + Date.now(),
       name: body.name,
       email: body.email,
       ...(hashed && { password: hashed }),
       role: "MANAGER",
-      ...(body.department && {
-        department: {
-          connectOrCreate: {
-            where: { name: body.department },
-            create: { name: body.department },
-          },
-        },
-      }),
+      position: body.position || null,
       ...(creator ? { createdBy: { connect: { id: creator.id } } } : {}),
     },
     select: {
@@ -79,14 +91,67 @@ exports.createManager = async (user, body) => {
       name: true,
       email: true,
       role: true,
-      department: true,
+      position: true,
       createdAt: true,
+      userDepartments: {
+        select: {
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
+
+  const departmentRecords = await Promise.all(
+    departmentNames.map(async (departmentName) => {
+      return prisma.department.upsert({
+        where: { name: departmentName },
+        update: {},
+        create: { name: departmentName },
+      });
+    })
+  );
+
+  await prisma.userDepartment.createMany({
+    data: departmentRecords.map((department) => ({
+      userId: createdManager.id,
+      departmentId: department.id,
+    })),
+    skipDuplicates: true,
+  });
+
+  const manager = await prisma.user.findUnique({
+    where: { id: createdManager.id },
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      email: true,
+      role: true,
+      position: true,
+      createdAt: true,
+      userDepartments: {
+        select: {
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return serializeManagerRecord(manager);
 };
 
 exports.getManagers = async (user) => {
-  return prisma.user.findMany({
+  const managers = await prisma.user.findMany({
     where: {
       role: "MANAGER",
     },
@@ -96,10 +161,22 @@ exports.getManagers = async (user) => {
       name: true,
       email: true,
       role: true,
-      department: true,
+      position: true,
       createdAt: true,
+      userDepartments: {
+        select: {
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
+
+  return managers.map(serializeManagerRecord);
 };
 
 exports.getManager = async (employeeId) => {
@@ -111,8 +188,18 @@ exports.getManager = async (employeeId) => {
       name: true,
       email: true,
       role: true,
-      department: true,
+      position: true,
       createdAt: true,
+      userDepartments: {
+        select: {
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -124,7 +211,7 @@ exports.getManager = async (employeeId) => {
     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 
-  return manager;
+  return serializeManagerRecord(manager);
 };
 
 exports.updateManager = async (employeeId, body) => {
@@ -140,48 +227,80 @@ exports.updateManager = async (employeeId, body) => {
     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 
-  //
-  // 🔥 HASH PASSWORD
-  //
-  let hashedPassword;
+  const departmentNames = parseArrayField(
+    body.department || body.departments
+  );
 
+  const shouldUpdateDepartments =
+    Object.prototype.hasOwnProperty.call(body, "department") ||
+    Object.prototype.hasOwnProperty.call(body, "departments");
+
+  if (shouldUpdateDepartments && departmentNames.length === 0) {
+    throw new ApiError(400, "At least one department is required");
+  }
+
+  let hashedPassword;
   if (body.password) {
     hashedPassword = await bcrypt.hash(body.password, 10);
   }
 
-  return prisma.user.update({
-    where: { employeeId },
+  const updatedManager = await prisma.$transaction(async (tx) => {
+    if (shouldUpdateDepartments) {
+      await tx.userDepartment.deleteMany({
+        where: { userId: manager.id },
+      });
 
-    data: {
-      name: body.name,
-      email: body.email,
-      ...(body.department && {
-        department: {
-          connectOrCreate: {
-            where: { name: body.department },
-            create: { name: body.department },
+      const departmentRecords = await Promise.all(
+        departmentNames.map(async (departmentName) => {
+          return tx.department.upsert({
+            where: { name: departmentName },
+            update: {},
+            create: { name: departmentName },
+          });
+        })
+      );
+
+      await tx.userDepartment.createMany({
+        data: departmentRecords.map((department) => ({
+          userId: manager.id,
+          departmentId: department.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    return tx.user.update({
+      where: { employeeId },
+      data: {
+        name: body.name,
+        email: body.email,
+        position: body.position,
+        role: body.role,
+        ...(hashedPassword && { password: hashedPassword }),
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        email: true,
+        role: true,
+        position: true,
+        createdAt: true,
+        userDepartments: {
+          select: {
+            department: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
-      }),
-      position: body.position,
-      role: body.role,
-
-      ...(hashedPassword && {
-        password: hashedPassword,
-      }),
-    },
-
-    select: {
-      id: true,
-      employeeId: true,
-      name: true,
-      email: true,
-      role: true,
-      department: true,
-      position: true,
-      createdAt: true,
-    },
+      },
+    });
   });
+
+  return serializeManagerRecord(updatedManager);
 };
 
 exports.deleteManager = async (employeeId) => {

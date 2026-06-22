@@ -6,34 +6,44 @@ exports.createManagerSchema = Joi.object({
   name: Joi.string().min(3).max(50).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
-  department: Joi.string().min(2).max(50).required(),
+
+  department: Joi.alternatives()
+    .try(
+      Joi.string().min(2).max(50),
+      Joi.array().items(Joi.string().min(2).max(50)).min(1)
+    )
+    .required(),
+
+  departments: Joi.alternatives()
+    .try(
+      Joi.string().min(2).max(50),
+      Joi.array().items(Joi.string().min(2).max(50)).min(1)
+    ),
+
+  position: Joi.string().min(2).max(50),
 });
 
-// 🔹 Update Manager
-// exports.updateManagerSchema = Joi.object({
-//   name: Joi.string().min(3).max(50),
-//   email: Joi.string().email(),
-//   department: Joi.string().min(2).max(50),
-// });
+exports.updateManagerSchema = Joi.object({
+  name: Joi.string(),
+  email: Joi.string().email(),
+  password: Joi.string().min(6),
 
-exports.updateManagerSchema =
-  Joi.object({
-    name: Joi.string(),
-
-    email: Joi.string().email(),
-
-    password: Joi.string().min(6),
-
-    department: Joi.string(),
-
-    position: Joi.string(),
-
-    role: Joi.string().valid(
-      "MANAGER",
-      "HR",
-      "EMPLOYEE"
+  department: Joi.alternatives()
+    .try(
+      Joi.string().min(2).max(50),
+      Joi.array().items(Joi.string().min(2).max(50)).min(1)
     ),
-  });
+
+  departments: Joi.alternatives()
+    .try(
+      Joi.string().min(2).max(50),
+      Joi.array().items(Joi.string().min(2).max(50)).min(1)
+    ),
+
+  position: Joi.string(),
+
+  role: Joi.string().valid("MANAGER", "HR", "EMPLOYEE"),
+});
 
 // exports.createEmployeeSchema = Joi.object({
 //   employeeId: Joi.string().min(3).max(50),
