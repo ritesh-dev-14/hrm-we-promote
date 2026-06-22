@@ -41,7 +41,14 @@ exports.getEmployees = async (user) => {
   return prisma.user.findMany({
     where: {
       role: "EMPLOYEE",
-      managerId: user.id,
+      OR: [
+        { managerId: user.id },
+        {
+          employeeManagers: {
+            some: { managerId: user.id },
+          },
+        },
+      ],
     },
   });
 };
@@ -81,26 +88,26 @@ exports.deleteEmployee = async (id) => {
 
 exports.getMyEmployees =
   async (user) => {
-
     const employees =
       await prisma.user.findMany({
         where: {
-          managerId: user.id,
-
           role: "EMPLOYEE",
+          OR: [
+            { managerId: user.id },
+            {
+              employeeManagers: {
+                some: { managerId: user.id },
+              },
+            },
+          ],
         },
 
         select: {
           id: true,
-
           employeeId: true,
-
           name: true,
-
           email: true,
-
           department: true,
-
           position: true,
         },
 
@@ -148,8 +155,15 @@ exports.getDashboardStats = async (user) => {
   // Get employees under this manager
   const employees = await prisma.user.findMany({
     where: {
-      managerId: user.id,
       role: "EMPLOYEE",
+      OR: [
+        { managerId: user.id },
+        {
+          employeeManagers: {
+            some: { managerId: user.id },
+          },
+        },
+      ],
     },
     select: {
       id: true,
