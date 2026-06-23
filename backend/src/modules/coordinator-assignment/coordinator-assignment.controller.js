@@ -59,6 +59,25 @@ exports.getMyTasks = async (req, res, next) => {
 };
 
 //
+// 🔥 GET TASKS CREATED BY CURRENT USER
+//
+exports.getMyCreatedTasks = async (req, res, next) => {
+  try {
+    const result = await service.getMyCreatedTasks(
+      req.user,
+      req.query
+    );
+    res.json({
+      success: true,
+      data: result,
+      message: "Created tasks fetched successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//
 // 🔥 GET ASSIGNMENTS BY COORDINATOR
 //
 exports.getAssignmentsByCoordinator = async (req, res, next) => {

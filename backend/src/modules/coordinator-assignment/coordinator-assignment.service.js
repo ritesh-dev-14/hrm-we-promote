@@ -545,6 +545,71 @@ exports.getAssignmentsByAssignedTo = async (
 };
 
 //
+// 🔥 GET TASKS CREATED BY CURRENT USER
+//
+exports.getMyCreatedTasks = async (user, filters = {}) => {
+  const {
+    status,
+    skip = 0,
+    take = 10,
+    sortBy = "assignedTime",
+    sortOrder = "desc",
+  } = filters;
+
+  const where = {
+    createdById: user.id,
+    ...(status && { status }),
+  };
+
+  const [assignments, total] = await Promise.all([
+    prisma.coordinatorAssignment.findMany({
+      where,
+      include: {
+        task: true,
+        assignedTo: true,
+      },
+      skip: parseInt(skip),
+      take: parseInt(take),
+      orderBy: { [sortBy]: sortOrder },
+    }),
+    prisma.coordinatorAssignment.count({ where }),
+  ]);
+
+  return {
+    data: assignments.map((a) => ({
+      id: a.id,
+      taskId: a.taskId,
+      task: {
+        id: a.task.id,
+        projectName: a.task.projectName,
+        description: a.task.description,
+        status: a.task.status,
+      },
+      assignedTo: {
+        id: a.assignedTo.id,
+        name: a.assignedTo.name,
+        email: a.assignedTo.email,
+        employeeId: a.assignedTo.employeeId,
+        role: a.assignedTo.role,
+      },
+      assignedBy: a.assignedBy,
+      assignedTime: a.assignedTime,
+      completionDate: a.completionDate,
+      reason: a.reason,
+      status: a.status,
+      submittedAt: a.submittedAt,
+      completedAt: a.completedAt,
+    })),
+    pagination: {
+      skip: parseInt(skip),
+      take: parseInt(take),
+      total,
+      hasMore: parseInt(skip) + parseInt(take) < total,
+    },
+  };
+};
+
+//
 // 🔥 GET SINGLE ASSIGNMENT
 //
 exports.getAssignmentById = async (user, assignmentId) => {

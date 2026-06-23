@@ -57,6 +57,16 @@ router.get(
 );
 
 //
+// 🔥 GET TASKS CREATED BY CURRENT USER
+// Employee/Manager/HR can fetch coordinator tasks they created
+//
+router.get(
+  "/my-created",
+  auth,
+  controller.getMyCreatedTasks
+);
+
+//
 // 🔥 GET ASSIGNMENTS BY COORDINATOR
 // Get all assignments created by this coordinator
 //
