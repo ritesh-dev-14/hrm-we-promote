@@ -152,6 +152,170 @@ async function main() {
     },
   });
 
+  // =========================
+  // EA - EXECUTIVE ASSISTANT
+  // =========================
+
+  await prisma.user.upsert({
+    where: { email: "ea.manager@company.com" },
+    update: {
+      password,
+      departmentId: departments["Social Media"].id,
+      position: "Executive Assistant",
+    },
+    create: {
+      employeeId: "EA-001",
+      name: "EA User",
+      email: "ea.manager@company.com",
+      password,
+      role: "EA",
+      position: "Executive Assistant",
+      departmentId: departments["Social Media"].id,
+    },
+  });
+
+  const shootWorkspaceOwner = await prisma.user.findUnique({
+    where: { email: "smmwepromote@gmail.com" },
+  });
+
+  if (!shootWorkspaceOwner) {
+    throw new Error("Shoot workspace owner not found");
+  }
+
+  const shootCoordinator = await prisma.user.findUnique({
+    where: { email: "ea.wepromote001@gmail.com" },
+  });
+
+  if (!shootCoordinator) {
+    throw new Error("Shoot coordinator not found");
+  }
+
+  const shootWorkspace = await prisma.shootWorkspace.upsert({
+    where: { id: "SHOOT-WORKSPACE-001" },
+    update: {
+      name: "Social Media Shoot Workspace",
+      description: "Workspace for social media shoot planning and execution.",
+      createdById: shootWorkspaceOwner.id,
+    },
+    create: {
+      id: "SHOOT-WORKSPACE-001",
+      name: "Social Media Shoot Workspace",
+      description: "Workspace for social media shoot planning and execution.",
+      createdById: shootWorkspaceOwner.id,
+    },
+  });
+
+  await prisma.shootWorkspaceMember.upsert({
+    where: {
+      workspaceId_userId: {
+        workspaceId: shootWorkspace.id,
+        userId: shootWorkspaceOwner.id,
+      },
+    },
+    update: {},
+    create: {
+      workspaceId: shootWorkspace.id,
+      userId: shootWorkspaceOwner.id,
+    },
+  });
+
+  await prisma.shootWorkspaceMember.upsert({
+    where: {
+      workspaceId_userId: {
+        workspaceId: shootWorkspace.id,
+        userId: shootCoordinator.id,
+      },
+    },
+    update: {},
+    create: {
+      workspaceId: shootWorkspace.id,
+      userId: shootCoordinator.id,
+    },
+  });
+
+  const shootTask = await prisma.shootTask.upsert({
+    where: { id: "SHOOT-TASK-001" },
+    update: {
+      title: "Social Media Shoot Plan",
+      description: "Create and organize shoot assets for the upcoming campaign.",
+      noOfPics: 6,
+      noOfReels: 2,
+      workspaceId: shootWorkspace.id,
+      createdById: shootWorkspaceOwner.id,
+    },
+    create: {
+      id: "SHOOT-TASK-001",
+      workspaceId: shootWorkspace.id,
+      title: "Social Media Shoot Plan",
+      description: "Create and organize shoot assets for the upcoming campaign.",
+      noOfPics: 6,
+      noOfReels: 2,
+      createdById: shootWorkspaceOwner.id,
+    },
+  });
+
+  await prisma.shootSubTask.upsert({
+    where: { id: "SHOOT-SUBTASK-001" },
+    update: {
+      title: "Capture product photos",
+      description: "Shoot product stills with branded setup.",
+      type: "PIC",
+      referenceLinks: ["https://example.com/reference/product-photos"],
+      videoType: "HORIZONTAL",
+      setupType: "PREMIUM",
+      submissionLinks: [],
+      unableToSubmitReason: null,
+      submittedById: null,
+      submittedAt: null,
+      taskId: shootTask.id,
+    },
+    create: {
+      id: "SHOOT-SUBTASK-001",
+      taskId: shootTask.id,
+      title: "Capture product photos",
+      description: "Shoot product stills with branded setup.",
+      type: "PIC",
+      referenceLinks: ["https://example.com/reference/product-photos"],
+      videoType: "HORIZONTAL",
+      setupType: "PREMIUM",
+      submissionLinks: [],
+      unableToSubmitReason: null,
+      submittedById: null,
+      submittedAt: null,
+    },
+  });
+
+  await prisma.shootSubTask.upsert({
+    where: { id: "SHOOT-SUBTASK-002" },
+    update: {
+      title: "Film Instagram Reel",
+      description: "Record a vertical product reel for social media.",
+      type: "REEL",
+      referenceLinks: ["https://example.com/reference/instagram-reel"],
+      videoType: "VERTICAL",
+      setupType: "PHONE",
+      submissionLinks: [],
+      unableToSubmitReason: null,
+      submittedById: null,
+      submittedAt: null,
+      taskId: shootTask.id,
+    },
+    create: {
+      id: "SHOOT-SUBTASK-002",
+      taskId: shootTask.id,
+      title: "Film Instagram Reel",
+      description: "Record a vertical product reel for social media.",
+      type: "REEL",
+      referenceLinks: ["https://example.com/reference/instagram-reel"],
+      videoType: "VERTICAL",
+      setupType: "PHONE",
+      submissionLinks: [],
+      unableToSubmitReason: null,
+      submittedById: null,
+      submittedAt: null,
+    },
+  });
+
   console.log("🌱 Seed data inserted successfully");
 }
 

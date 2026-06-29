@@ -27,8 +27,15 @@ model User {
   leaveBalance            LeaveBalance[]
   notifications           Notification[]
   createdTasks            Task[]                    @relation("CreatedTasks")
-  sentFollowUps           CoordinatorFollowUp[]
-  assignments             TaskAssignment[]
+  projectAssignments      ProjectAssignment[]       @relation("ProjectAssignmentManager")
+  createdProjects              Project[]                 @relation("CreatedProjects")
+  createdProjectMonthlySheets  ProjectMonthlySheet[]     @relation("CreatedProjectMonthlySheets")
+  createdShootWorkspaces       ShootWorkspace[]          @relation("UserCreatedShootWorkspaces")
+  createdShootTasks            ShootTask[]               @relation("UserCreatedShootTasks")
+  submittedShootSubTasks       ShootSubTask[]            @relation("UserSubmittedShootSubTasks")
+  shootWorkspaceMemberships    ShootWorkspaceMember[]    @relation("UserShootWorkspaceMembers")
+  sentFollowUps                CoordinatorFollowUp[]
+  assignments                  TaskAssignment[]
   employeeEscalations     TaskEscalation[]          @relation("EmployeeEscalation")
   managerEscalations      TaskEscalation[]          @relation("ManagerEscalation")
   taskItemAssignments     TaskItemAssignment[]
@@ -256,12 +263,166 @@ model TaskItemAssignment {
   @@index([userId])
 }
 
+model ShootWorkspace {
+  id          String                 @id @default(uuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  createdBy User                   @relation("UserCreatedShootWorkspaces", fields: [createdById], references: [id])
+  members   ShootWorkspaceMember[]
+  tasks     ShootTask[]
+
+  @@index([createdById])
+}
+
+model ShootWorkspaceMember {
+  workspaceId String
+  userId      String
+  assignedAt  DateTime @default(now())
+
+  workspace ShootWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User           @relation("UserShootWorkspaceMembers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+  @@index([userId])
+}
+
+model ShootTask {
+  id          String    @id @default(uuid())
+  workspaceId String
+  title       String
+  description String?
+  noOfPics    Int       @default(0)
+  noOfReels   Int       @default(0)
+  date        String?
+  arrivalTime String?
+  location    String?
+  setupType   SetupType?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace ShootWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User           @relation("UserCreatedShootTasks", fields: [createdById], references: [id])
+  subtasks  ShootSubTask[]
+
+  @@index([workspaceId])
+  @@index([createdById])
+}
+
+model ShootSubTask {
+  id                     String           @id @default(uuid())
+  taskId                 String
+  title                  String
+  description            String?
+  type                   ShootSubTaskType
+  referenceLinks         String[]
+  videoType              VideoType
+  setupType              SetupType?        @default(PREMIUM)
+  submissionLinks        String[]
+  unableToSubmitReason   String?
+  submittedById          String?
+  submittedAt            DateTime?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  task ShootTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submittedBy User? @relation("UserSubmittedShootSubTasks", fields: [submittedById], references: [id])
+
+  @@index([taskId])
+  @@index([submittedById])
+}
+
 model Department {
   id              String            @id @default(uuid())
   name            String            @unique
   createdAt       DateTime          @default(now())
   users           User[]
+  projects        Project[]
   userDepartments UserDepartment[]  @relation("DepartmentUsers")
+}
+
+model Project {
+  id            String             @id @default(uuid())
+  projectName   String
+  description   String?
+  departmentId  String
+  startDate     DateTime
+  endDate       DateTime
+  renewalDate   DateTime?
+  frequency     String?
+  clientName    String?
+  location      String?
+  phone         String?
+  fbEmail       String?
+  fbPassword    String?
+  instaEmail    String?
+  instaPassword String?
+  projectStartDate DateTime?
+  createdById   String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  department    Department         @relation(fields: [departmentId], references: [id])
+  createdBy     User               @relation("CreatedProjects", fields: [createdById], references: [id])
+  assignments   ProjectAssignment[]
+  monthlySheets ProjectMonthlySheet[]
+}
+
+model ProjectAssignment {
+  id         String   @id @default(uuid())
+  projectId  String
+  managerId  String
+  assignedAt DateTime @default(now())
+
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  manager    User     @relation("ProjectAssignmentManager", fields: [managerId], references: [id])
+
+  @@unique([projectId, managerId])
+  @@index([managerId])
+  @@index([projectId])
+}
+
+model ProjectMonthlySheet {
+  id                 String                      @id @default(uuid())
+  projectId          String
+  month              Int
+  year               Int
+  totalReels         Int
+  totalPosts         Int
+  totalReelsUploaded Int
+  totalPostsUploaded Int
+  moodBoardLink      String
+  createdById        String
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User @relation("CreatedProjectMonthlySheets", fields: [createdById], references: [id])
+  days ProjectMonthlySheetDay[]
+
+  @@unique([projectId, month, year])
+  @@index([projectId])
+  @@index([createdById])
+}
+
+model ProjectMonthlySheetDay {
+  id          String             @id @default(uuid())
+  sheetId     String
+  date        DateTime
+  reelType    MediaSource
+  postType    MediaSource
+  script      String?
+  description String?
+  createdAt   DateTime           @default(now())
+
+  sheet ProjectMonthlySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+
+  @@index([sheetId])
+  @@unique([sheetId, date])
 }
 
 model UserDepartment {
@@ -369,6 +530,7 @@ enum EscalationStatus {
 enum Role {
   ADMIN
   HR
+  EA
   MANAGER
   EMPLOYEE
   COORDINATOR
@@ -456,6 +618,21 @@ enum Priority {
   LOW
   MEDIUM
   HIGH
+}
+
+enum MediaSource {
+  SHOOT
+  AI
+}
+
+enum ShootSubTaskType {
+  PIC
+  REEL
+}
+
+enum VideoType {
+  HORIZONTAL
+  VERTICAL
 }
 
 enum EscalationType {

@@ -1,0 +1,108 @@
+{
+  "info": {
+    "_postman_id": "project-monthly-sheet-api",
+    "name": "Project Monthly Sheet API",
+    "description": "Collection for testing Social Media project monthly sheet endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Monthly Sheet",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"month\": 7,\n  \"year\": 2026,\n  \"totalReels\": 20,\n  \"totalPosts\": 15,\n  \"totalReelsUploaded\": 18,\n  \"totalPostsUploaded\": 12,\n  \"moodBoardLink\": \"https://example.com/moodboard\",\n  \"days\": [\n    {\n      \"date\": \"2026-07-01T00:00:00.000Z\",\n      \"reelType\": \"SHOOT\",\n      \"postType\": \"AI\",\n      \"script\": \"Intro script for day 1\",\n      \"description\": \"Post description for day 1\"\n    },\n    {\n      \"date\": \"2026-07-02T00:00:00.000Z\",\n      \"reelType\": \"AI\",\n      \"postType\": \"SHOOT\",\n      \"script\": \"Script for day 2\",\n      \"description\": \"Post description for day 2\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/projects/{{projectId}}/monthly-sheets",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "projects", "{{projectId}}", "monthly-sheets"]
+        },
+        "description": "Create a new monthly sheet for a Social Media project. Allowed role: MANAGER assigned to this project."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Monthly Sheets",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/projects/{{projectId}}/monthly-sheets",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "projects", "{{projectId}}", "monthly-sheets"]
+        },
+        "description": "Get all monthly sheets for the project. Allowed roles: ADMIN, HR, EA, assigned MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Monthly Sheet By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/projects/{{projectId}}/monthly-sheets/{{monthlySheetId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "projects", "{{projectId}}", "monthly-sheets", "{{monthlySheetId}}"]
+        },
+        "description": "Get a single monthly sheet by its ID. Allowed roles: ADMIN, HR, EA, assigned MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Update Monthly Sheet",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"totalReelsUploaded\": 20,\n  \"totalPostsUploaded\": 14,\n  \"moodBoardLink\": \"https://example.com/updated-moodboard\",\n  \"days\": [\n    {\n      \"date\": \"2026-07-01T00:00:00.000Z\",\n      \"reelType\": \"SHOOT\",\n      \"postType\": \"AI\",\n      \"script\": \"Revised script for day 1\",\n      \"description\": \"Updated description for day 1\"\n    },\n    {\n      \"date\": \"2026-07-02T00:00:00.000Z\",\n      \"reelType\": \"AI\",\n      \"postType\": \"SHOOT\",\n      \"script\": \"Revised script for day 2\",\n      \"description\": \"Updated description for day 2\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/projects/{{projectId}}/monthly-sheets/{{monthlySheetId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "projects", "{{projectId}}", "monthly-sheets", "{{monthlySheetId}}"]
+        },
+        "description": "Update the monthly sheet and its calendar days. Allowed role: assigned MANAGER."
+      },
+      "response": []
+    }
+  ]
+}

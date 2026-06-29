@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const cors = require("cors");
 const errorMiddleware = require("./middlewares/error.middleware");
 const attendanceRoutes = require("./modules/attendance/attendance.routes");
@@ -20,6 +20,11 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/manager/tasks", require("./modules/task/task.routes"));
 app.use("/api/employee", require("./modules/employee/employee.routes"));
 app.use("/api/manager", require("./modules/manager/manager.routes"));
+app.use("/api/projects", require("./modules/project/project.routes"));
+app.use(
+  "/api/projects/:projectId/monthly-sheets",
+  require("./modules/project-monthly-sheet/project-monthly-sheet.routes")
+);
 app.use(
   "/api/task-items",
   require("./modules/task-item/task-item.routes")
@@ -65,6 +70,11 @@ app.use(
   require(
     "./modules/department/department.routes"
   )
+);
+
+app.use(
+  "/api/shoot-workspaces",
+  require("./modules/shoot-workspace/shoot-workspace.routes")
 );
 
 app.use(

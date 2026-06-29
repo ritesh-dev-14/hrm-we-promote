@@ -1,0 +1,246 @@
+{
+  "info": {
+    "_postman_id": "shoot-workspace-api",
+    "name": "Shoot Workspace API",
+    "description": "API collection for Shoot Workspace management, tasks, and subtasks.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Shoot Workspace",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"brandName\": \"Shoot Workspace Alpha\",\n  \"description\": \"Workspace for shoot department tasks\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces"] },
+        "description": "Create a new shoot workspace. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Shoot Workspaces",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces"] },
+        "description": "List shoot workspaces visible to the authenticated user."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Shoot Workspace By ID",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}"] },
+        "description": "Get a shoot workspace by its ID."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Update Shoot Workspace",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"brandName\": \"Shoot Workspace Alpha Updated\",\n  \"description\": \"Updated workspace description\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}"] },
+        "description": "Update workspace metadata. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Delete Shoot Workspace",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}"] },
+        "description": "Delete a shoot workspace. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Add Shoot Workspace Members",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"employeeIds\": [\"EMP001\", \"EMP002\"]\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/members", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "members"] },
+        "description": "Add employees to the shoot workspace. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Remove Shoot Workspace Member",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/members/{{memberId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "members", "{{memberId}}"] },
+        "description": "Remove a workspace member. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Create Shoot Task",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Shoot Task 1\",\n  \"description\": \"Create campaign shoot plan\",\n  \"noOfPics\": 10,\n  \"noOfReels\": 3,\n  \"date\": \"2026-06-30\",\n  \"arrivalTime\": \"10:00\",\n  \"location\": \"https://maps.google.com/?q=studio\",\n  \"setupType\": \"PREMIUM\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks"] },
+        "description": "Create a shoot task inside the workspace. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Get Shoot Tasks",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks"] },
+        "description": "List tasks in the shoot workspace."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Get Shoot Task By ID",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}"] },
+        "description": "Get details for a shoot task."
+      },
+      "response": []
+    },
+    {
+      "name": "11. Update Shoot Task",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Shoot Task 1 Updated\",\n  \"noOfPics\": 12\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}"] },
+        "description": "Update a shoot task. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "12. Delete Shoot Task",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}"] },
+        "description": "Delete a shoot task. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "13. Create Shoot Subtask",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Reel setup\",\n  \"description\": \"Horizontal reel setup with premium props\",\n  \"type\": \"REEL\",\n  \"referenceLinks\": [\"https://example.com/reel1\"],\n  \"videoType\": \"HORIZONTAL\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", "subtasks"] },
+        "description": "Create a subtask for a shoot task. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "14. Get Shoot Subtasks",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", "subtasks"] },
+        "description": "List subtasks under a shoot task."
+      },
+      "response": []
+    },
+    {
+      "name": "15. Submit Shoot Subtask",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"submissionLinks\": [\"https://docs.google.com/spreadsheets/d/example\" ]\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}/submit", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", "subtasks", "{{subtaskId}}", "submit"] },
+        "description": "Submit a shoot subtask with a reference link. Employees may also submit only unableToSubmitReason if they cannot complete it."
+      },
+      "response": []
+    },
+    {
+      "name": "16. Get Shoot Subtask By ID",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", "subtasks", "{{subtaskId}}"] },
+        "description": "Get a single shoot subtask."
+      },
+      "response": []
+    },
+    {
+      "name": "16. Update Shoot Subtask",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Updated reel setup\",\n  \"videoType\": \"VERTICAL\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", "subtasks", "{{subtaskId}}"] },
+        "description": "Update a shoot subtask. Allowed role: MANAGER."
+      },
+      "response": []
+    },
+    {
+      "name": "17. Delete Shoot Subtask",
+      "request": {
+        "method": "DELETE",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", "subtasks", "{{subtaskId}}"] },
+        "description": "Delete a shoot subtask. Allowed role: MANAGER."
+      },
+      "response": []
+    }
+  ]
+}
