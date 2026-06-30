@@ -125,6 +125,16 @@
       "response": []
     },
     {
+      "name": "9a. Get My Shoot Tasks",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/my-tasks", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "my-tasks"] },
+        "description": "List all shoot tasks visible to the authenticated user. Employees see tasks for workspaces where they are members. Managers see tasks for workspaces they created."
+      },
+      "response": []
+    },
+    {
       "name": "10. Get Shoot Task By ID",
       "request": {
         "method": "GET",

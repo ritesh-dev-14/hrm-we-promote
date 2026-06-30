@@ -31,6 +31,12 @@ router.get(
 );
 
 router.get(
+  "/my-tasks",
+  auth,
+  controller.getMyShootTasks
+);
+
+router.get(
   "/:workspaceId",
   auth,
   role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),

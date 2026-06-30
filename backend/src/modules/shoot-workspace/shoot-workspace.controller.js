@@ -81,6 +81,15 @@ exports.getShootTasks = async (req, res, next) => {
   }
 };
 
+exports.getMyShootTasks = async (req, res, next) => {
+  try {
+    const data = await service.getMyShootTasks(req.user);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getShootTaskById = async (req, res, next) => {
   try {
     const data = await service.getShootTaskById(req.user, req.params.workspaceId, req.params.taskId);

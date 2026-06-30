@@ -324,6 +324,56 @@ exports.getShootTasks = async (user, workspaceId) => {
   }));
 };
 
+exports.getMyShootTasks = async (user) => {
+  const where =
+    ["ADMIN", "HR"].includes(user.role)
+      ? undefined
+      : user.role === "MANAGER"
+      ? { workspace: { createdById: user.id } }
+      : { workspace: { members: { some: { userId: user.id } } } };
+
+  const tasks = await prisma.shootTask.findMany({
+    where,
+    include: {
+      workspace: true,
+      subtasks: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return tasks.map((task) => ({
+    id: task.id,
+    workspaceId: task.workspaceId,
+    workspaceName: task.workspace?.name ?? null,
+    title: task.title,
+    description: task.description,
+    noOfPics: task.noOfPics,
+    noOfReels: task.noOfReels,
+    date: task.date,
+    arrivalTime: task.arrivalTime,
+    location: task.location,
+    setupType: task.setupType,
+    createdById: task.createdById,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    subtasks: task.subtasks.map((subtask) => ({
+      id: subtask.id,
+      title: subtask.title,
+      description: subtask.description,
+      type: subtask.type,
+      referenceLinks: subtask.referenceLinks,
+      videoType: subtask.videoType,
+      setupType: subtask.setupType,
+      submissionLinks: subtask.submissionLinks,
+      unableToSubmitReason: subtask.unableToSubmitReason,
+      submittedById: subtask.submittedById,
+      submittedAt: subtask.submittedAt,
+      createdAt: subtask.createdAt,
+      updatedAt: subtask.updatedAt,
+    })),
+  }));
+};
+
 exports.getShootTaskById = async (user, workspaceId, taskId) => {
   await verifyWorkspaceAccess(user, workspaceId);
 
