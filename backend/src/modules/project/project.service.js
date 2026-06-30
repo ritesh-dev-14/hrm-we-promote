@@ -7,46 +7,60 @@ const FREQUENCY_DEPARTMENTS = [
   "Social Media",
 ];
 
-const formatProject = (project) => ({
-  id: project.id,
-  projectName: project.projectName,
-  description: project.description,
-  department: {
-    id: project.department.id,
-    name: project.department.name,
-  },
-  startDate: project.startDate,
-  endDate: project.endDate,
-  renewalDate: project.renewalDate,
-  frequency: project.frequency,
-  clientName: project.clientName,
-  location: project.location,
-  phone: project.phone,
-  fbEmail: project.fbEmail,
-  fbPassword: project.fbPassword,
-  instaEmail: project.instaEmail,
-  instaPassword: project.instaPassword,
-  projectStartDate: project.projectStartDate,
-  createdBy: {
-    id: project.createdBy.id,
-    employeeId: project.createdBy.employeeId,
-    name: project.createdBy.name,
-    role: project.createdBy.role,
-  },
-  assignments: project.assignments.map((assignment) => ({
-    id: assignment.id,
-    assignedAt: assignment.assignedAt,
-    manager: {
-      id: assignment.manager.id,
-      employeeId: assignment.manager.employeeId,
-      name: assignment.manager.name,
-      role: assignment.manager.role,
-      position: assignment.manager.position,
+const formatProject = (project) => {
+  const department = project.department || { id: null, name: null };
+  const createdBy =
+    project.createdBy ||
+    {
+      id: null,
+      employeeId: null,
+      name: null,
+      role: null,
+    };
+
+  return {
+    id: project.id,
+    projectName: project.projectName,
+    description: project.description,
+    department: {
+      id: department.id,
+      name: department.name,
     },
-  })),
-  createdAt: project.createdAt,
-  updatedAt: project.updatedAt,
-});
+    startDate: project.startDate,
+    endDate: project.endDate,
+    renewalDate: project.renewalDate,
+    frequency: project.frequency,
+    clientName: project.clientName,
+    location: project.location,
+    phone: project.phone,
+    fbEmail: project.fbEmail,
+    fbPassword: project.fbPassword,
+    instaEmail: project.instaEmail,
+    instaPassword: project.instaPassword,
+    projectStartDate: project.projectStartDate,
+    createdBy: {
+      id: createdBy.id,
+      employeeId: createdBy.employeeId,
+      name: createdBy.name,
+      role: createdBy.role,
+    },
+    assignments: project.assignments
+      .filter((assignment) => assignment.manager)
+      .map((assignment) => ({
+        id: assignment.id,
+        assignedAt: assignment.assignedAt,
+        manager: {
+          id: assignment.manager.id,
+          employeeId: assignment.manager.employeeId,
+          name: assignment.manager.name,
+          role: assignment.manager.role,
+          position: assignment.manager.position,
+        },
+      })),
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+  };
+};
 
 exports.createProject = async (user, body) => {
   if (!["ADMIN", "HR", "EA"].includes(user.role)) {
