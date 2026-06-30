@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useEffect, useState } from "react";
 
+import API from "../services/api";
 // Pages
 import Login from "../auth/login";
 
@@ -9,6 +11,7 @@ import AdminTaskCreation from "../pages/Admin/AdminTaskCreation";
 
 // Shared Task Detail
 import TaskDetailPage from "../components/taskCreation/TaskDetailPage.jsx";
+import ProjectDetailsViewWrapper from "../components/projects/ProjectDetailsViewWrapper";
 
 import HrHomePage from "../pages/HR/HrHomePage";
 import HrTeamPage from "../pages/HR/HrTeamPage";
@@ -18,9 +21,9 @@ import HrSettings from "../pages/HR/HrSettigns";
 import HrAttendance from "../pages/HR/HrAttendance.jsx";
 import HrLeaves from "../pages/HR/HrLeaves.jsx";
 import HrAllEmployeeAttendence from "../pages/HR/HrAllEmployeeAttendence.jsx";
-import EmployeeDetails from "../pages/HR/employeeDetailsHr/EmployeeDetails.jsx";
 import HrTaskCreation from "../pages/HR/HrTaskCreation";
 
+import EmployeeDetails from "../pages/HR/employeeDetailsHr/EmployeeDetails";
 import EmployeHomePage from "../pages/Employee/EmployeeHomePage";
 import EmployeeAttendence from "../pages/Employee/EmployeeAttendence";
 import EmployeeLeave from "../pages/Employee/EmployeeLeave";
@@ -35,7 +38,11 @@ import ManagerLeave from "../pages/Manager/ManagerLeave";
 import ManagerPayslips from "../pages/Manager/ManagerPayslips";
 import ManagerSettings from "../pages/Manager/ManagerSettings";
 import ManagerTaskPage from "../pages/Manager/ManagerTasksPage.jsx";
-import ManagerTaskDetailsPage from "../pages/Manager/tasks/ManagerTaskDetails.jsx";
+
+// shoots
+import ShootPage from "../components/shoots/ShootPage.jsx";
+import ShootWorkspaceDetails from "../components/shoots/manager/ShootWorkspaceDetails.jsx";
+
 /* NEW — COORDINATOR */
 import CoordinatorHomePage from "../pages/Coordinator/CoordinatorHomePage.jsx";
 import CoordinatorPriorityActions from "../pages/Coordinator/CoordinatorPriorityActions.jsx";
@@ -45,17 +52,96 @@ import AssignedActionsPage from "../pages/Employee/AssignedActionsPage.jsx";
 
 export const AppRoutes = () => {
   const { role, user, token, isLoading } = useAuth();
+  const [departmentName, setDepartmentName] = useState("");
+  const [isDeptLoading, setIsDeptLoading] = useState(true);
 
   const isAuthenticated = user && token;
 
-  // LOADER
-  if (isLoading) {
+  useEffect(() => {
+    const getDepartmentName = async () => {
+      if (isLoading) return;
+
+      if (!user) {
+        setIsDeptLoading(false);
+        return;
+      }
+
+      try {
+        // 1. HARDCODED OVERRIDE FOR DEVELOPMENT
+        // If this specific user is logged in, grant explicit "video production" access immediately
+        if (user?.name === "shoot1" || user?.email === "shoot1@gmail.com") {
+          setDepartmentName("video production");
+          setIsDeptLoading(false);
+          return;
+        }
+
+        if (!role) {
+          setIsDeptLoading(false);
+          return;
+        }
+
+        const normalizedRole = role.toUpperCase();
+
+        if (normalizedRole === "HR" || normalizedRole === "ADMIN") {
+          setDepartmentName(normalizedRole);
+          setIsDeptLoading(false);
+          return;
+        }
+
+        const assignedDepartmentId = 
+          user?.departmentId || 
+          user?.department || 
+          user?.deptId || 
+          user?.department_id;
+
+        if (!assignedDepartmentId) {
+          console.warn("User profile missing all recognizable department key fields:", user);
+          setDepartmentName("NONE");
+          setIsDeptLoading(false);
+          return;
+        }
+
+        const res = await API.get("/api/departments");
+        
+        let departmentsList = [];
+        if (Array.isArray(res.data)) {
+          departmentsList = res.data;
+        } else if (res.data?.data && Array.isArray(res.data.data)) {
+          departmentsList = res.data.data;
+        }
+
+        const department = departmentsList.find((d) => {
+          const systemDeptId = String(d.id || d._id || "");
+          const userDeptId = typeof assignedDepartmentId === "object" 
+            ? String(assignedDepartmentId?.id || assignedDepartmentId?._id || "") 
+            : String(assignedDepartmentId);
+
+          return systemDeptId === userDeptId;
+        });
+
+        if (department?.name) {
+          setDepartmentName(department.name.trim());
+        } else {
+          console.warn("Could not find matching department document for ID reference:", assignedDepartmentId);
+          setDepartmentName("UNKNOWN");
+        }
+      } catch (err) {
+        console.error("Failed fetching routing engine context keys:", err);
+        setDepartmentName("ERROR");
+      } finally {
+        setIsDeptLoading(false);
+      }
+    };
+
+    getDepartmentName();
+  }, [role, user, isLoading]);
+
+  if (isLoading || isDeptLoading || (isAuthenticated && !departmentName)) {
     return (
       <div className="flex items-center justify-center h-screen w-full">
         <div className="text-center">
           <div className="h-12 w-12 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mx-auto mb-4"></div>
-
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Syncing application workspaces...</p>
         </div>
       </div>
     );
@@ -89,7 +175,7 @@ export const AppRoutes = () => {
 
           {/* TASKS */}
           <Route
-            path="/tasks"
+            path="/projects"
             element={
               role === "ADMIN" ? (
                 <AdminTaskCreation />
@@ -105,6 +191,47 @@ export const AppRoutes = () => {
             }
           />
 
+          <Route path="/project/:id" element={<ProjectDetailsViewWrapper />} />
+          
+          {/* SAFE ACCESS GUARD GRID FOR MEDIA SHOOTS */}
+          <Route
+            path="/shoot"
+            element={
+              (() => {
+                const currentRole = role?.toUpperCase();
+                const currentDept = departmentName?.toLowerCase();
+
+                // If this is our development override user, directly allow entry
+                if (user?.name === "shoot1") {
+                  return <ShootPage />;
+                }
+
+                if (currentRole === "MANAGER" && currentDept === "social media") {
+                  return <ShootPage />;
+                }
+                
+                if (["EMPLOYEE", "COORDINATOR"].includes(currentRole) && currentDept === "video production") {
+                  return <ShootPage />;
+                }
+
+                
+                return <Navigate to="/dashboard" replace />;
+              })()
+            }
+          />
+
+          <Route
+  path="/shoot/:workspaceId"
+  element={
+    (role === "MANAGER" &&
+      departmentName === "Social Media")  ? (
+      <ShootWorkspaceDetails />
+    ) : (
+      <Navigate to="/dashboard" replace />
+    )
+  }
+/>
+
           <Route
             path="/priority-actions"
             element={
@@ -117,26 +244,12 @@ export const AppRoutes = () => {
           />
 
           <Route
-  path="/assigned-actions"
-  element={
-    ["EMPLOYEE", "MANAGER", "HR"].includes(role) ? (
-      <AssignedActionsPage />
-    ) : (
-      <Navigate to="/dashboard" replace />
-    )
-  }
-/>
-
-          {/* DYNAMIC TASK DETAILS */}
-          <Route
-            path="/:role/tasks/:id"
+            path="/assigned-actions"
             element={
-              role === "MANAGER" ? (
-                <ManagerTaskDetailsPage />
-              ) : role === "EMPLOYEE" ? (
-                <EmployeeTaskDetailsPage />
+              ["EMPLOYEE", "MANAGER", "HR"].includes(role) ? (
+                <AssignedActionsPage />
               ) : (
-                <TaskDetailPage />
+                <Navigate to="/dashboard" replace />
               )
             }
           />
@@ -212,14 +325,11 @@ export const AppRoutes = () => {
                 path="/hr/employees-attendance"
                 element={<HrAllEmployeeAttendence />}
               />
-
               <Route path="/hr/team/:id" element={<EmployeeDetails />} />
-
               <Route
                 path="/hr/employees-leaves"
                 element={<HrLeaveManagement />}
               />
-
               <Route path="/hr/team" element={<HrTeamPage />} />
             </>
           )}
@@ -241,7 +351,6 @@ export const AppRoutes = () => {
       {!isAuthenticated && (
         <>
           <Route path="/" element={<Navigate to="/login" replace />} />
-
           <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       )}

@@ -11,7 +11,6 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-full bg-[#FDFDFD] overflow-hidden">
-
       {!hideSidebar && <Sidebar />}
 
       <div className="flex-1 overflow-y-auto pt-18 lg:pt-0 overflow-x-hidden custom-scrollbar">
