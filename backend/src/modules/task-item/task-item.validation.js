@@ -42,6 +42,8 @@ exports.createTaskItemSchema = Joi.object({
     .valid("DRAFT", "IN_PROGRESS")
     .optional()
     .default("DRAFT"),
+  referenceLink: Joi.string().uri().allow("", null).optional(),
+  rawDataLink: Joi.string().uri().allow("", null).optional(),
 })
   .unknown(false);
 

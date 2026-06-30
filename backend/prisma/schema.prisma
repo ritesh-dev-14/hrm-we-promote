@@ -224,6 +224,8 @@ model TaskItem {
   progress    Int                  @default(0)
   dueDate     DateTime
   priority    Priority             @default(MEDIUM)
+  referenceLink String?
+  rawDataLink   String?
   task        Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
   assignments TaskItemAssignment[]
 

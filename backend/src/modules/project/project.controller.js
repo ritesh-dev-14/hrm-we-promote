@@ -26,6 +26,19 @@ exports.getProjects = async (req, res, next) => {
   }
 };
 
+exports.getAssignedProjects = async (req, res, next) => {
+  try {
+    const data = await service.getAssignedProjects(req.user);
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getProjectById = async (req, res, next) => {
   try {
     const data = await service.getProjectById(req.user, req.params.id);

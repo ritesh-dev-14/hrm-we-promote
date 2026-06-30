@@ -221,6 +221,36 @@ exports.getProjects = async (user) => {
   return projects.map(formatProject);
 };
 
+exports.getAssignedProjects = async (user) => {
+  if (user.role !== "MANAGER") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const projects = await prisma.project.findMany({
+    where: {
+      assignments: {
+        some: {
+          managerId: user.id,
+        },
+      },
+    },
+    include: {
+      department: true,
+      createdBy: true,
+      assignments: {
+        include: {
+          manager: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return projects.map(formatProject);
+};
+
 exports.getProjectById = async (user, projectId) => {
   const project = await prisma.project.findUnique({
     where: { id: projectId },

@@ -1,0 +1,37 @@
+{
+  "info": {
+    "_postman_id": "task-item-api",
+    "name": "Task Item API",
+    "description": "Collection for testing Task Item endpoints (create/get) including referenceLink and rawDataLink fields.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Task Item",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Prepare campaign assets\",\n  \"employeeId\": \"EMP-1781959865954\",\n  \"dueDate\": \"2026-07-05T17:00:00.000Z\",\n  \"priority\": \"HIGH\",\n  \"description\": \"Collect reference images and raw footage.\",\n  \"status\": \"DRAFT\",\n  \"referenceLink\": \"https://drive.google.com/drive/folders/example-ref\",\n  \"rawDataLink\": \"https://drive.google.com/drive/folders/example-raw\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/task-items/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","task-items","{{taskId}}"] },
+        "description": "Create a task item under a task. Allowed roles: ADMIN, HR, MANAGER. `referenceLink` and `rawDataLink` are optional string URIs."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Task Items",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],
+        "url": { "raw": "{{baseUrl}}/api/task-items/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["api","task-items","{{taskId}}"] },
+        "description": "Retrieve task items for the specified task. Responses include `referenceLink` and `rawDataLink` fields when present."
+      },
+      "response": []
+    }
+  ]
+}

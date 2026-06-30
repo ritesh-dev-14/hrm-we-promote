@@ -21,6 +21,8 @@ router.post(
 
 router.get("/", auth, controller.getProjects);
 
+router.get("/assigned", auth, role("MANAGER"), controller.getAssignedProjects);
+
 router.get("/:id", auth, controller.getProjectById);
 
 router.patch(

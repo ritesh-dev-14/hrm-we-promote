@@ -122,6 +122,8 @@ exports.createTaskItem = async (
       dueDate: new Date(body.dueDate),
       priority: body.priority || "MEDIUM",
       status: body.status || "DRAFT",
+      referenceLink: body.referenceLink ?? null,
+      rawDataLink: body.rawDataLink ?? null,
     },
   });
 
@@ -156,6 +158,8 @@ exports.createTaskItem = async (
   return {
     id: item.id,
     title: item.title,
+    referenceLink: item.referenceLink,
+    rawDataLink: item.rawDataLink,
     project: task.projectName,
     assignedToEmployee: {
       id: employee.id,
@@ -282,6 +286,8 @@ exports.getTaskItems = async (
           email: assignment.employee.email,
         }
         : null,
+      referenceLink: item.referenceLink,
+      rawDataLink: item.rawDataLink,
       dueDate: item.dueDate,
       priority: item.priority,
       status: item.status,

@@ -1040,6 +1040,8 @@ exports.getTaskItemsWithDetails =
         (item) => ({
           id: item.id,
           title: item.title,
+          referenceLink: item.referenceLink,
+          rawDataLink: item.rawDataLink,
           description:
             item.description,
           status:
