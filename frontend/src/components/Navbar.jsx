@@ -43,7 +43,15 @@ const NAV_CONFIG = [
     icon: Camera,
     path: "/shoot", // Syncing match mapping pattern with your guard rule configuration
     roles: ["MANAGER", "EMPLOYEE", "COORDINATOR"],
-    departments: ["social media", "video production"],
+    // departments: ["social media", "video production"],
+  },
+  {
+    id: "editor",
+    label: "Editor",
+    icon: Camera,
+    path: "/editor", // Syncing match mapping pattern with your guard rule configuration
+    roles: ["MANAGER", "EMPLOYEE", "COORDINATOR"],
+    // departments: ["social media", "Video Editor"],
   },
   {
     id: "tasks-emp",

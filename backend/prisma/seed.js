@@ -105,7 +105,7 @@ async function main() {
     },
     create: {
       employeeId: "SM-MGR-001",
-      name: "Lovprit",
+      name: "Gurpinder Singh",
       email: "smmwepromote@gmail.com",
       password,
       role: "MANAGER",

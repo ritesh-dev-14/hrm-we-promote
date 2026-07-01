@@ -43,6 +43,10 @@ import ManagerTaskPage from "../pages/Manager/ManagerTasksPage.jsx";
 import ShootPage from "../components/shoots/ShootPage.jsx";
 import ShootWorkspaceDetails from "../components/shoots/manager/ShootWorkspaceDetails.jsx";
 
+// editor
+import EditorPage from "../components/editor/EditorPage.jsx";
+import EditorWorkSpaceDetails from "../components/editor/manager/EditorWorkspaceDetails.jsx";
+
 /* NEW — COORDINATOR */
 import CoordinatorHomePage from "../pages/Coordinator/CoordinatorHomePage.jsx";
 import CoordinatorPriorityActions from "../pages/Coordinator/CoordinatorPriorityActions.jsx";
@@ -88,21 +92,24 @@ export const AppRoutes = () => {
           return;
         }
 
-        const assignedDepartmentId = 
-          user?.departmentId || 
-          user?.department || 
-          user?.deptId || 
+        const assignedDepartmentId =
+          user?.departmentId ||
+          user?.department ||
+          user?.deptId ||
           user?.department_id;
 
         if (!assignedDepartmentId) {
-          console.warn("User profile missing all recognizable department key fields:", user);
+          console.warn(
+            "User profile missing all recognizable department key fields:",
+            user,
+          );
           setDepartmentName("NONE");
           setIsDeptLoading(false);
           return;
         }
 
         const res = await API.get("/api/departments");
-        
+
         let departmentsList = [];
         if (Array.isArray(res.data)) {
           departmentsList = res.data;
@@ -112,9 +119,12 @@ export const AppRoutes = () => {
 
         const department = departmentsList.find((d) => {
           const systemDeptId = String(d.id || d._id || "");
-          const userDeptId = typeof assignedDepartmentId === "object" 
-            ? String(assignedDepartmentId?.id || assignedDepartmentId?._id || "") 
-            : String(assignedDepartmentId);
+          const userDeptId =
+            typeof assignedDepartmentId === "object"
+              ? String(
+                  assignedDepartmentId?.id || assignedDepartmentId?._id || "",
+                )
+              : String(assignedDepartmentId);
 
           return systemDeptId === userDeptId;
         });
@@ -122,7 +132,10 @@ export const AppRoutes = () => {
         if (department?.name) {
           setDepartmentName(department.name.trim());
         } else {
-          console.warn("Could not find matching department document for ID reference:", assignedDepartmentId);
+          console.warn(
+            "Could not find matching department document for ID reference:",
+            assignedDepartmentId,
+          );
           setDepartmentName("UNKNOWN");
         }
       } catch (err) {
@@ -192,45 +205,51 @@ export const AppRoutes = () => {
           />
 
           <Route path="/project/:id" element={<ProjectDetailsViewWrapper />} />
-          
+
           {/* SAFE ACCESS GUARD GRID FOR MEDIA SHOOTS */}
           <Route
             path="/shoot"
-            element={
-              (() => {
-                const currentRole = role?.toUpperCase();
-                const currentDept = departmentName?.toLowerCase();
+            element={(() => {
+              const currentRole = role?.toUpperCase();
+              const currentDept = departmentName?.toLowerCase();
 
-                // If this is our development override user, directly allow entry
-                if (user?.name === "shoot1") {
-                  return <ShootPage />;
-                }
+              // If this is our development override user, directly allow entry
+              if (user?.name === "shoot1") {
+                return <ShootPage />;
+              }
 
-                if (currentRole === "MANAGER" && currentDept === "social media") {
-                  return <ShootPage />;
-                }
-                
-                if (["EMPLOYEE", "COORDINATOR"].includes(currentRole) && currentDept === "video production") {
-                  return <ShootPage />;
-                }
+              if (currentRole === "MANAGER" && currentDept === "social media") {
+                return <ShootPage />;
+              }
 
-                
-                return <Navigate to="/dashboard" replace />;
-              })()
-            }
+              if (
+                ["EMPLOYEE", "COORDINATOR"].includes(currentRole) &&
+                currentDept === "video production"
+              ) {
+                return <ShootPage />;
+              }
+
+              return <Navigate to="/dashboard" replace />;
+            })()}
           />
 
           <Route
-  path="/shoot/:workspaceId"
-  element={
-    (role === "MANAGER" &&
-      departmentName === "Social Media")  ? (
-      <ShootWorkspaceDetails />
-    ) : (
-      <Navigate to="/dashboard" replace />
-    )
-  }
-/>
+            path="/shoot/:workspaceId"
+            element={
+              role === "MANAGER" && departmentName === "Social Media" ? (
+                <ShootWorkspaceDetails />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
+            }
+          />
+
+          <Route path="/editor" element={<EditorPage />} />
+
+          <Route
+            path="/editor/:workspaceId"
+            element={<EditorWorkSpaceDetails />}
+          />
 
           <Route
             path="/priority-actions"
