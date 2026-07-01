@@ -133,7 +133,7 @@ const EditorManagerPage = () => {
       {/* Overview Analytics Metrics Row */}
       <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Frameworks</span>
+          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total </span>
           <span className="block text-2xl font-black text-slate-900 mt-1">{tasks.length}</span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">

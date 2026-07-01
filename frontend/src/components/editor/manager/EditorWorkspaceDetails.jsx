@@ -13,9 +13,8 @@ import {
   TrendingUp,
   User2,
   Plus,
-  X,
-  FileText,
   Briefcase,
+  FileText,
   UserCheck,
   ThumbsUp,
   ThumbsDown
@@ -100,12 +99,18 @@ const EditorWorkspaceDetails = () => {
     try {
       const subtasksRes = await API.get(`/api/task-items/${workspaceId}`)
       if (subtasksRes.data?.success) {
-        setSubtasks(subtasksRes.data.data || [])
+        const updatedSubtasks = subtasksRes.data.data || []
+        setSubtasks(updatedSubtasks)
         
         // Dynamic structural synchronizer for open modal view state updates
         if (selectedSubtask) {
-          const freshSubtask = (subtasksRes.data.data || []).find(item => item.id === selectedSubtask.id)
-          if (freshSubtask) setSelectedSubtask(freshSubtask)
+          const freshSubtask = updatedSubtasks.find(item => item.id === selectedSubtask.id)
+          if (freshSubtask) {
+            setSelectedSubtask(freshSubtask)
+          } else {
+            setSelectedSubtask(null)
+            setShowDetailsModal(false)
+          }
         }
       }
       const workspaceRes = await API.get(`/api/manager/tasks/${workspaceId}`)
@@ -156,9 +161,11 @@ const EditorWorkspaceDetails = () => {
   const handleApproveSubmission = async (subtaskId) => {
     try {
       setActionLoadingId(subtaskId)
-      // Check if target requires routing via explicit submission ID context or core subtask ID reference
-      await API.patch(`/api/task-item-submission/${subtaskId}/verify`)
-      await refreshSubtaskIndex()
+      const res = await API.patch(`/api/task-item-submission/${subtaskId}/verify`)
+      
+      if (res.data?.success) {
+        await refreshSubtaskIndex()
+      }
     } catch (error) {
       console.error(error)
       alert(error.response?.data?.message || "Verification mapping phase failed")
@@ -175,12 +182,14 @@ const EditorWorkspaceDetails = () => {
       }
 
       setActionLoadingId(rejectModal.subtaskId)
-      await API.patch(`/api/task-item-submission/${rejectModal.subtaskId}/reject`, {
-        rejectionReason: rejectModal.reason.trim(),
-      })
+      const payload = { rejectionReason: rejectModal.reason.trim() }
 
-      setRejectModal({ open: false, subtaskId: null, reason: "" })
-      await refreshSubtaskIndex()
+      const res = await API.patch(`/api/task-item-submission/${rejectModal.subtaskId}/reject`, payload)
+
+      if (res.data?.success) {
+        setRejectModal({ open: false, subtaskId: null, reason: "" })
+        await refreshSubtaskIndex()
+      }
     } catch (error) {
       console.error(error)
       alert(error.response?.data?.message || "Rejection logic deployment sequence failure")
