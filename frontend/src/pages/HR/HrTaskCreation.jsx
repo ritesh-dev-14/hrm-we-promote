@@ -32,7 +32,7 @@ const HrTaskCreation = () => {
     try {
       setIsLoading(true);
 
-      const response = await API.get("/api/manager/tasks");
+      const response = await API.get("/api/projects");
 
       setTasks(response?.data?.data || []);
     } catch (error) {
@@ -51,7 +51,8 @@ const HrTaskCreation = () => {
   };
 
   const handleTaskClick = (task) => {
-    navigate(`/manager/tasks/${task.id}`);
+    console.log(task.id);
+    navigate(`/project/${task.id}`);
   };
 
   const formatDate = (date) => {
@@ -104,7 +105,7 @@ const HrTaskCreation = () => {
             <div className="py-24 flex flex-col items-center justify-center">
               <Loader2 size={28} className="animate-spin text-slate-400" />
 
-              <p className="text-sm text-slate-400 mt-3">Loading tasks...</p>
+              <p className="text-sm text-slate-400 mt-3">Loading projects...</p>
             </div>
           ) : tasks.length === 0 ? (
             <div className="py-24 text-center">

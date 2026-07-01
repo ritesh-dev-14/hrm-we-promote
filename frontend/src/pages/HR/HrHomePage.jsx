@@ -77,7 +77,7 @@ const HrHomePage = () => {
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
         <div className="flex flex-col items-center gap-2 text-slate-500">
           <Loader2 className="animate-spin text-slate-900" size={24} />
-          <span className="text-xs font-medium">Syncing data streams...</span>
+          <span className="text-xs font-medium">Loading...</span>
         </div>
       </div>
     );

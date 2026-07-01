@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTeamData } from "./hooks/useTeamData";
-import API from "../../services/api"; // 👈 Imported your API client instance
+import API from "../../services/api"; 
 
 import HrAddEmployee from "./HrAddEmployee";
 import HrAddManager from "./HrAddManager";
