@@ -81,6 +81,20 @@ router.post(
 );
 
 // 🔥 VERIFY SUBMISSION
+router.get(
+  "/:assignmentId/verify",
+
+  auth,
+
+  role(
+    "ADMIN",
+    "HR",
+    "MANAGER"
+  ),
+
+  controller.verifySubmission
+);
+
 router.patch(
   "/:assignmentId/verify",
 

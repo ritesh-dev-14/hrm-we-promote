@@ -1317,9 +1317,12 @@ exports.verifySubmission =
   ) => {
 
     //
-    // ✅ FIND ASSIGNMENT
+    // ✅ FIND ASSIGNMENT OR SUBMISSION
     //
-    const assignment =
+    let assignment = null;
+    let submission = null;
+
+    assignment =
       await prisma.taskItemAssignment.findUnique({
         where: {
           id: assignmentId,
@@ -1331,25 +1334,41 @@ exports.verifySubmission =
               task: true,
             },
           },
+          submission: true,
         },
       });
 
     if (!assignment) {
-      throw new ApiError(
-        404,
-        "Assignment not found"
-      );
+      submission =
+        await prisma.taskItemSubmission.findUnique({
+          where: {
+            id: assignmentId,
+          },
+          include: {
+            assignment: {
+              include: {
+                taskItem: {
+                  include: {
+                    task: true,
+                  },
+                },
+                submission: true,
+              },
+            },
+          },
+        });
+
+      assignment = submission?.assignment || null;
+    } else {
+      submission = assignment.submission;
     }
 
-    //
-    // ✅ CHECK SUBMISSION EXISTS
-    //
-    const submission =
-      await prisma.taskItemSubmission.findUnique({
-        where: {
-          assignmentId,
-        },
-      });
+    if (!assignment) {
+      throw new ApiError(
+        404,
+        "Assignment or submission not found"
+      );
+    }
 
     if (!submission) {
       throw new ApiError(
@@ -1388,6 +1407,8 @@ exports.verifySubmission =
     else if (
       user.role === "MANAGER"
     ) {
+      const isTaskCreator =
+        assignment.taskItem.task.createdById === user.id;
 
       const managerAssignment =
         await prisma.taskAssignment.findFirst({
@@ -1401,6 +1422,7 @@ exports.verifySubmission =
         });
 
       if (
+        isTaskCreator ||
         managerAssignment
       ) {
         allowed = true;

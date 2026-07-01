@@ -10,6 +10,10 @@
 const Joi = require("joi");
 
 exports.submitSchema = Joi.object({
+  driveLink: Joi.string()
+    .optional()
+    .allow("", null),
+
   remarks: Joi.string()
     .optional()
     .allow("", null),
