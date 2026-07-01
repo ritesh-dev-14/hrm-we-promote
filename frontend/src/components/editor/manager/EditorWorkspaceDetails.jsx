@@ -17,7 +17,8 @@ import {
   FileText,
   UserCheck,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  CheckCircle2
 } from 'lucide-react'
 
 const EditorWorkspaceDetails = () => {
@@ -43,7 +44,7 @@ const EditorWorkspaceDetails = () => {
   // Rejection Workflow State Module
   const [rejectModal, setRejectModal] = useState({
     open: false,
-    subtaskId: null,
+    assignmentId: null, 
     reason: ""
   })
 
@@ -72,16 +73,17 @@ const EditorWorkspaceDetails = () => {
       
       const [workspaceRes, subtasksRes, employeesRes] = await Promise.all([
         API.get(`/api/manager/tasks/${workspaceId}`),
-        API.get(`/api/task-items/${workspaceId}`),
+        API.get(`/api/manager/tasks/${workspaceId}/items`), 
         API.get('/api/manager/my-employees').catch(() => ({ data: { success: true, data: [] } })) 
       ])
 
+      // Adjusting to handle nested structure if API wraps data under a common wrapper response
       if (workspaceRes.data?.success) {
-        setWorkspace(workspaceRes.data.data)
+        setWorkspace(workspaceRes.data.data?.task || workspaceRes.data.data)
       }
       
       if (subtasksRes.data?.success) {
-        setSubtasks(subtasksRes.data.data || [])
+        setSubtasks(subtasksRes.data.data?.items || [])
       }
 
       if (employeesRes.data?.success) {
@@ -97,12 +99,11 @@ const EditorWorkspaceDetails = () => {
 
   const refreshSubtaskIndex = async () => {
     try {
-      const subtasksRes = await API.get(`/api/task-items/${workspaceId}`)
+      const subtasksRes = await API.get(`/api/manager/tasks/${workspaceId}/items`) 
       if (subtasksRes.data?.success) {
-        const updatedSubtasks = subtasksRes.data.data || []
+        const updatedSubtasks = subtasksRes.data.data?.items || []
         setSubtasks(updatedSubtasks)
         
-        // Dynamic structural synchronizer for open modal view state updates
         if (selectedSubtask) {
           const freshSubtask = updatedSubtasks.find(item => item.id === selectedSubtask.id)
           if (freshSubtask) {
@@ -115,7 +116,7 @@ const EditorWorkspaceDetails = () => {
       }
       const workspaceRes = await API.get(`/api/manager/tasks/${workspaceId}`)
       if (workspaceRes.data?.success) {
-        setWorkspace(workspaceRes.data.data)
+        setWorkspace(workspaceRes.data.data?.task || workspaceRes.data.data)
       }
     } catch (err) {
       console.error("Subtask refresh operation failed:", err)
@@ -158,16 +159,20 @@ const EditorWorkspaceDetails = () => {
     }
   }
 
-  const handleApproveSubmission = async (subtaskId) => {
+  const handleApproveSubmission = async (assignmentId) => {
+    if (!assignmentId) {
+      alert("Missing valid assignment target vector tracking schema references.")
+      return
+    }
     try {
-      setActionLoadingId(subtaskId)
-      const res = await API.patch(`/api/task-item-submission/${subtaskId}/verify`)
-      
-      if (res.data?.success) {
+      setActionLoadingId(assignmentId)
+      const res = await API.patch(`/api/task-item-submission/${assignmentId}/verify`)
+
+      if (res.data?.success || res.status === 200) {
         await refreshSubtaskIndex()
       }
     } catch (error) {
-      console.error(error)
+      console.error("Frontend HTTP Handshake Error Object:", error.response || error)
       alert(error.response?.data?.message || "Verification mapping phase failed")
     } finally {
       setActionLoadingId(null)
@@ -175,23 +180,28 @@ const EditorWorkspaceDetails = () => {
   }
 
   const handleRejectSubmission = async () => {
+    const { assignmentId, reason } = rejectModal
+    if (!assignmentId) {
+      alert("Missing active operational trace target identification arrays.")
+      return
+    }
+    if (!reason.trim()) {
+      alert("Rejection validation reason parameters are required")
+      return
+    }
+
     try {
-      if (!rejectModal.reason.trim()) {
-        alert("Rejection validation reason parameters are required")
-        return
-      }
+      setActionLoadingId(assignmentId)
+      const payload = { rejectionReason: reason.trim() }
 
-      setActionLoadingId(rejectModal.subtaskId)
-      const payload = { rejectionReason: rejectModal.reason.trim() }
+      const res = await API.patch(`/api/task-item-submission/${assignmentId}/reject`, payload)
 
-      const res = await API.patch(`/api/task-item-submission/${rejectModal.subtaskId}/reject`, payload)
-
-      if (res.data?.success) {
-        setRejectModal({ open: false, subtaskId: null, reason: "" })
+      if (res.data?.success || res.status === 200) {
+        setRejectModal({ open: false, assignmentId: null, reason: "" })
         await refreshSubtaskIndex()
       }
     } catch (error) {
-      console.error(error)
+      console.error("Frontend HTTP Handshake Error Object:", error.response || error)
       alert(error.response?.data?.message || "Rejection logic deployment sequence failure")
     } finally {
       setActionLoadingId(null)
@@ -335,76 +345,89 @@ const EditorWorkspaceDetails = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
-                  {subtasks.map((item) => (
-                    <tr 
-                      key={item.id}
-                      onClick={() => handleOpenRowDetails(item)}
-                      className="hover:bg-slate-50/60 cursor-pointer transition-colors group"
-                    >
-                      <td className="py-3.5 px-5 max-w-xs">
-                        <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors block text-sm truncate">{item.title}</span>
-                        <span className="text-slate-400 block text-[11px] truncate mt-0.5">{item.description || 'No specialized description.'}</span>
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-slate-100 font-bold border border-slate-200 text-slate-600 flex items-center justify-center text-[10px] uppercase shrink-0">
-                            {item.assignedToEmployee?.name?.charAt(0) || 'E'}
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-800 block">{item.assignedToEmployee?.name || 'Unassigned'}</span>
-                            <span className="text-[10px] text-slate-400 block font-mono">{item.assignedToEmployee?.employeeId || '—'}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-0.5 text-[9px] font-bold border rounded-md uppercase ${getPriorityStyle(item.priority)}`}>
-                          {item.priority || 'MEDIUM'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-0.5 text-[9px] font-bold border rounded-md uppercase ${getStatusStyle(item.status)}`}>
-                          {item.status || 'DRAFT'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600 font-semibold whitespace-nowrap">
-                        {item.dueDate ? (
-                          <div className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" /> {new Date(item.dueDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</div>
-                        ) : <span className="text-slate-300 italic">Unscheduled</span>}
-                      </td>
-                      <td className="py-3.5 px-5 text-right whitespace-nowrap text-indigo-600 font-bold" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          {item.status === "SUBMITTED" && (
-                            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl shadow-2xs">
-                              <button
-                                disabled={actionLoadingId !== null}
-                                onClick={() => handleApproveSubmission(item.id)}
-                                className="p-1.5 bg-white text-emerald-600 hover:bg-emerald-50 rounded-lg border border-slate-200 shadow-3xs transition"
-                              >
-                                {actionLoadingId === item.id ? (
-                                  <Loader2 size={13} className="animate-spin" />
-                                ) : (
-                                  <ThumbsUp size={13} />
-                                )}
-                              </button>
-                              <button
-                                disabled={actionLoadingId !== null}
-                                onClick={() => setRejectModal({ open: true, subtaskId: item.id, reason: "" })}
-                                className="p-1.5 bg-white text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 shadow-3xs transition"
-                              >
-                                <ThumbsDown size={13} />
-                              </button>
+                  {subtasks.map((item) => {
+                    const primaryAssignment = item.assignments?.[0] || null;
+                    // FIX: Prioritize explicit assignmentId strictly over ambiguous fallbacks
+                    const assignmentId = primaryAssignment?.assignmentId || primaryAssignment?.id || null;
+                    const employeeData = primaryAssignment?.employee || null;
+                    
+                    const computedStatus = item.status || 'DRAFT';
+                    const assignmentStatus = primaryAssignment?.status || computedStatus;
+                    
+                    // Display actions strictly when actionable or pending evaluation status
+                    const isActionable = assignmentStatus === "COMPLETED";
+
+                    return (
+                      <tr 
+                        key={item.id}
+                        onClick={() => handleOpenRowDetails(item)}
+                        className="hover:bg-slate-50/60 cursor-pointer transition-colors group"
+                      >
+                        <td className="py-3.5 px-5 max-w-xs">
+                          <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors block text-sm truncate">{item.title}</span>
+                          <span className="text-slate-400 block text-[11px] truncate mt-0.5">{item.description || 'No specialized description.'}</span>
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded-full bg-slate-100 font-bold border border-slate-200 text-slate-600 flex items-center justify-center text-[10px] uppercase shrink-0">
+                              {employeeData?.name?.charAt(0) || 'E'}
                             </div>
-                          )}
-                          <button 
-                            onClick={() => handleOpenRowDetails(item)}
-                            className="text-indigo-600 font-bold group-hover:translate-x-0.5 transition-transform text-xs px-2 py-1 hover:bg-slate-50 rounded-lg"
-                          >
-                            View Details →
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <div>
+                              <span className="font-bold text-slate-800 block">{employeeData?.name || 'Unassigned'}</span>
+                              <span className="text-[10px] text-slate-400 block font-mono">{employeeData?.employeeId || '—'}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-0.5 text-[9px] font-bold border rounded-md uppercase ${getPriorityStyle(item.priority)}`}>
+                            {item.priority || 'MEDIUM'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-0.5 text-[9px] font-bold border rounded-md uppercase ${getStatusStyle(assignmentStatus)}`}>
+                            {assignmentStatus}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600 font-semibold whitespace-nowrap">
+                          {item.dueDate ? (
+                            <div className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" /> {new Date(item.dueDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</div>
+                          ) : <span className="text-slate-300 italic">Unscheduled</span>}
+                        </td>
+                        <td className="py-3.5 px-5 text-right whitespace-nowrap text-indigo-600 font-bold" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
+                            {isActionable && assignmentId && (
+                              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl shadow-2xs">
+                                <button
+                                  disabled={actionLoadingId !== null}
+                                  onClick={() => handleApproveSubmission(assignmentId)}
+                                  className="p-1.5 bg-white text-emerald-600 hover:bg-emerald-50 rounded-lg border border-slate-200 shadow-3xs transition"
+                                >
+                                  {actionLoadingId === assignmentId ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <ThumbsUp size={13} />
+                                  )}
+                                </button>
+                                <button
+                                  disabled={actionLoadingId !== null}
+                                  onClick={() => setRejectModal({ open: true, assignmentId: assignmentId, reason: "" })}
+                                  className="p-1.5 bg-white text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 shadow-3xs transition"
+                                >
+                                  <ThumbsDown size={13} />
+                                </button>
+                              </div>
+                            )}
+                            <button 
+                              onClick={() => handleOpenRowDetails(item)}
+                              className="text-indigo-600 font-bold group-hover:translate-x-0.5 transition-transform text-xs px-2 py-1 hover:bg-slate-50 rounded-lg"
+                            >
+                              View Details →
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -551,152 +574,191 @@ const EditorWorkspaceDetails = () => {
       )}
 
       {/* MODAL MODULE B: SUBTASK DRILL-DOWN ANALYTICAL SPECIFICATIONS VIEWER */}
-      {showDetailsModal && selectedSubtask && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-100 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform scale-100 transition-all flex flex-col">
-            
-            <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-start">
-              <div className="space-y-1">
-                <span className="px-2 py-0.5 text-[9px] font-bold bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase tracking-wider rounded-md">
-                  Drill-Down Inspection Panel
-                </span>
-                <h3 className="font-bold text-slate-900 text-base tracking-tight pt-0.5">{selectedSubtask.title}</h3>
-              </div>
-              <button 
-                onClick={() => { setShowDetailsModal(false); setSelectedSubtask(null); }}
-                className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition"
-              >
-                ✕
-              </button>
-            </div>
+      {showDetailsModal && selectedSubtask && (() => {
+        const modalAssignment = selectedSubtask.assignments?.[0] || null;
+        // FIX: Prioritize explicit assignmentId strictly over ambiguous fallbacks
+        const modalAssignmentId = modalAssignment?.assignmentId || modalAssignment?.id || null;
+        const modalEmployee = modalAssignment?.employee || null;
+        const modalSubmission = modalAssignment?.submission || null;
+        
+        const modalStatus = selectedSubtask.status || 'DRAFT';
+        const modalAssignmentStatus = modalAssignment?.status || modalStatus;
+        
+        const isModalActionable = modalAssignmentStatus === "SUBMITTED";
 
-            <div className="p-6 space-y-5 text-xs overflow-y-auto max-h-[70vh]">
-              {/* Core Meta Properties Badge Strip */}
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 border border-slate-200/60 p-3.5 rounded-xl text-slate-600 font-medium">
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Priority Level</span>
-                  <span className={`inline-flex px-2 py-0.5 rounded text-[10px] border uppercase font-bold mt-1 ${getPriorityStyle(selectedSubtask.priority)}`}>
-                    {selectedSubtask.priority || 'NORMAL'}
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-100 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transform scale-100 transition-all flex flex-col">
+              
+              <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-start">
+                <div className="space-y-1">
+                  <span className="px-2 py-0.5 text-[9px] font-bold bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase tracking-wider rounded-md">
+                    Drill-Down Inspection Panel
                   </span>
+                  <h3 className="font-bold text-slate-900 text-base tracking-tight pt-0.5">{selectedSubtask.title}</h3>
                 </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Lifecycle Tracking</span>
-                  <span className={`inline-flex px-2 py-0.5 rounded text-[10px] border uppercase font-bold mt-1 ${getStatusStyle(selectedSubtask.status)}`}>
-                    {selectedSubtask.status || 'DRAFT'}
-                  </span>
-                </div>
+                <button 
+                  onClick={() => { setShowDetailsModal(false); setSelectedSubtask(null); }}
+                  className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Assignment Personnel Block */}
-              <div className="space-y-1.5">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><UserCheck className="w-3.5 h-3.5" /> Operations Operator Assignment</h4>
-                <div className="p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 flex items-center justify-center text-xs shadow-2xs">
-                    {selectedSubtask.assignedToEmployee?.name?.charAt(0).toUpperCase() || 'E'}
+              <div className="p-6 space-y-5 text-xs overflow-y-auto max-h-[70vh]">
+                {/* Core Meta Properties Badge Strip */}
+                <div className="grid grid-cols-2 gap-3 bg-slate-50 border border-slate-200/60 p-3.5 rounded-xl text-slate-600 font-medium">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Priority Level</span>
+                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] border uppercase font-bold mt-1 ${getPriorityStyle(selectedSubtask.priority)}`}>
+                      {selectedSubtask.priority || 'NORMAL'}
+                    </span>
                   </div>
                   <div>
-                    <span className="font-bold text-slate-900 block text-sm">{selectedSubtask.assignedToEmployee?.name || 'No assigned operator detected.'}</span>
-                    <span className="text-slate-400 font-mono text-[11px] block mt-0.5">
-                      Registry Token: {selectedSubtask.assignedToEmployee?.employeeId || '—'} • {selectedSubtask.assignedToEmployee?.email || '—'}
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Lifecycle Tracking</span>
+                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] border uppercase font-bold mt-1 ${getStatusStyle(modalAssignmentStatus)}`}>
+                      {modalAssignmentStatus}
                     </span>
                   </div>
                 </div>
-              </div>
 
-              {/* Deadline & Progress Frame */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Assignment Personnel Block */}
                 <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Due Target Horizon</h4>
-                  <div className="p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl font-bold text-slate-700 flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    <span>{selectedSubtask.dueDate ? new Date(selectedSubtask.dueDate).toLocaleString('en-US', {dateStyle: 'medium'}) : 'Pending Sequence Calendar Block'}</span>
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><UserCheck className="w-3.5 h-3.5" /> Operations Operator Assignment</h4>
+                  <div className="p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 flex items-center justify-center text-xs shadow-2xs">
+                      {modalEmployee?.name?.charAt(0).toUpperCase() || 'E'}
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900 block text-sm">{modalEmployee?.name || 'No assigned operator detected.'}</span>
+                      <span className="text-slate-400 font-mono text-[11px] block mt-0.5">
+                        Registry Token: {modalEmployee?.employeeId || '—'} • {modalEmployee?.email || '—'}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Deadline & Progress Frame */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Due Target Horizon</h4>
+                    <div className="p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl font-bold text-slate-700 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      <span>{selectedSubtask.dueDate ? new Date(selectedSubtask.dueDate).toLocaleString('en-US', {dateStyle: 'medium'}) : 'Pending Sequence Calendar Block'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> Progress Evaluation</h4>
+                    <div className="p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl font-bold text-indigo-600 flex items-center justify-between">
+                      <span>Task Completion Node Metric:</span>
+                      <span>{selectedSubtask.progress ?? 0}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description Block */}
                 <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> Progress Evaluation</h4>
-                  <div className="p-3 bg-slate-50/50 border border-slate-200/60 rounded-xl font-bold text-indigo-600 flex items-center justify-between">
-                    <span>Task Completion Node Metric:</span>
-                    <span>{selectedSubtask.progress ?? 0}%</span>
-                  </div>
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> Scope Specifications Requirements</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed bg-slate-50/30 border border-slate-100 p-3.5 rounded-xl whitespace-pre-wrap">
+                    {selectedSubtask.description || 'No specialized description parameters attached across this workspace node element.'}
+                  </p>
                 </div>
-              </div>
 
-              {/* Description Block */}
-              <div className="space-y-1.5">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> Scope Specifications Requirements</h4>
-                <p className="text-xs text-slate-600 leading-relaxed bg-slate-50/30 border border-slate-100 p-3.5 rounded-xl whitespace-pre-wrap">
-                  {selectedSubtask.description || 'No specialized description parameters attached across this workspace node element.'}
-                </p>
-              </div>
-
-              {/* Resource Repositories Links Deployment Frame */}
-              {(selectedSubtask.referenceLink || selectedSubtask.rawDataLink) && (
-                <div className="space-y-2 border-t border-slate-100 pt-4">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cloud Data Directories Links Map Vectors</h4>
-                  <div className="space-y-2">
-                    {selectedSubtask.referenceLink && (
-                      <a 
-                        href={selectedSubtask.referenceLink} target="_blank" rel="noreferrer"
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/40 hover:bg-indigo-50 border border-indigo-100/50 text-indigo-700 font-bold transition-all group"
-                      >
-                        <span className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5 text-indigo-400" /> Asset Reference Directory Location</span>
-                        <ExternalLink className="w-3 h-3 text-indigo-400 group-hover:translate-x-0.5 transition-transform" />
-                      </a>
-                    )}
-                    {selectedSubtask.rawDataLink && (
-                      <a 
-                        href={selectedSubtask.rawDataLink} target="_blank" rel="noreferrer"
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/40 hover:bg-emerald-50 border border-emerald-100/50 text-emerald-700 font-bold transition-all group"
-                      >
-                        <span className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-emerald-400" /> Raw Media Footage Storage Repository</span>
-                        <ExternalLink className="w-3 h-3 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
-                      </a>
-                    )}
+                {/* Dynamic Work Submission Feedback Tray */}
+                {modalSubmission && (
+                  <div className="space-y-2 border-t border-slate-100 pt-4">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Employee Deliverable Submission Data
+                    </h4>
+                    <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+                      {modalSubmission.remarks && (
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">Worker Remarks:</span>
+                          <p className="text-slate-700 font-medium italic">"{modalSubmission.remarks}"</p>
+                        </div>
+                      )}
+                      {modalSubmission.driveLink && (
+                        <a 
+                          href={modalSubmission.driveLink} target="_blank" rel="noreferrer"
+                          className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-indigo-600 font-bold hover:bg-slate-50 transition"
+                        >
+                          <span className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5 text-indigo-400" /> Review Submitted Assets Link</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
 
-            {/* Verification Control Section directly in the drilldown panel */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-2 justify-between items-center">
-              <div>
-                {selectedSubtask.status === "SUBMITTED" && (
-                  <span className="text-[11px] font-medium text-slate-400">Actions Pending Manager Approval</span>
+                {/* Resource Repositories Links Deployment Frame */}
+                {(selectedSubtask.referenceLink || selectedSubtask.rawDataLink) && (
+                  <div className="space-y-2 border-t border-slate-100 pt-4">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cloud Data Directories Links Map Vectors</h4>
+                    <div className="space-y-2">
+                      {selectedSubtask.referenceLink && (
+                        <a 
+                          href={selectedSubtask.referenceLink} target="_blank" rel="noreferrer"
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/40 hover:bg-indigo-50 border border-indigo-100/50 text-indigo-700 font-bold transition-all group"
+                        >
+                          <span className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5 text-indigo-400" /> Asset Reference Directory Location</span>
+                          <ExternalLink className="w-3 h-3 text-indigo-400 group-hover:translate-x-0.5 transition-transform" />
+                        </a>
+                      )}
+                      {selectedSubtask.rawDataLink && (
+                        <a 
+                          href={selectedSubtask.rawDataLink} target="_blank" rel="noreferrer"
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/40 hover:bg-emerald-50 border border-emerald-100/50 text-emerald-700 font-bold transition-all group"
+                        >
+                          <span className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-emerald-400" /> Raw Media Footage Storage Repository</span>
+                          <ExternalLink className="w-3 h-3 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                {selectedSubtask.status === "SUBMITTED" && (
-                  <>
-                    <button
-                      disabled={actionLoadingId !== null}
-                      onClick={() => handleApproveSubmission(selectedSubtask.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition"
-                    >
-                      {actionLoadingId === selectedSubtask.id ? <Loader2 size={12} className="animate-spin" /> : <ThumbsUp size={12} />}
-                      Approve
-                    </button>
-                    <button
-                      disabled={actionLoadingId !== null}
-                      onClick={() => setRejectModal({ open: true, subtaskId: selectedSubtask.id, reason: "" })}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition"
-                    >
-                      <ThumbsDown size={12} />
-                      Reject
-                    </button>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={() => { setShowDetailsModal(false); setSelectedSubtask(null); }}
-                  className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-2xs hover:bg-slate-50 transition"
-                >
-                  Dismiss Analysis View
-                </button>
+
+              {/* Verification Control Section directly in the drilldown panel */}
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-2 justify-between items-center">
+                <div>
+                  {isModalActionable && (
+                    <span className="text-[11px] font-medium text-slate-400">Review Status Workspace Action Blocks</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isModalActionable && modalAssignmentId && (
+                    <>
+                      <button
+                        disabled={actionLoadingId !== null}
+                        onClick={() => handleApproveSubmission(modalAssignmentId)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition"
+                      >
+                        {actionLoadingId === modalAssignmentId ? <Loader2 size={12} className="animate-spin" /> : <ThumbsUp size={12} />}
+                        Approve
+                      </button>
+                      <button
+                        disabled={actionLoadingId !== null}
+                        onClick={() => setRejectModal({ open: true, assignmentId: modalAssignmentId, reason: "" })}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition"
+                      >
+                        <ThumbsDown size={12} />
+                        Reject
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setShowDetailsModal(false); setSelectedSubtask(null); }}
+                    className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-2xs hover:bg-slate-50 transition"
+                  >
+                    Dismiss Analysis View
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* REJECT MODAL FORM BLOCK */}
       {rejectModal.open && (
@@ -718,17 +780,17 @@ const EditorWorkspaceDetails = () => {
 
             <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-2">
               <button
-                onClick={() => setRejectModal({ open: false, subtaskId: null, reason: "" })}
+                onClick={() => setRejectModal({ open: false, assignmentId: null, reason: "" })}
                 className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-2xs hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRejectSubmission}
-                disabled={actionLoadingId === rejectModal.subtaskId}
+                disabled={actionLoadingId === rejectModal.assignmentId}
                 className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-xs transition disabled:opacity-50 inline-flex items-center gap-1.5"
               >
-                {actionLoadingId === rejectModal.subtaskId ? <Loader2 size={12} className="animate-spin" /> : null}
+                {actionLoadingId === rejectModal.assignmentId ? <Loader2 size={12} className="animate-spin" /> : null}
                 Confirm Rejection Node
               </button>
             </div>

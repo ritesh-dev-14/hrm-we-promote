@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { X, ChevronDown, Eye, EyeOff } from "lucide-react";
 
 import API from "../../services/api";
-
 import { notifySuccess, notifyError } from "../../utils/toast";
 
 function Field({
@@ -19,7 +18,7 @@ function Field({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-slate-700">
+      <label className="text-xs font-semibold text-slate-700 tracking-wide">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
 
@@ -30,10 +29,10 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           required={required}
-          className={`w-full h-10 bg-white border rounded-xl px-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-colors ${
+          className={`w-full h-10 bg-white border rounded-xl px-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all ${
             error
-              ? "border-red-500 focus:border-red-500"
-              : "border-slate-200 focus:border-slate-900"
+              ? "border-red-500 focus:border-red-500 ring-2 ring-red-500/10"
+              : "border-slate-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/5"
           }`}
         />
 
@@ -48,7 +47,7 @@ function Field({
         )}
       </div>
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
     </div>
   );
 }
@@ -64,7 +63,7 @@ function SelectField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-slate-700">{label}</label>
+      <label className="text-xs font-semibold text-slate-700 tracking-wide">{label}</label>
 
       <div className="relative">
         <select
@@ -80,16 +79,16 @@ function SelectField({
             border-slate-200
             rounded-xl
             px-3
-            pr-10
             text-sm
             text-slate-800
             outline-none
-            transition-colors
+            transition-all
             hover:border-slate-300
             focus:border-slate-900
             disabled:opacity-50
+            disabled:bg-slate-50
             cursor-pointer
-            ${multiple ? "min-h-[120px] py-2" : "h-10"}
+            ${multiple ? "min-h-[110px] py-2.5 space-y-1 focus:ring-2 focus:ring-slate-900/5" : "h-10 pr-10"}
           `}
         >
           {children}
@@ -103,18 +102,13 @@ function SelectField({
       </div>
 
       {placeholder && (
-        <p className="text-[11px] text-slate-500">{placeholder}</p>
+        <p className="text-[11px] text-slate-400 leading-normal mt-1 italic">{placeholder}</p>
       )}
     </div>
   );
 }
 
-export default function HrAddEmployee({
-  isOpen,
-  onClose,
-  onSave,
-  initialData,
-}) {
+export default function HrAddEmployee({ isOpen, onClose, onSave, initialData }) {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -136,7 +130,6 @@ export default function HrAddEmployee({
       ...prev,
       [key]: value,
     }));
-
     if (error) setError("");
   };
 
@@ -178,9 +171,9 @@ export default function HrAddEmployee({
         email: initialData.email || "",
         password: "",
         department: initialData.departments?.length
-          ? initialData.departments.map((dept) => dept.name || dept)
-          : initialData.department?.name
-            ? [initialData.department.name]
+          ? initialData.departments.map((dept) => dept.id || dept)
+          : initialData.department?.id
+            ? [initialData.department.id]
             : [],
         position: initialData.position || "",
         managerIds: initialData.managers?.length
@@ -214,15 +207,14 @@ export default function HrAddEmployee({
         email: form.email,
         password: form.password,
         role: "EMPLOYEE",
-        department: form.department,
+        department: form.department, // Correctly forwards array of IDs now
         position: form.position,
         ...(form.managerIds.length > 0 && {
-          managerIds: form.managerIds,
+          managerIds: form.managerIds, // Forwards array of IDs now
         }),
       };
 
       const res = await API.post("/api/hr/employee", payload);
-
       notifySuccess("Employee added successfully!");
 
       setForm({
@@ -252,12 +244,13 @@ export default function HrAddEmployee({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-xs p-4">
-      <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden max-h-[90vh] border border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
+      <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] border border-slate-100 architecture-container animate-in fade-in zoom-in-95 duration-200">
+        
         {/* MODAL HEADER */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Add Employee</h2>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Add New Employee</h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Create a new employee system access account profile.
             </p>
@@ -265,95 +258,99 @@ export default function HrAddEmployee({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
+            type="button"
+            className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors cursor-pointer hover:bg-slate-50"
           >
             <X size={15} />
           </button>
         </div>
 
-        {/* MODAL FORM BODY */}
-        <form
-          onSubmit={handleSubmit}
-          className="p-6 flex-1 space-y-4 overflow-y-auto bg-white"
-        >
-          <Field
-            label="Full Name"
-            value={form.name}
-            onChange={(v) => updateForm("name", v)}
-            placeholder="John Doe"
-            required
-          />
+        {/* MODAL FORM WRAPPER */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          
+          {/* SCROLLABLE INJECT FORM FIELDS */}
+          <div className="p-6 flex-1 space-y-4 overflow-y-auto bg-white custom-scrollbar">
+            <Field
+              label="Full Name"
+              value={form.name}
+              onChange={(v) => updateForm("name", v)}
+              placeholder="John Doe"
+              required
+            />
 
-          <Field
-            label="Email Address"
-            type="email"
-            value={form.email}
-            onChange={(v) => updateForm("email", v)}
-            placeholder="john@company.com"
-            required
-          />
+            <Field
+              label="Email Address"
+              type="email"
+              value={form.email}
+              onChange={(v) => updateForm("email", v)}
+              placeholder="john@company.com"
+              required
+            />
 
-          <Field
-            label="Password"
-            type="password"
-            value={form.password}
-            onChange={(v) => updateForm("password", v)}
-            placeholder="••••••••"
-            required
-          />
+            <Field
+              label="Password"
+              type="password"
+              value={form.password}
+              onChange={(v) => updateForm("password", v)}
+              placeholder="••••••••"
+              required
+            />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SelectField
+                label="Department"
+                value={form.department}
+                onChange={(e) => {
+                  const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+                  updateForm("department", selected);
+                }}
+                disabled={fetchingDepartments}
+                multiple
+                placeholder="Hold Ctrl/Cmd to choose multiple departments"
+              >
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id} className="py-1 px-2 rounded-md text-slate-700 checked:bg-slate-900 checked:text-white">
+                    {dept.name}
+                  </option>
+                ))}
+              </SelectField>
+
+              <Field
+                label="Job Title / Position"
+                value={form.position}
+                onChange={(v) => updateForm("position", v)}
+                placeholder="Frontend Developer"
+                required
+              />
+            </div>
+
             <SelectField
-              label="Department"
-              value={form.department}
+              label="Assign Reporting Managers"
+              value={form.managerIds}
               onChange={(e) => {
                 const selected = Array.from(e.target.selectedOptions, (option) => option.value);
-                updateForm("department", selected);
+                updateForm("managerIds", selected);
               }}
-              disabled={fetchingDepartments}
+              disabled={fetchingManagers}
               multiple
-              placeholder="Hold Ctrl/Cmd to select multiple departments"
+              placeholder="Hold Ctrl/Cmd to choose multiple managers"
             >
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.name}>
-                  {dept.name}
+              {managers.map((manager) => (
+                <option key={manager.id} value={manager.id} className="py-1 px-2 rounded-md text-slate-700 checked:bg-slate-900 checked:text-white">
+                  {manager.name} ({manager.position})
                 </option>
               ))}
             </SelectField>
 
-            <Field
-              label="Job Title / Position"
-              value={form.position}
-              onChange={(v) => updateForm("position", v)}
-              placeholder="Frontend Developer"
-              required
-            />
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs font-medium text-red-600 animate-pulse">
+                {error}
+              </div>
+            )}
           </div>
 
-          <SelectField
-            label="Assign Reporting Managers"
-            value={form.managerIds}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions, (option) => option.value);
-              updateForm("managerIds", selected);
-            }}
-            disabled={fetchingManagers}
-            multiple
-            placeholder="Hold Ctrl/Cmd to select multiple managers"
-          >
-            {managers.map((manager) => (
-              <option key={manager.id} value={manager.id}>
-                {manager.name}
-              </option>
-            ))}
-          </SelectField>
-
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs font-medium text-red-600">
-              {error}
-            </div>
-          )}
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+          {/* PERSISTENT ACTIONS FOOTER */}
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
@@ -365,7 +362,7 @@ export default function HrAddEmployee({
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors disabled:bg-slate-300 cursor-pointer"
+              className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors disabled:bg-slate-300 cursor-pointer shadow-sm shadow-slate-900/10"
             >
               {loading ? "Creating..." : "Create Employee"}
             </button>

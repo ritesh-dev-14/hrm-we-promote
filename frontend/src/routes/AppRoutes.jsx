@@ -212,6 +212,7 @@ export const AppRoutes = () => {
             element={(() => {
               const currentRole = role?.toUpperCase();
               const currentDept = departmentName?.toLowerCase();
+              console.log(currentDept);
 
               // If this is our development override user, directly allow entry
               if (user?.name === "shoot1") {
@@ -219,6 +220,18 @@ export const AppRoutes = () => {
               }
 
               if (currentRole === "MANAGER" && currentDept === "social media") {
+                return <ShootPage />;
+              }
+              if (
+                currentRole === "MANAGER" &&
+                currentDept === "content & creative"
+              ) {
+                return <ShootPage />;
+              }
+              if (
+                currentRole === "EMPLOYEE" &&
+                currentDept === "video production"
+              ) {
                 return <ShootPage />;
               }
 
