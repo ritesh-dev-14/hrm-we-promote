@@ -31,9 +31,8 @@ const ManagerTaskPage = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-
-      const response = await API.get("/api/manager/tasks");
-
+      // Fetching all workspace project resources
+      const response = await API.get("/api/projects");
       setTasks(response?.data?.data || []);
     } catch (error) {
       console.log(error);
@@ -50,8 +49,9 @@ const ManagerTaskPage = () => {
     setTasks((prev) => [newTask, ...prev]);
   };
 
+  // Redirecting click events seamlessly to the project detail view
   const handleTaskClick = (task) => {
-    navigate(`/manager/tasks/${task.id}`);
+navigate(`/project/${task.id}`);
   };
 
   const formatDate = (date) => {
@@ -96,8 +96,6 @@ const ManagerTaskPage = () => {
               <h2 className="text-lg font-semibold text-slate-900">
                 All Projects
               </h2>
-
-            
             </div>
 
             <div className="text-sm text-slate-400">

@@ -5,8 +5,6 @@ import {
   LayoutGrid,
   CalendarDays,
   FileText,
-  CircleDollarSign,
-  Settings,
   LogOut,
   Menu,
   X,
@@ -17,6 +15,7 @@ import {
   ChevronRight,
   BellRing,
   Zap,
+  Camera,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -31,23 +30,36 @@ const NAV_CONFIG = [
     path: "/dashboard",
     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
   },
-
   {
-    id: "tasks",
+    id: "project",
     label: "Projects",
     icon: BriefcaseBusiness,
-    path: "/tasks",
+    path: "/projects",
     roles: ["ADMIN", "HR", "MANAGER"],
   },
-
+  {
+    id: "shoots",
+    label: "Shoots",
+    icon: Camera,
+    path: "/shoot", // Syncing match mapping pattern with your guard rule configuration
+    roles: ["MANAGER", "EMPLOYEE", "COORDINATOR"],
+    // departments: ["social media", "video production"],
+  },
+  {
+    id: "editor",
+    label: "Editor",
+    icon: Camera,
+    path: "/editor", // Syncing match mapping pattern with your guard rule configuration
+    roles: ["MANAGER", "EMPLOYEE", "COORDINATOR"],
+    // departments: ["social media", "Video Editor"],
+  },
   {
     id: "tasks-emp",
     label: "Tasks",
     icon: BriefcaseBusiness,
-    path: "/tasks",
+    path: "/projects", // Redirect paths map uniformly to match shared workspace layouts
     roles: ["EMPLOYEE", "COORDINATOR"],
   },
-
   {
     id: "priority-actions",
     label: "Priority Actions",
@@ -56,7 +68,6 @@ const NAV_CONFIG = [
     roles: ["COORDINATOR"],
     notificationCount: 4,
   },
-
   {
     id: "assigned-actions",
     label: "Assigned Actions",
@@ -64,7 +75,6 @@ const NAV_CONFIG = [
     path: "/assigned-actions",
     roles: ["EMPLOYEE", "MANAGER", "HR"],
   },
-
   {
     id: "attendance",
     label: "Attendance",
@@ -72,7 +82,6 @@ const NAV_CONFIG = [
     path: "/attendance",
     roles: ["EMPLOYEE", "MANAGER", "HR", "COORDINATOR"],
   },
-
   {
     id: "employee-attendance",
     label: "Employee Attendance",
@@ -80,7 +89,6 @@ const NAV_CONFIG = [
     path: "/hr/employees-attendance",
     roles: ["HR"],
   },
-
   {
     id: "employee-leaves",
     label: "Employee Leaves",
@@ -88,7 +96,6 @@ const NAV_CONFIG = [
     path: "/hr/employees-leaves",
     roles: ["HR"],
   },
-
   {
     id: "team",
     label: "Team",
@@ -96,7 +103,6 @@ const NAV_CONFIG = [
     path: "/hr/team",
     roles: ["HR", "ADMIN"],
   },
-
   {
     id: "leave",
     label: "Leave",
@@ -104,15 +110,6 @@ const NAV_CONFIG = [
     path: "/leave",
     roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
   },
-
-  // {
-  //   id: "payslips",
-  //   label: "Payslips",
-  //   icon: CircleDollarSign,
-  //   path: "/payslips",
-  //   roles: ["EMPLOYEE", "MANAGER", "HR", "COORDINATOR"],
-  // },
-
   {
     id: "admin-panel",
     label: "Admin",
@@ -120,14 +117,6 @@ const NAV_CONFIG = [
     path: "/admin/settings",
     roles: ["ADMIN"],
   },
-
-  // {
-  //   id: "settings",
-  //   label: "Settings",
-  //   icon: Settings,
-  //   path: "/settings",
-  //   roles: ["ADMIN", "HR", "MANAGER", "EMPLOYEE", "COORDINATOR"],
-  // },
 ];
 
 const WIDE = 260;
@@ -139,11 +128,72 @@ export default function ProfessionalSidebar({ children }) {
     () => localStorage.getItem("sidebar") === "collapsed",
   );
 
-  const { role, logout } = useAuth();
+  const { role, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [assignedActionsCount, setAssignedActionsCount] = useState(0);
-  const { user } = useAuth();
+  const [departmentName, setDepartmentName] = useState("");
+
+  // Fetch or calculate department alignment contexts exactly like the router configuration
+  useEffect(() => {
+    const checkUserDepartment = async () => {
+      if (!user) return;
+      
+      try {
+        const normalizedRole = role?.toUpperCase();
+        
+        // Instant static layout injection for workspace development users
+        if (user?.name === "shoot2" || user?.email === "shoot2@gmail.com") {
+          setDepartmentName("video production");
+          return;
+        }
+
+        if (normalizedRole === "HR" || normalizedRole === "ADMIN") {
+          setDepartmentName(normalizedRole);
+          return;
+        }
+
+        const assignedDepartmentId = 
+          user?.departmentId || 
+          user?.department || 
+          user?.deptId || 
+          user?.department_id;
+
+        if (!assignedDepartmentId) {
+          setDepartmentName("NONE");
+          return;
+        }
+
+        const res = await API.get("/api/departments");
+        let departmentsList = [];
+        if (Array.isArray(res.data)) {
+          departmentsList = res.data;
+        } else if (res.data?.data && Array.isArray(res.data.data)) {
+          departmentsList = res.data.data;
+        }
+
+        const department = departmentsList.find((d) => {
+          const systemDeptId = String(d.id || d._id || "");
+          const userDeptId = typeof assignedDepartmentId === "object" 
+            ? String(assignedDepartmentId?.id || assignedDepartmentId?._id || "") 
+            : String(assignedDepartmentId);
+
+          return systemDeptId === userDeptId;
+        });
+
+        if (department?.name) {
+          setDepartmentName(department.name.trim().toLowerCase());
+        } else {
+          setDepartmentName("UNKNOWN");
+        }
+      } catch (err) {
+        console.error("Error setting sidebar navigation department filter flags:", err);
+        setDepartmentName("ERROR");
+      }
+    };
+
+    checkUserDepartment();
+  }, [role, user]);
 
   useEffect(() => {
     let interval;
@@ -161,8 +211,6 @@ export default function ProfessionalSidebar({ children }) {
         );
 
         const assignments = res?.data?.data?.data || [];
-
-        // ONLY NEW ASSIGNED
         const assignedOnly = assignments.filter(
           (item) => item.status === "ASSIGNED",
         );
@@ -190,10 +238,24 @@ export default function ProfessionalSidebar({ children }) {
     document.body.style.overflow = mobileOpen ? "hidden" : "auto";
   }, [mobileOpen]);
 
-  const allowedNav = useMemo(
-    () => NAV_CONFIG.filter((i) => i.roles.includes(role)),
-    [role],
-  );
+  // Comprehensive safety filter layer checking both valid functional Roles and explicit Department rules
+  const allowedNav = useMemo(() => {
+    return NAV_CONFIG.filter((item) => {
+      const handlesRole = item.roles.includes(role?.toUpperCase());
+      if (!handlesRole) return false;
+
+      // Special conditional gate for specialized modules (like Media Shoots workspace grid options)
+      if (item.departments) {
+        // Direct pass grid access override confirmation for test accounts
+        if (user?.name === "shoot1") return true;
+
+        const cleanDeptStr = departmentName?.toLowerCase();
+        return item.departments.map(d => d.toLowerCase()).includes(cleanDeptStr);
+      }
+
+      return true;
+    });
+  }, [role, departmentName, user]);
 
   const activeId = useMemo(() => {
     const sortedRoutes = [...allowedNav].sort(
@@ -239,7 +301,6 @@ export default function ProfessionalSidebar({ children }) {
         {/* NAV */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {allowedNav.map((item) => {
-            // const active = activeId === item.id;
             const active = activeId !== null && activeId === item.id;
 
             return (
@@ -285,7 +346,7 @@ ${active ? "bg-white/10 text-white" : "text-slate-400 hover:text-white hover:bg-
           </button>
         </div>
 
-        {/* TOGGLE (FIXED EDGE BUTTON — NO POSITION BUG) */}
+        {/* TOGGLE */}
         {!mobile && (
           <button
             onClick={() => setCollapsed((p) => !p)}
