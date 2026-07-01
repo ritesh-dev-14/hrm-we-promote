@@ -118,7 +118,7 @@ async function main() {
   where: { email: "smm02wepromote@gmail.com" },
   update: {
     password,
-    departmentId: departments["Content & Creative"].id,
+    departmentId: departments["Social Media"].id,
     position: "Content & Creative Manager",
   },
   create: {

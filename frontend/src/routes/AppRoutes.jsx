@@ -69,7 +69,7 @@ export const AppRoutes = () => {
       try {
         // 1. HARDCODED OVERRIDE FOR DEVELOPMENT
         // If this specific user is logged in, grant explicit "video production" access immediately
-        if (user?.name === "shoot1" || user?.email === "shoot1@gmail.com") {
+        if (user?.name === "shoot2" || user?.email === "shoot2@gmail.com") {
           setDepartmentName("video production");
           setIsDeptLoading(false);
           return;
@@ -141,7 +141,7 @@ export const AppRoutes = () => {
       <div className="flex items-center justify-center h-screen w-full">
         <div className="text-center">
           <div className="h-12 w-12 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Syncing application workspaces...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );

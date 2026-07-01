@@ -87,7 +87,7 @@ const ShootManagerPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Video className="text-indigo-600 h-6 w-6" />
-            Shoot Management
+            Shoot's Project Management
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Organize, track, and monitor media production campaigns and active tasks.
@@ -99,7 +99,7 @@ const ShootManagerPage = () => {
           className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition shadow-sm shadow-indigo-600/10 text-sm"
         >
           <Plus size={18} />
-          Create Shoot Workspace
+          Create Shoot Project
         </button>
       </div>
 
@@ -107,7 +107,7 @@ const ShootManagerPage = () => {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
-          <p className="text-slate-500 text-sm mt-3">Loading production workspaces...</p>
+          <p className="text-slate-500 text-sm mt-3">Loading shoot ptojects...</p>
         </div>
       ) : workspaces.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 p-8">
@@ -179,7 +179,7 @@ const ShootManagerPage = () => {
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Video className="text-indigo-600 h-5 w-5" />
-                New Shoot Workspace
+                New Shoot Project
               </h2>
               <button
                 onClick={() => {
@@ -204,12 +204,12 @@ const ShootManagerPage = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Brand / Workspace Name <span className="text-rose-500">*</span>
+                  Brand / Project Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g., Shoot Workspace Alpha 12"
+                  placeholder="e.g., XYZ Brand"
                   value={formData.brandName}
                   onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm text-slate-800 transition"
@@ -222,7 +222,7 @@ const ShootManagerPage = () => {
                 </label>
                 <textarea
                   rows="3"
-                  placeholder="Workspace description for shoot department tasks..."
+                  placeholder="Project description for shoot department tasks..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm text-slate-800 transition resize-none"
@@ -253,7 +253,7 @@ const ShootManagerPage = () => {
                       Creating...
                     </>
                   ) : (
-                    "Create Workspace"
+                    "Create Shoot Project"
                   )}
                 </button>
               </div>

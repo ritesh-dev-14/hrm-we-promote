@@ -368,7 +368,7 @@ export default function ShootWorkspaceDetails() {
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 font-medium transition mb-6 group bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm"
       >
         <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition" />
-        Back to Workspace Roster
+        Back to Projects Roster
       </button>
 
       {/* RENDER CONTROLLER BOUNDS ENGINE BLOCK */}
@@ -472,7 +472,7 @@ export default function ShootWorkspaceDetails() {
                     className="flex items-center gap-1.5 px-3 py-2 border border-rose-200 hover:bg-rose-50/50 text-rose-600 font-medium text-xs rounded-xl transition"
                   >
                     <Trash2 size={14} />
-                    Delete Shoot
+                    Delete Project
                   </button>
                 </div>
               )}
@@ -488,7 +488,7 @@ export default function ShootWorkspaceDetails() {
                 <div>
                   <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <ListTodo size={20} className="text-indigo-600" />
-                    Shoot Workspace Tasks Index Matrix
+                    Planned Shoots
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">Production instructions and timeline configurations list. Click a task row to view details & subtasks.</p>
                 </div>
@@ -500,7 +500,7 @@ export default function ShootWorkspaceDetails() {
                   className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm shadow-indigo-600/10 transition"
                 >
                   <Plus size={14} />
-                  Add Shoot Task
+                  Add Shoot 
                 </button>
               </div>
 
@@ -515,10 +515,10 @@ export default function ShootWorkspaceDetails() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50/30 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                        <th className="py-3 px-5">Task Scope Meta</th>
-                        <th className="py-3 px-4">Setup Flag</th>
+                        <th className="py-3 px-5">Shoot Name</th>
+                        <th className="py-3 px-4">Setup </th>
                         <th className="py-3 px-4">Metrics Layout</th>
-                        <th className="py-3 px-4">Date Context</th>
+                        <th className="py-3 px-4">Date </th>
                         <th className="py-3 px-4">Arrival</th>
                         <th className="py-3 px-4">Maps Navigation</th>
                         <th className="py-3 px-5 text-right">Actions</th>
@@ -536,7 +536,7 @@ export default function ShootWorkspaceDetails() {
                             <span className="text-xs text-slate-400 line-clamp-1 mt-0.5">{task.description || "No specifications description provided."}</span>
                             {task.subtasks?.length > 0 && (
                               <span className="inline-flex items-center gap-1 mt-1 text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-medium">
-                                <Layers size={10} /> Contains {task.subtasks.length} subtasks nodes
+                                <Layers size={10} /> Contains {task.subtasks.length} subtasks
                               </span>
                             )}
                           </td>
@@ -742,7 +742,7 @@ export default function ShootWorkspaceDetails() {
               <div className="flex items-center gap-2 text-indigo-600">
                 <ListTodo size={20} />
                 <h3 className="text-base font-bold text-slate-900">
-                  {isEditTaskMode ? "Modify Target Shoot Task Context" : "Compile Target Shoot Task Context"}
+                  {isEditTaskMode ? "Modify Shoot" : "Plan Shoot"}
                 </h3>
               </div>
               <button onClick={closeAndResetTaskModal} className="p-1 hover:bg-slate-200 text-slate-400 hover:text-slate-600 rounded-lg transition"><X size={18} /></button>
@@ -752,7 +752,7 @@ export default function ShootWorkspaceDetails() {
               <div className="p-5 overflow-y-auto space-y-4 flex-1 bg-white grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                 
                 <div className="sm:col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Task Title Core Header</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Shoot Title</label>
                   <input 
                     type="text" required
                     value={taskForm.title}
@@ -763,7 +763,7 @@ export default function ShootWorkspaceDetails() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Description Parameters</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Description </label>
                   <textarea 
                     rows="2"
                     value={taskForm.description}
@@ -774,7 +774,7 @@ export default function ShootWorkspaceDetails() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Pictures Target Metrics Count</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Pictures  Count</label>
                   <input 
                     type="number" min="0" required
                     value={taskForm.noOfPics}
@@ -784,7 +784,7 @@ export default function ShootWorkspaceDetails() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Reels Target Metrics Count</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Reels  Count</label>
                   <input 
                     type="number" min="0" required
                     value={taskForm.noOfReels}
@@ -794,7 +794,7 @@ export default function ShootWorkspaceDetails() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Calendar Execution Target Date</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Shoot Date</label>
                   <input 
                     type="date"
                     value={taskForm.date}
@@ -804,7 +804,7 @@ export default function ShootWorkspaceDetails() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Call Target Arrival Time</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Arrival Time</label>
                   <input 
                     type="time"
                     value={taskForm.arrivalTime}
@@ -814,7 +814,7 @@ export default function ShootWorkspaceDetails() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Live Set Map Coordinates Navigation Hyperlink</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1"> Location Link</label>
                   <input 
                     type="url"
                     value={taskForm.location}
@@ -825,13 +825,12 @@ export default function ShootWorkspaceDetails() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Workspace Setup Matrix Variant Flag</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Setup Type </label>
                   <select
                     value={taskForm.setupType || ""}
                     onChange={(e) => setTaskForm({...taskForm, setupType: e.target.value})}
                     className="w-full text-sm px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50/40 text-slate-700"
                   >
-                    <option value="">Standard Base Config (Null Mapping Value)</option>
                     <option value="PREMIUM">PREMIUM</option>
                     <option value="VERY_PREMIUM">VERY_PREMIUM</option>
                     <option value="PHONE">PHONE</option>
@@ -848,7 +847,7 @@ export default function ShootWorkspaceDetails() {
                   className="flex items-center gap-1.5 px-4.5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition"
                 >
                   {isActionLoading && <Loader2 size={12} className="animate-spin" />}
-                  {isEditTaskMode ? "Update Changes" : "Publish Context Task"}
+                  {isEditTaskMode ? "Update Changes" : "Create Shoot"}
                 </button>
               </div>
             </form>
@@ -898,11 +897,9 @@ export default function ShootWorkspaceDetails() {
             
             <div className="p-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
               <div className="space-y-1">
-                <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  Operational Context Node
-                </span>
+               
                 <h3 className="text-lg font-bold text-slate-900 mt-1">
-                  {isSubtaskLoading ? "Fetching Track Profile..." : selectedTaskDetails?.title}
+                  {isSubtaskLoading ? "Fetching Shoot Details..." : selectedTaskDetails?.title}
                 </h3>
               </div>
               <button 
@@ -936,11 +933,11 @@ export default function ShootWorkspaceDetails() {
                       <span className="text-slate-800 font-bold flex items-center gap-1 mt-0.5"><Video size={12} className="text-slate-400" /> {selectedTaskDetails?.noOfReels} Units</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 font-medium block">Timeline Segment</span>
+                      <span className="text-slate-400 font-medium block">Status</span>
                       <span className="text-slate-800 font-bold mt-0.5 block">{selectedTaskDetails?.date ? new Date(selectedTaskDetails.date).toLocaleDateString() : "Pending"}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 font-medium block">Arrival Slot</span>
+                      <span className="text-slate-400 font-medium block">Arrival </span>
                       <span className="text-slate-800 font-bold mt-0.5 block">{selectedTaskDetails?.arrivalTime || "N/A"}</span>
                     </div>
                   </div>
@@ -958,16 +955,16 @@ export default function ShootWorkspaceDetails() {
                       <div>
                         <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                           <Layers size={16} className="text-indigo-600" />
-                          Subtask Specifications Roster
+                          Shoot Tasks
                         </h4>
-                        <p className="text-[11px] text-slate-400">Atomic functional tasks targets allocations tracking array indicators.</p>
+                     
                       </div>
                       <button
                         type="button"
                         onClick={() => setShowAddSubtaskModal(true)}
                         className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition"
                       >
-                        <Plus size={12} /> Add Subtask Node
+                        <Plus size={12} /> Add Shoot Task
                       </button>
                     </div>
 
@@ -992,9 +989,7 @@ export default function ShootWorkspaceDetails() {
                                 </div>
                                 <p className="text-xs text-slate-500 mt-1 leading-normal">{sub.description || "No descriptions specified for this structural branch node item."}</p>
                               </div>
-                              <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 shrink-0">
-                                {sub.id.split("-")[0]}...
-                              </span>
+                             
                             </div>
 
                             {/* Reference Links Vectors Section inside subtask box layout template */}
@@ -1006,7 +1001,7 @@ export default function ShootWorkspaceDetails() {
                                     key={idx} href={link} target="_blank" rel="noreferrer"
                                     className="inline-flex items-center gap-1 text-[10px] bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-100 text-slate-600 hover:text-indigo-600 px-2 py-0.5 rounded transition font-medium truncate max-w-[160px]"
                                   >
-                                    URL Vector {idx + 1} <ExternalLink size={8} />
+                                    URL  {idx + 1} <ExternalLink size={8} />
                                   </a>
                                 ))}
                               </div>
@@ -1030,7 +1025,7 @@ export default function ShootWorkspaceDetails() {
                 }} 
                 className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl transition bg-white"
               >
-                Close Analytical Drawer
+                Close 
               </button>
             </div>
 
@@ -1046,14 +1041,14 @@ export default function ShootWorkspaceDetails() {
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-1.5 text-indigo-600">
                 <Plus size={16} />
-                <h4 className="text-sm font-bold text-slate-900">Inject Subtask Branch Parameters</h4>
+                <h4 className="text-sm font-bold text-slate-900">Create Shoot Task</h4>
               </div>
               <button onClick={() => setShowAddSubtaskModal(false)} className="p-1 text-slate-400 hover:text-slate-600 transition"><X size={16} /></button>
             </div>
 
             <form onSubmit={handleAddSubtaskSubmit} className="p-5 space-y-4 text-xs">
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Subtask Title Core</label>
+                <label className="text-xs font-bold text-slate-500 uppercase block mb-1"> Title </label>
                 <input 
                   type="text" required
                   value={subtaskForm.title}
@@ -1064,7 +1059,7 @@ export default function ShootWorkspaceDetails() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Functional Guidelines Description</label>
+                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Description</label>
                 <textarea 
                   rows="2"
                   value={subtaskForm.description}
@@ -1076,7 +1071,7 @@ export default function ShootWorkspaceDetails() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Production Type Scope</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Production Type </label>
                   <select
                     value={subtaskForm.type}
                     onChange={(e) => setSubtaskForm({...subtaskForm, type: e.target.value})}
@@ -1090,7 +1085,7 @@ export default function ShootWorkspaceDetails() {
 
                 {subtaskForm.type === "REEL" && (
                   <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Video Aspect Variant Layout</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Media Aspect</label>
                     <select
                       value={subtaskForm.videoType}
                       onChange={(e) => setSubtaskForm({...subtaskForm, videoType: e.target.value})}
@@ -1104,7 +1099,7 @@ export default function ShootWorkspaceDetails() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Reference Asset Links Matrix (Comma Separated)</label>
+                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Reference  Links</label>
                 <input 
                   type="text"
                   value={subtaskForm.referenceLinksRaw}
@@ -1122,7 +1117,7 @@ export default function ShootWorkspaceDetails() {
                   className="flex items-center gap-1 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm transition"
                 >
                   {isActionLoading && <Loader2 size={10} className="animate-spin" />}
-                  Deploy branch node
+                  Add Shoot Task
                 </button>
               </div>
             </form>

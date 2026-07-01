@@ -135,7 +135,7 @@ export default function ProfessionalSidebar({ children }) {
         const normalizedRole = role?.toUpperCase();
         
         // Instant static layout injection for workspace development users
-        if (user?.name === "shoot1" || user?.email === "shoot1@gmail.com") {
+        if (user?.name === "shoot2" || user?.email === "shoot2@gmail.com") {
           setDepartmentName("video production");
           return;
         }
