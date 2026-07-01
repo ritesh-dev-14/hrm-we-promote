@@ -79,10 +79,10 @@ navigate(`/project/${task.id}`);
             </h1>
           </div>
 
-          <CreateTaskButton
+          {/* <CreateTaskButton
             title="Create Project"
             onClick={() => setOpenModal(true)}
-          />
+          /> */}
         </div>
 
         {/* STATS */}
@@ -135,7 +135,6 @@ navigate(`/project/${task.id}`);
               {/* TABLE HEADER */}
               <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 text-xs font-medium uppercase tracking-wider text-slate-400">
                 <div className="col-span-4">Projects</div>
-                <div className="col-span-2">Status</div>
                 <div className="col-span-2">Start</div>
                 <div className="col-span-2">End</div>
                 <div className="col-span-2">Created By</div>
@@ -167,7 +166,7 @@ navigate(`/project/${task.id}`);
                       </div>
 
                       {/* STATUS */}
-                      <div className="col-span-2">
+                      {/* <div className="col-span-2">
                         <span
                           className={`text-sm font-medium ${
                             statusStyles[task.status]
@@ -175,7 +174,7 @@ navigate(`/project/${task.id}`);
                         >
                           {task.status}
                         </span>
-                      </div>
+                      </div> */}
 
                       {/* START */}
                       <div className="col-span-2 flex items-center gap-2 text-sm text-slate-600">

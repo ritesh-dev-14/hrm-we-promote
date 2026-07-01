@@ -16,6 +16,7 @@ import {
   BellRing,
   Zap,
   Camera,
+  Keyboard,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -47,8 +48,8 @@ const NAV_CONFIG = [
   },
   {
     id: "editor",
-    label: "Creative and Content",
-    icon: Camera,
+    label: "Creative and Editors",
+    icon: Keyboard,
     path: "/editor", // Syncing match mapping pattern with your guard rule configuration
     roles: ["MANAGER", "EMPLOYEE", "COORDINATOR"],
     // departments: ["social media", "Video Editor"],
@@ -138,10 +139,10 @@ export default function ProfessionalSidebar({ children }) {
   useEffect(() => {
     const checkUserDepartment = async () => {
       if (!user) return;
-      
+
       try {
         const normalizedRole = role?.toUpperCase();
-        
+
         // Instant static layout injection for workspace development users
         if (user?.name === "shoot2" || user?.email === "shoot2@gmail.com") {
           setDepartmentName("video production");
@@ -153,10 +154,10 @@ export default function ProfessionalSidebar({ children }) {
           return;
         }
 
-        const assignedDepartmentId = 
-          user?.departmentId || 
-          user?.department || 
-          user?.deptId || 
+        const assignedDepartmentId =
+          user?.departmentId ||
+          user?.department ||
+          user?.deptId ||
           user?.department_id;
 
         if (!assignedDepartmentId) {
@@ -174,9 +175,12 @@ export default function ProfessionalSidebar({ children }) {
 
         const department = departmentsList.find((d) => {
           const systemDeptId = String(d.id || d._id || "");
-          const userDeptId = typeof assignedDepartmentId === "object" 
-            ? String(assignedDepartmentId?.id || assignedDepartmentId?._id || "") 
-            : String(assignedDepartmentId);
+          const userDeptId =
+            typeof assignedDepartmentId === "object"
+              ? String(
+                  assignedDepartmentId?.id || assignedDepartmentId?._id || "",
+                )
+              : String(assignedDepartmentId);
 
           return systemDeptId === userDeptId;
         });
@@ -187,7 +191,10 @@ export default function ProfessionalSidebar({ children }) {
           setDepartmentName("UNKNOWN");
         }
       } catch (err) {
-        console.error("Error setting sidebar navigation department filter flags:", err);
+        console.error(
+          "Error setting sidebar navigation department filter flags:",
+          err,
+        );
         setDepartmentName("ERROR");
       }
     };
@@ -250,7 +257,9 @@ export default function ProfessionalSidebar({ children }) {
         if (user?.name === "shoot1") return true;
 
         const cleanDeptStr = departmentName?.toLowerCase();
-        return item.departments.map(d => d.toLowerCase()).includes(cleanDeptStr);
+        return item.departments
+          .map((d) => d.toLowerCase())
+          .includes(cleanDeptStr);
       }
 
       return true;
@@ -275,7 +284,7 @@ export default function ProfessionalSidebar({ children }) {
 
     return matched?.id || null;
   }, [location.pathname, allowedNav]);
-  
+
   const Sidebar = ({ mobile = false }) => {
     const width = mobile ? WIDE : collapsed ? COLLAPSED : WIDE;
 
