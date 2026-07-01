@@ -56,10 +56,30 @@ import AssignedActionsPage from "../pages/Employee/AssignedActionsPage.jsx";
 
 export const AppRoutes = () => {
   const { role, user, token, isLoading } = useAuth();
-  const [departmentName, setDepartmentName] = useState("");
-  const [isDeptLoading, setIsDeptLoading] = useState(true);
-
   const isAuthenticated = user && token;
+
+  // Compute the initial state synchronously to prevent asynchronous state-change flickering
+  const [departmentName, setDepartmentName] = useState(() => {
+    if (role === "HR" || role === "ADMIN") return role.toUpperCase();
+    
+    const initialDeptId = user?.departmentId || user?.department || user?.deptId || user?.department_id;
+    const initialDeptsArray = user?.departments || [];
+    
+    if (!initialDeptId && initialDeptsArray.length === 0 && user) {
+      return user?.position ? String(user.position).trim() : "GENERAL_STAFF";
+    }
+    return "";
+  });
+
+  const [isDeptLoading, setIsDeptLoading] = useState(() => {
+    if (role === "HR" || role === "ADMIN") return false;
+    
+    const initialDeptId = user?.departmentId || user?.department || user?.deptId || user?.department_id;
+    const initialDeptsArray = user?.departments || [];
+    
+    if (!initialDeptId && initialDeptsArray.length === 0) return false;
+    return true;
+  });
 
   useEffect(() => {
     const getDepartmentName = async () => {
@@ -71,23 +91,13 @@ export const AppRoutes = () => {
       }
 
       try {
-        // 1. HARDCODED OVERRIDE FOR DEVELOPMENT
-        // If this specific user is logged in, grant explicit "video production" access immediately
-        if (user?.name === "shoot2" || user?.email === "shoot2@gmail.com") {
-          setDepartmentName("video production");
-          setIsDeptLoading(false);
-          return;
-        }
-
         if (!role) {
           setIsDeptLoading(false);
           return;
         }
 
         const normalizedRole = role.toUpperCase();
-
         if (normalizedRole === "HR" || normalizedRole === "ADMIN") {
-          setDepartmentName(normalizedRole);
           setIsDeptLoading(false);
           return;
         }
@@ -98,49 +108,50 @@ export const AppRoutes = () => {
           user?.deptId ||
           user?.department_id;
 
-        if (!assignedDepartmentId) {
-          console.warn(
-            "User profile missing all recognizable department key fields:",
-            user,
-          );
-          setDepartmentName("NONE");
+        const assignedDepartmentsArray = user?.departments || [];
+
+        if (!assignedDepartmentId && assignedDepartmentsArray.length === 0) {
           setIsDeptLoading(false);
           return;
         }
 
         const res = await API.get("/api/departments");
+        const departmentsList = res.data?.data || [];
 
-        let departmentsList = [];
-        if (Array.isArray(res.data)) {
-          departmentsList = res.data;
-        } else if (res.data?.data && Array.isArray(res.data.data)) {
-          departmentsList = res.data.data;
+        const targetIds = new Set();
+        if (assignedDepartmentId) {
+          if (typeof assignedDepartmentId === "object") {
+            targetIds.add(String(assignedDepartmentId?.id || assignedDepartmentId?._id || ""));
+          } else {
+            targetIds.add(String(assignedDepartmentId));
+          }
         }
 
-        const department = departmentsList.find((d) => {
-          const systemDeptId = String(d.id || d._id || "");
-          const userDeptId =
-            typeof assignedDepartmentId === "object"
-              ? String(
-                  assignedDepartmentId?.id || assignedDepartmentId?._id || "",
-                )
-              : String(assignedDepartmentId);
-
-          return systemDeptId === userDeptId;
+        assignedDepartmentsArray.forEach((dept) => {
+          if (typeof dept === "object") {
+            targetIds.add(String(dept?.id || dept?._id || ""));
+          } else {
+            targetIds.add(String(dept));
+          }
         });
 
-        if (department?.name) {
-          setDepartmentName(department.name.trim());
+        const matchedDepartment = departmentsList.find((d) => {
+          const systemDeptId = String(d.id || d._id || "");
+          return targetIds.has(systemDeptId);
+        });
+
+        if (matchedDepartment?.name) {
+          setDepartmentName(matchedDepartment.name.trim());
         } else {
-          console.warn(
-            "Could not find matching department document for ID reference:",
-            assignedDepartmentId,
-          );
-          setDepartmentName("UNKNOWN");
+          if (typeof user?.department === "string" && user?.department) {
+            setDepartmentName(user.department);
+          } else {
+            setDepartmentName("GENERAL_STAFF");
+          }
         }
       } catch (err) {
-        console.error("Failed fetching routing engine context keys:", err);
-        setDepartmentName("ERROR");
+        console.error("Failed fetching routing engine context keys via API:", err);
+        setDepartmentName("GENERAL_STAFF");
       } finally {
         setIsDeptLoading(false);
       }
@@ -149,16 +160,18 @@ export const AppRoutes = () => {
     getDepartmentName();
   }, [role, user, isLoading]);
 
-  if (isLoading || isDeptLoading || (isAuthenticated && !departmentName)) {
+  if (isLoading || (isAuthenticated && isDeptLoading)) {
     return (
-      <div className="flex items-center justify-center h-screen w-full">
+      <div className="flex items-center justify-center h-screen w-full bg-white">
         <div className="text-center">
           <div className="h-12 w-12 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 font-medium text-sm">Loading Environment...</p>
         </div>
       </div>
     );
   }
+  
+  console.log(user?.position);
 
   return (
     <Routes>
@@ -213,31 +226,20 @@ export const AppRoutes = () => {
               const currentRole = role?.toUpperCase();
               const currentDept = departmentName?.toLowerCase();
 
-              // If this is our development override user, directly allow entry
-              if (user?.name === "shoot1") {
+              if (user?.position === "Shoot") {
                 return <ShootPage />;
               }
 
               if (currentRole === "MANAGER" && currentDept === "social media") {
                 return <ShootPage />;
               }
-              if (
-                currentRole === "MANAGER" &&
-                currentDept === "content & creative"
-              ) {
+              if (currentRole === "MANAGER" && currentDept === "content & creative") {
                 return <ShootPage />;
               }
-              if (
-                currentRole === "EMPLOYEE" &&
-                currentDept === "video production"
-              ) {
+              if (currentRole === "EMPLOYEE" && currentDept === "video production") {
                 return <ShootPage />;
               }
-
-              if (
-                ["EMPLOYEE", "COORDINATOR"].includes(currentRole) &&
-                currentDept === "video production"
-              ) {
+              if (currentRole === "COORDINATOR" && currentDept === "video production") {
                 return <ShootPage />;
               }
 
@@ -248,7 +250,7 @@ export const AppRoutes = () => {
           <Route
             path="/shoot/:workspaceId"
             element={
-              role === "MANAGER" && departmentName === "Social Media" ? (
+              role === "MANAGER" && departmentName.toLowerCase() === "social media" ? (
                 <ShootWorkspaceDetails />
               ) : (
                 <Navigate to="/dashboard" replace />

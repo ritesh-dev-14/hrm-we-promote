@@ -51,7 +51,7 @@ const NAV_CONFIG = [
     label: "Creative and Editors",
     icon: Keyboard,
     path: "/editor", // Syncing match mapping pattern with your guard rule configuration
-    roles: ["MANAGER", "EMPLOYEE", "COORDINATOR"],
+    roles: ["MANAGER"],
     // departments: ["social media", "Video Editor"],
   },
   {
