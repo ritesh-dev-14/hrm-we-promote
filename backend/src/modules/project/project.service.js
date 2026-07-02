@@ -5,6 +5,7 @@ const ERRORS = require("../../utils/errors");
 const FREQUENCY_DEPARTMENTS = [
   "SEO",
   "Social Media",
+  "Social Media Department",
 ];
 
 const formatProject = (project) => {
@@ -79,7 +80,10 @@ exports.createProject = async (user, body) => {
   }
 
   const isFrequencyDepartment = FREQUENCY_DEPARTMENTS.includes(department.name);
-  const isSocialMediaDepartment = department.name === "Social Media";
+  const isSocialMediaDepartment = [
+    "Social Media",
+    "Social Media Department",
+  ].includes(department.name);
 
   if (isFrequencyDepartment) {
     if (!body.frequency) {
@@ -370,7 +374,10 @@ exports.updateProject = async (user, projectId, body) => {
   }
 
   const isFrequencyDepartment = FREQUENCY_DEPARTMENTS.includes(department.name);
-  const isSocialMediaDepartment = department.name === "Social Media";
+  const isSocialMediaDepartment = [
+    "Social Media",
+    "Social Media Department",
+  ].includes(department.name);
   const currentEndDate = body.endDate
     ? new Date(body.endDate)
     : project.endDate;
