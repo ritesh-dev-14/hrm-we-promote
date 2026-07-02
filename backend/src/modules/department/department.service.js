@@ -81,6 +81,18 @@ exports.deleteDepartment = async (
     );
   }
 
+  const projectCount =
+    await prisma.project.count({
+      where: { departmentId: id },
+    });
+
+  if (projectCount > 0) {
+    throw new ApiError(
+      409,
+      "Cannot delete department because it is linked to one or more projects"
+    );
+  }
+
   return prisma.department.delete({
     where: { id },
   });

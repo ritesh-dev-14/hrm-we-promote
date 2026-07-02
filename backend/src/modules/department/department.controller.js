@@ -60,8 +60,10 @@ exports.deleteDepartment =
           req.params.id
         );
 
-      res.json({
+      res.status(200).json({
         success: true,
+        message:
+          "Department deleted successfully",
         data,
       });
     } catch (err) {
