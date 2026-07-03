@@ -304,15 +304,136 @@ exports.updateManager = async (employeeId, body) => {
 };
 
 exports.deleteManager = async (employeeId) => {
-  const manager = await prisma.user.findUnique({ where: { employeeId } });
+  const manager = await prisma.user.findUnique({
+    where: { employeeId },
+    select: {
+      id: true,
+      employeeId: true,
+      role: true,
+      name: true,
+    },
+  });
 
   if (!manager) {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
-  return prisma.user.delete({
-    where: { employeeId },
-  });
+  try {
+    // Use transaction to ensure all related data is deleted properly
+    // Delete in order of dependencies to handle all foreign key constraints
+    await prisma.$transaction(async (tx) => {
+      // Delete user relationships first
+      await tx.userDepartment.deleteMany({
+        where: { userId: manager.id },
+      });
+
+      await tx.userManager.deleteMany({
+        where: { employeeId: manager.id },
+      });
+
+      await tx.userManager.deleteMany({
+        where: { managerId: manager.id },
+      });
+
+      // Delete notifications
+      await tx.notification.deleteMany({
+        where: { userId: manager.id },
+      });
+
+      // Delete task-related records
+      await tx.taskItemAssignment.deleteMany({
+        where: { userId: manager.id },
+      });
+
+      await tx.taskAssignment.deleteMany({
+        where: { userId: manager.id },
+      });
+
+      await tx.taskEscalation.deleteMany({
+        where: { employeeId: manager.id },
+      });
+
+      await tx.taskEscalation.deleteMany({
+        where: { managerId: manager.id },
+      });
+
+      // Delete attendance records
+      await tx.attendance.deleteMany({
+        where: { userId: manager.id },
+      });
+
+      // Delete leave records (including where user is reviewer)
+      await tx.leave.deleteMany({
+        where: { reviewedBy: manager.id },
+      });
+
+      await tx.leave.deleteMany({
+        where: { userId: manager.id },
+      });
+
+      // Delete coverage records
+      await tx.employeeTaskCoverage.deleteMany({
+        where: { employeeId: manager.id },
+      });
+
+      await tx.employeeTaskCoverage.deleteMany({
+        where: { managerId: manager.id },
+      });
+
+      // Delete coordinator assignments
+      await tx.coordinatorFollowUp.deleteMany({
+        where: { senderId: manager.id },
+      });
+
+      await tx.coordinatorAssignment.deleteMany({
+        where: { assignedToId: manager.id },
+      });
+
+      await tx.coordinatorAssignment.deleteMany({
+        where: { createdById: manager.id },
+      });
+
+      // Delete project assignments
+      await tx.projectAssignment.deleteMany({
+        where: { managerId: manager.id },
+      });
+
+      // Delete shoot workspace memberships
+      await tx.shootSubTask.deleteMany({
+        where: { submittedById: manager.id },
+      });
+
+      await tx.shootTask.deleteMany({
+        where: { createdById: manager.id },
+      });
+
+      // Delete project-related records
+      await tx.projectMonthlySheet.deleteMany({
+        where: { createdById: manager.id },
+      });
+
+      await tx.project.deleteMany({
+        where: { createdById: manager.id },
+      });
+
+      // Delete tasks created by this user
+      await tx.task.deleteMany({
+        where: { createdById: manager.id },
+      });
+
+      // Delete the user
+      await tx.user.delete({
+        where: { id: manager.id },
+      });
+    });
+
+    return { id: manager.id, employeeId: manager.employeeId };
+  } catch (err) {
+    throw new ApiError(500, {
+      code: "DELETE_ERROR",
+      message: `Failed to delete manager: ${err.message}`,
+    });
+  }
 };
 
 // exports.createEmployee = async (user, body) => {
@@ -751,15 +872,144 @@ exports.updateEmployee = async (employeeId, body) => {
 };
 
 exports.deleteEmployee = async (employeeId) => {
-  const employee = await prisma.user.findUnique({ where: { employeeId } });
+  const employee = await prisma.user.findUnique({
+    where: { employeeId },
+    select: {
+      id: true,
+      employeeId: true,
+      role: true,
+      name: true,
+    },
+  });
 
   if (!employee) {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
-  return prisma.user.delete({
-    where: { employeeId },
-  });
+  // Allow deletion of EMPLOYEE and MANAGER roles
+  if (!["EMPLOYEE", "MANAGER", "EA", "COORDINATOR"].includes(employee.role)) {
+    throw new ApiError(400, {
+      code: "INVALID_ROLE",
+      message: `Cannot delete user with role ${employee.role}`,
+    });
+  }
+
+  try {
+    // Use transaction to ensure all related data is deleted properly
+    // Delete in order of dependencies to handle all foreign key constraints
+    await prisma.$transaction(async (tx) => {
+      // Delete user relationships first
+      await tx.userDepartment.deleteMany({
+        where: { userId: employee.id },
+      });
+
+      await tx.userManager.deleteMany({
+        where: { employeeId: employee.id },
+      });
+
+      await tx.userManager.deleteMany({
+        where: { managerId: employee.id },
+      });
+
+      // Delete notifications
+      await tx.notification.deleteMany({
+        where: { userId: employee.id },
+      });
+
+      // Delete task-related records
+      await tx.taskItemAssignment.deleteMany({
+        where: { userId: employee.id },
+      });
+
+      await tx.taskAssignment.deleteMany({
+        where: { userId: employee.id },
+      });
+
+      await tx.taskEscalation.deleteMany({
+        where: { employeeId: employee.id },
+      });
+
+      await tx.taskEscalation.deleteMany({
+        where: { managerId: employee.id },
+      });
+
+      // Delete attendance records
+      await tx.attendance.deleteMany({
+        where: { userId: employee.id },
+      });
+
+      // Delete leave records (including where user is reviewer)
+      await tx.leave.deleteMany({
+        where: { reviewedBy: employee.id },
+      });
+
+      await tx.leave.deleteMany({
+        where: { userId: employee.id },
+      });
+
+      // Delete coverage records
+      await tx.employeeTaskCoverage.deleteMany({
+        where: { employeeId: employee.id },
+      });
+
+      await tx.employeeTaskCoverage.deleteMany({
+        where: { managerId: employee.id },
+      });
+
+      // Delete coordinator assignments
+      await tx.coordinatorFollowUp.deleteMany({
+        where: { senderId: employee.id },
+      });
+
+      await tx.coordinatorAssignment.deleteMany({
+        where: { assignedToId: employee.id },
+      });
+
+      await tx.coordinatorAssignment.deleteMany({
+        where: { createdById: employee.id },
+      });
+
+      // Delete project assignments
+      await tx.projectAssignment.deleteMany({
+        where: { managerId: employee.id },
+      });
+
+      // Delete shoot workspace memberships
+      await tx.shootSubTask.deleteMany({
+        where: { submittedById: employee.id },
+      });
+
+      await tx.shootTask.deleteMany({
+        where: { createdById: employee.id },
+      });
+
+      // Delete project-related records
+      await tx.projectMonthlySheet.deleteMany({
+        where: { createdById: employee.id },
+      });
+
+      await tx.project.deleteMany({
+        where: { createdById: employee.id },
+      });
+
+      // Delete tasks created by this user
+      await tx.task.deleteMany({
+        where: { createdById: employee.id },
+      });
+
+      // Delete the user
+      await tx.user.delete({
+        where: { id: employee.id },
+      });
+    });
+
+    return { id: employee.id, employeeId: employee.employeeId };
+  } catch (err) {
+    throw new ApiError(500, {
+      code: "DELETE_ERROR",
+      message: `Failed to delete employee: ${err.message}`,
+    });
+  }
 };
 
 // Get Employee Attandance
