@@ -2,7 +2,11 @@ const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
 
-const FREQUENCY_DEPARTMENTS = ["SEO", "Social Media"];
+const FREQUENCY_DEPARTMENTS = [
+  "SEO",
+  "Social Media",
+  "Social Media Department",
+];
 
 const formatDay = (day) => ({
   id: day.id,
