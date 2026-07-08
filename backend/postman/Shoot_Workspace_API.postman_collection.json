@@ -216,7 +216,24 @@
       "response": []
     },
     {
-      "name": "16. Get Shoot Subtask By ID",
+      "name": "16. Review Shoot Subtask",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"APPROVED\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}/review", "host": ["{{baseUrl}}"], "path": ["api", "shoot-workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", "subtasks", "{{subtaskId}}", "review"] },
+        "description": "Review a submitted shoot subtask. Allowed role: MANAGER. Use status APPROVED or REJECTED, and include reason for rejected submissions."
+      },
+      "response": []
+    },
+    {
+      "name": "17. Get Shoot Subtask By ID",
       "request": {
         "method": "GET",
         "header": [ { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" } ],

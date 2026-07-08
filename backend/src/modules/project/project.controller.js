@@ -1,7 +1,19 @@
 const service = require("./project.service");
+const cloudinary = require("../../utils/cloudinary");
 
 exports.createProject = async (req, res, next) => {
   try {
+    req.body = req.body || {};
+
+    if (req.file) {
+      const result = await cloudinary.uploadBuffer(req.file.buffer, {
+        folder: "projects",
+        resource_type: "image",
+      });
+
+      req.body.logo = result.secure_url;
+    }
+
     const data = await service.createProject(req.user, req.body);
 
     res.status(201).json({
@@ -54,6 +66,17 @@ exports.getProjectById = async (req, res, next) => {
 
 exports.updateProject = async (req, res, next) => {
   try {
+    req.body = req.body || {};
+
+    if (req.file) {
+      const result = await cloudinary.uploadBuffer(req.file.buffer, {
+        folder: "projects",
+        resource_type: "image",
+      });
+
+      req.body.logo = result.secure_url;
+    }
+
     const data = await service.updateProject(
       req.user,
       req.params.id,

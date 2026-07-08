@@ -13,6 +13,9 @@ const formatDay = (day) => ({
   date: day.date,
   reelType: day.reelType,
   postType: day.postType,
+  videoType: day.videoType,
+  title: day.title,
+  referenceLinks: day.referenceLinks,
   script: day.script,
   description: day.description,
   createdAt: day.createdAt,
@@ -109,8 +112,11 @@ exports.createProjectMonthlySheet = async (user, projectId, body) => {
       days: {
         create: body.days.map((day) => ({
           date: new Date(day.date),
-          reelType: day.reelType,
-          postType: day.postType,
+          reelType: day.reelType || null,
+          postType: day.postType || null,
+          videoType: day.videoType || null,
+          title: day.title || null,
+          referenceLinks: day.referenceLinks || [],
           script: day.script || null,
           description: day.description || null,
         })),
@@ -219,8 +225,11 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
     updateData.data.days = {
       create: body.days.map((day) => ({
         date: new Date(day.date),
-        reelType: day.reelType,
-        postType: day.postType,
+        reelType: day.reelType || null,
+        postType: day.postType || null,
+        videoType: day.videoType || null,
+        title: day.title || null,
+        referenceLinks: day.referenceLinks || [],
         script: day.script || null,
         description: day.description || null,
       })),

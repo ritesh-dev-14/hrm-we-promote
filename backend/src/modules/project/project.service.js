@@ -38,6 +38,15 @@ const formatProject = (project) => {
     fbPassword: project.fbPassword,
     instaEmail: project.instaEmail,
     instaPassword: project.instaPassword,
+    referenceLink: project.referenceLink,
+    tasteLink: project.tasteLink,
+    linkedinEmail: project.linkedinEmail,
+    linkedinPassword: project.linkedinPassword,
+    youtubeEmail: project.youtubeEmail,
+    youtubePassword: project.youtubePassword,
+    twitterEmail: project.twitterEmail,
+    twitterPassword: project.twitterPassword,
+    logo: project.logo,
     projectStartDate: project.projectStartDate,
     createdBy: {
       id: createdBy.id,
@@ -152,6 +161,26 @@ exports.createProject = async (user, body) => {
     },
   });
 
+  let currentUser = null;
+
+  if (user?.id) {
+    currentUser = await prisma.user.findUnique({
+      where: { id: user.id },
+    });
+  }
+
+  if (!currentUser && user?.employeeId) {
+    currentUser = await prisma.user.findUnique({
+      where: { employeeId: user.employeeId },
+    });
+  }
+
+  if (!currentUser) {
+    throw new ApiError(401, ERRORS.AUTH.UNAUTHORIZED);
+  }
+
+  user = currentUser;
+
   if (managers.length !== body.assignTo.length) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
@@ -189,6 +218,15 @@ exports.createProject = async (user, body) => {
       projectStartDate: body.projectStartDate
         ? new Date(body.projectStartDate)
         : null,
+      referenceLink: body.referenceLink || null,
+      tasteLink: body.tasteLink || null,
+      linkedinEmail: body.linkedinEmail || null,
+      linkedinPassword: body.linkedinPassword || null,
+      youtubeEmail: body.youtubeEmail || null,
+      youtubePassword: body.youtubePassword || null,
+      twitterEmail: body.twitterEmail || null,
+      twitterPassword: body.twitterPassword || null,
+      logo: body.logo || null,
       createdById: user.id,
       assignments: {
         create: managers.map((manager) => ({
@@ -342,6 +380,15 @@ exports.updateProject = async (user, projectId, body) => {
       "fbPassword",
       "instaEmail",
       "instaPassword",
+      "referenceLink",
+      "tasteLink",
+      "linkedinEmail",
+      "linkedinPassword",
+      "youtubeEmail",
+      "youtubePassword",
+      "twitterEmail",
+      "twitterPassword",
+      "logo",
       "projectStartDate",
     ]);
 
@@ -436,6 +483,23 @@ exports.updateProject = async (user, projectId, body) => {
         ? new Date(body.projectStartDate)
         : null
       : project.projectStartDate;
+  const currentReferenceLink =
+    body.referenceLink !== undefined ? body.referenceLink : project.referenceLink;
+  const currentTasteLink =
+    body.tasteLink !== undefined ? body.tasteLink : project.tasteLink;
+  const currentLinkedinEmail =
+    body.linkedinEmail !== undefined ? body.linkedinEmail : project.linkedinEmail;
+  const currentLinkedinPassword =
+    body.linkedinPassword !== undefined ? body.linkedinPassword : project.linkedinPassword;
+  const currentYoutubeEmail =
+    body.youtubeEmail !== undefined ? body.youtubeEmail : project.youtubeEmail;
+  const currentYoutubePassword =
+    body.youtubePassword !== undefined ? body.youtubePassword : project.youtubePassword;
+  const currentTwitterEmail =
+    body.twitterEmail !== undefined ? body.twitterEmail : project.twitterEmail;
+  const currentTwitterPassword =
+    body.twitterPassword !== undefined ? body.twitterPassword : project.twitterPassword;
+  const currentLogo = body.logo !== undefined ? body.logo : project.logo;
 
   if (isSocialMediaDepartment) {
     if (
@@ -489,6 +553,23 @@ exports.updateProject = async (user, projectId, body) => {
   if (body.fbPassword !== undefined) data.fbPassword = body.fbPassword || null;
   if (body.instaEmail !== undefined) data.instaEmail = body.instaEmail || null;
   if (body.instaPassword !== undefined) data.instaPassword = body.instaPassword || null;
+  if (body.referenceLink !== undefined)
+    data.referenceLink = body.referenceLink || null;
+  if (body.tasteLink !== undefined)
+    data.tasteLink = body.tasteLink || null;
+  if (body.linkedinEmail !== undefined)
+    data.linkedinEmail = body.linkedinEmail || null;
+  if (body.linkedinPassword !== undefined)
+    data.linkedinPassword = body.linkedinPassword || null;
+  if (body.youtubeEmail !== undefined)
+    data.youtubeEmail = body.youtubeEmail || null;
+  if (body.youtubePassword !== undefined)
+    data.youtubePassword = body.youtubePassword || null;
+  if (body.twitterEmail !== undefined)
+    data.twitterEmail = body.twitterEmail || null;
+  if (body.twitterPassword !== undefined)
+    data.twitterPassword = body.twitterPassword || null;
+  if (body.logo !== undefined) data.logo = body.logo || null;
   if (body.projectStartDate !== undefined)
     data.projectStartDate = body.projectStartDate
       ? new Date(body.projectStartDate)
@@ -507,6 +588,15 @@ exports.updateProject = async (user, projectId, body) => {
     data.fbPassword = null;
     data.instaEmail = null;
     data.instaPassword = null;
+    data.referenceLink = null;
+    data.tasteLink = null;
+    data.linkedinEmail = null;
+    data.linkedinPassword = null;
+    data.youtubeEmail = null;
+    data.youtubePassword = null;
+    data.twitterEmail = null;
+    data.twitterPassword = null;
+    data.logo = null;
     data.projectStartDate = null;
   }
 

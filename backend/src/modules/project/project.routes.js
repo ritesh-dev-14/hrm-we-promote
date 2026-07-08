@@ -5,6 +5,8 @@ const auth = require("../../middlewares/auth.middleware");
 const role = require("../../middlewares/role.middleware");
 const validate = require("../../middlewares/validate.middleware");
 const controller = require("./project.controller");
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
 const {
   createProjectSchema,
   updateProjectSchema,
@@ -15,6 +17,7 @@ router.post(
   "/",
   auth,
   role("ADMIN", "HR", "EA"),
+  upload.single("logo"),
   validate(createProjectSchema),
   controller.createProject
 );
@@ -29,6 +32,16 @@ router.patch(
   "/:id",
   auth,
   role("ADMIN", "HR", "EA", "MANAGER"),
+  upload.single("logo"),
+  validate(updateProjectSchema),
+  controller.updateProject
+);
+
+router.patch(
+  "/:id/logo",
+  auth,
+  role("ADMIN", "HR", "EA", "MANAGER"),
+  upload.single("logo"),
   validate(updateProjectSchema),
   controller.updateProject
 );

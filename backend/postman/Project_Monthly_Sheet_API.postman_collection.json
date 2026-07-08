@@ -24,7 +24,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"month\": 7,\n  \"year\": 2026,\n  \"totalReels\": 20,\n  \"totalPosts\": 15,\n  \"totalReelsUploaded\": 18,\n  \"totalPostsUploaded\": 12,\n  \"moodBoardLink\": \"https://example.com/moodboard\",\n  \"days\": [\n    {\n      \"date\": \"2026-07-01T00:00:00.000Z\",\n      \"reelType\": \"SHOOT\",\n      \"postType\": \"AI\",\n      \"script\": \"Intro script for day 1\",\n      \"description\": \"Post description for day 1\"\n    },\n    {\n      \"date\": \"2026-07-02T00:00:00.000Z\",\n      \"reelType\": \"AI\",\n      \"postType\": \"SHOOT\",\n      \"script\": \"Script for day 2\",\n      \"description\": \"Post description for day 2\"\n    }\n  ]\n}"
+          "raw": "{\n  \"month\": 7,\n  \"year\": 2026,\n  \"totalReels\": 20,\n  \"totalPosts\": 15,\n  \"totalReelsUploaded\": 18,\n  \"totalPostsUploaded\": 12,\n  \"moodBoardLink\": \"https://example.com/moodboard\",\n  \"days\": [\n    {\n      \"date\": \"2026-07-01T00:00:00.000Z\",\n      \"reelType\": \"SHOOT\",\n      \"postType\": \"AI\",\n      \"videoType\": \"HORIZONTAL\",\n      \"title\": \"Day 1 Reel\",\n      \"referenceLinks\": [\"https://example.com/ref1\"],\n      \"script\": \"Intro script for day 1\",\n      \"description\": \"Post description for day 1\"\n    },\n    {\n      \"date\": \"2026-07-02T00:00:00.000Z\",\n      \"postType\": \"SHOOT\",\n      \"videoType\": \"VERTICAL\",\n      \"title\": \"Day 2 Post\",\n      \"referenceLinks\": [\"https://example.com/ref2\"],\n      \"script\": \"Script for day 2\",\n      \"description\": \"Post description for day 2\"\n    }\n  ]\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/projects/{{projectId}}/monthly-sheets",
@@ -93,7 +93,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"totalReelsUploaded\": 20,\n  \"totalPostsUploaded\": 14,\n  \"moodBoardLink\": \"https://example.com/updated-moodboard\",\n  \"days\": [\n    {\n      \"date\": \"2026-07-01T00:00:00.000Z\",\n      \"reelType\": \"SHOOT\",\n      \"postType\": \"AI\",\n      \"script\": \"Revised script for day 1\",\n      \"description\": \"Updated description for day 1\"\n    },\n    {\n      \"date\": \"2026-07-02T00:00:00.000Z\",\n      \"reelType\": \"AI\",\n      \"postType\": \"SHOOT\",\n      \"script\": \"Revised script for day 2\",\n      \"description\": \"Updated description for day 2\"\n    }\n  ]\n}"
+          "raw": "{\n  \"totalReelsUploaded\": 20,\n  \"totalPostsUploaded\": 14,\n  \"moodBoardLink\": \"https://example.com/updated-moodboard\",\n  \"days\": [\n    {\n      \"date\": \"2026-07-01T00:00:00.000Z\",\n      \"reelType\": \"SHOOT\",\n      \"postType\": \"AI\",\n      \"videoType\": \"HORIZONTAL\",\n      \"title\": \"Day 1 Revised\",\n      \"referenceLinks\": [\"https://example.com/ref1-updated\"],\n      \"script\": \"Revised script for day 1\",\n      \"description\": \"Updated description for day 1\"\n    },\n    {\n      \"date\": \"2026-07-02T00:00:00.000Z\",\n      \"postType\": \"SHOOT\",\n      \"videoType\": \"VERTICAL\",\n      \"title\": \"Day 2 Revised\",\n      \"referenceLinks\": [\"https://example.com/ref2-updated\"],\n      \"script\": \"Revised script for day 2\",\n      \"description\": \"Updated description for day 2\"\n    }\n  ]\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/api/projects/{{projectId}}/monthly-sheets/{{monthlySheetId}}",

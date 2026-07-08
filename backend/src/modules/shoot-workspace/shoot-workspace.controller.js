@@ -141,6 +141,21 @@ exports.submitShootSubTask = async (req, res, next) => {
   }
 };
 
+exports.reviewShootSubTask = async (req, res, next) => {
+  try {
+    const data = await service.reviewShootSubTask(
+      req.user,
+      req.params.workspaceId,
+      req.params.taskId,
+      req.params.subtaskId,
+      req.body
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getShootSubTasks = async (req, res, next) => {
   try {
     const data = await service.getShootSubTasks(req.user, req.params.workspaceId, req.params.taskId);

@@ -318,6 +318,10 @@ exports.getShootTasks = async (user, workspaceId) => {
       unableToSubmitReason: subtask.unableToSubmitReason,
       submittedById: subtask.submittedById,
       submittedAt: subtask.submittedAt,
+      status: subtask.status,
+      reviewReason: subtask.reviewReason,
+      reviewedById: subtask.reviewedById,
+      reviewedAt: subtask.reviewedAt,
       createdAt: subtask.createdAt,
       updatedAt: subtask.updatedAt,
     })),
@@ -368,6 +372,10 @@ exports.getMyShootTasks = async (user) => {
       unableToSubmitReason: subtask.unableToSubmitReason,
       submittedById: subtask.submittedById,
       submittedAt: subtask.submittedAt,
+      status: subtask.status,
+      reviewReason: subtask.reviewReason,
+      reviewedById: subtask.reviewedById,
+      reviewedAt: subtask.reviewedAt,
       createdAt: subtask.createdAt,
       updatedAt: subtask.updatedAt,
     })),
@@ -502,6 +510,7 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
       referenceLinks: body.referenceLinks,
       videoType: body.videoType,
       setupType: body.setupType ?? null,
+      status: "DRAFT",
     },
   });
 
@@ -514,6 +523,7 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
     referenceLinks: subtask.referenceLinks,
     videoType: subtask.videoType,
     setupType: subtask.setupType,
+    status: subtask.status,
     createdAt: subtask.createdAt,
     updatedAt: subtask.updatedAt,
   };
@@ -536,7 +546,7 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
     });
   }
 
-  if (subtask.submittedAt) {
+  if (subtask.status === "SUBMITTED" || subtask.status === "APPROVED") {
     throw new ApiError(400, {
       code: ERRORS.TASK.ALREADY_SUBMITTED.code,
       message: ERRORS.TASK.ALREADY_SUBMITTED.message,
@@ -550,6 +560,10 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
       unableToSubmitReason: body.unableToSubmitReason ?? null,
       submittedById: user.id,
       submittedAt: new Date(),
+      status: body.submissionLinks ? "SUBMITTED" : "UNABLE_TO_SUBMIT",
+      reviewReason: null,
+      reviewedAt: null,
+      reviewedById: null,
     },
   });
 
@@ -566,6 +580,66 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
     unableToSubmitReason: updatedSubtask.unableToSubmitReason,
     submittedById: updatedSubtask.submittedById,
     submittedAt: updatedSubtask.submittedAt,
+    status: updatedSubtask.status,
+    reviewReason: updatedSubtask.reviewReason,
+    reviewedById: updatedSubtask.reviewedById,
+    reviewedAt: updatedSubtask.reviewedAt,
+    createdAt: updatedSubtask.createdAt,
+    updatedAt: updatedSubtask.updatedAt,
+  };
+};
+
+exports.reviewShootSubTask = async (user, workspaceId, taskId, subtaskId, body) => {
+  await verifyWorkspaceAccess(user, workspaceId);
+
+  const subtask = await prisma.shootSubTask.findFirst({
+    where: {
+      id: subtaskId,
+      taskId,
+    },
+  });
+
+  if (!subtask) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Shoot subtask not found.",
+    });
+  }
+
+  if (subtask.status !== "SUBMITTED") {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Only submitted subtasks can be reviewed.",
+    });
+  }
+
+  const updatedSubtask = await prisma.shootSubTask.update({
+    where: { id: subtaskId },
+    data: {
+      status: body.status,
+      reviewReason: body.reason || null,
+      reviewedById: user.id,
+      reviewedAt: new Date(),
+    },
+  });
+
+  return {
+    id: updatedSubtask.id,
+    taskId: updatedSubtask.taskId,
+    title: updatedSubtask.title,
+    description: updatedSubtask.description,
+    type: updatedSubtask.type,
+    referenceLinks: updatedSubtask.referenceLinks,
+    videoType: updatedSubtask.videoType,
+    setupType: updatedSubtask.setupType,
+    submissionLinks: updatedSubtask.submissionLinks,
+    unableToSubmitReason: updatedSubtask.unableToSubmitReason,
+    submittedById: updatedSubtask.submittedById,
+    submittedAt: updatedSubtask.submittedAt,
+    status: updatedSubtask.status,
+    reviewReason: updatedSubtask.reviewReason,
+    reviewedById: updatedSubtask.reviewedById,
+    reviewedAt: updatedSubtask.reviewedAt,
     createdAt: updatedSubtask.createdAt,
     updatedAt: updatedSubtask.updatedAt,
   };
@@ -592,6 +666,10 @@ exports.getShootSubTasks = async (user, workspaceId, taskId) => {
     unableToSubmitReason: subtask.unableToSubmitReason,
     submittedById: subtask.submittedById,
     submittedAt: subtask.submittedAt,
+    status: subtask.status,
+    reviewReason: subtask.reviewReason,
+    reviewedById: subtask.reviewedById,
+    reviewedAt: subtask.reviewedAt,
     createdAt: subtask.createdAt,
     updatedAt: subtask.updatedAt,
   }));
@@ -624,6 +702,10 @@ exports.getShootSubTaskById = async (user, workspaceId, taskId, subtaskId) => {
     unableToSubmitReason: subtask.unableToSubmitReason,
     submittedById: subtask.submittedById,
     submittedAt: subtask.submittedAt,
+    status: subtask.status,
+    reviewReason: subtask.reviewReason,
+    reviewedById: subtask.reviewedById,
+    reviewedAt: subtask.reviewedAt,
     createdAt: subtask.createdAt,
     updatedAt: subtask.updatedAt,
   };

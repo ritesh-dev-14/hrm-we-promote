@@ -13,6 +13,7 @@ const {
   createShootSubTaskSchema,
   updateShootSubTaskSchema,
   submitShootSubTaskSchema,
+  reviewShootSubTaskSchema,
 } = require("./shoot-workspace.validation");
 
 router.post(
@@ -124,6 +125,14 @@ router.post(
   role("EMPLOYEE"),
   validate(submitShootSubTaskSchema),
   controller.submitShootSubTask
+);
+
+router.post(
+  "/:workspaceId/tasks/:taskId/subtasks/:subtaskId/review",
+  auth,
+  role("MANAGER"),
+  validate(reviewShootSubTaskSchema),
+  controller.reviewShootSubTask
 );
 
 router.get(

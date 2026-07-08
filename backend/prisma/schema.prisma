@@ -33,6 +33,7 @@ model User {
   createdShootWorkspaces       ShootWorkspace[]          @relation("UserCreatedShootWorkspaces")
   createdShootTasks            ShootTask[]               @relation("UserCreatedShootTasks")
   submittedShootSubTasks       ShootSubTask[]            @relation("UserSubmittedShootSubTasks")
+  reviewedShootSubTasks        ShootSubTask[]            @relation("UserReviewedShootSubTasks")
   shootWorkspaceMemberships    ShootWorkspaceMember[]    @relation("UserShootWorkspaceMembers")
   sentFollowUps                CoordinatorFollowUp[]
   assignments                  TaskAssignment[]
@@ -324,18 +325,24 @@ model ShootSubTask {
   referenceLinks         String[]
   videoType              VideoType
   setupType              SetupType?        @default(PREMIUM)
-  submissionLinks        String[]
+  submissionLinks        String[]           @default([])
   unableToSubmitReason   String?
   submittedById          String?
   submittedAt            DateTime?
+  status                 ShootSubTaskStatus @default(DRAFT)
+  reviewReason           String?
+  reviewedById           String?
+  reviewedAt             DateTime?
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
 
   task ShootTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
   submittedBy User? @relation("UserSubmittedShootSubTasks", fields: [submittedById], references: [id])
+  reviewedBy  User? @relation("UserReviewedShootSubTasks", fields: [reviewedById], references: [id])
 
   @@index([taskId])
   @@index([submittedById])
+  @@index([reviewedById])
 }
 
 model Department {
@@ -364,6 +371,15 @@ model Project {
   instaEmail    String?
   instaPassword String?
   projectStartDate DateTime?
+  referenceLink String?
+  tasteLink     String?
+  linkedinEmail String?
+  linkedinPassword String?
+  youtubeEmail  String?
+  youtubePassword String?
+  twitterEmail  String?
+  twitterPassword String?
+  logo          String?
   createdById   String
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -412,14 +428,17 @@ model ProjectMonthlySheet {
 }
 
 model ProjectMonthlySheetDay {
-  id          String             @id @default(uuid())
-  sheetId     String
-  date        DateTime
-  reelType    MediaSource
-  postType    MediaSource
-  script      String?
-  description String?
-  createdAt   DateTime           @default(now())
+  id             String             @id @default(uuid())
+  sheetId        String
+  date           DateTime
+  reelType       MediaSource?
+  postType       MediaSource?
+  videoType      VideoType?
+  title          String?
+  referenceLinks String[]           @default([])
+  script         String?
+  description    String?
+  createdAt      DateTime           @default(now())
 
   sheet ProjectMonthlySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
 
@@ -635,6 +654,14 @@ enum ShootSubTaskType {
 enum VideoType {
   HORIZONTAL
   VERTICAL
+}
+
+enum ShootSubTaskStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  UNABLE_TO_SUBMIT
 }
 
 enum EscalationType {

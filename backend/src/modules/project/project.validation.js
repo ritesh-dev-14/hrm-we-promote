@@ -24,6 +24,15 @@ exports.createProjectSchema = Joi.object({
   instaEmail: Joi.string().email(),
   instaPassword: Joi.string().min(1).max(200),
   projectStartDate: Joi.date(),
+  referenceLink: Joi.string().uri(),
+  tasteLink: Joi.string().uri(),
+  linkedinEmail: Joi.string().email(),
+  linkedinPassword: Joi.string().min(1).max(200),
+  youtubeEmail: Joi.string().email(),
+  youtubePassword: Joi.string().min(1).max(200),
+  twitterEmail: Joi.string().email(),
+  twitterPassword: Joi.string().min(1).max(200),
+  logo: Joi.string().uri(),
   assignTo: Joi.array().items(Joi.string().required()).min(1).required(),
 }).unknown(false);
 
@@ -46,6 +55,15 @@ exports.updateProjectSchema = Joi.object({
   instaEmail: Joi.string().email().allow(null),
   instaPassword: Joi.string().min(1).max(200).allow(null),
   projectStartDate: Joi.date().allow(null),
+  referenceLink: Joi.string().uri().allow(null),
+  tasteLink: Joi.string().uri().allow(null),
+  linkedinEmail: Joi.string().email().allow(null),
+  linkedinPassword: Joi.string().min(1).max(200).allow(null),
+  youtubeEmail: Joi.string().email().allow(null),
+  youtubePassword: Joi.string().min(1).max(200).allow(null),
+  twitterEmail: Joi.string().email().allow(null),
+  twitterPassword: Joi.string().min(1).max(200).allow(null),
+  logo: Joi.string().uri().allow(null),
   assignTo: Joi.array().items(Joi.string().required()).min(1),
 }).unknown(false);
 

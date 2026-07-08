@@ -4,11 +4,14 @@ const mediaSourceValues = ["SHOOT", "AI"];
 
 const monthlySheetDaySchema = Joi.object({
   date: Joi.date().required(),
-  reelType: Joi.string().valid(...mediaSourceValues).required(),
-  postType: Joi.string().valid(...mediaSourceValues).required(),
+  reelType: Joi.string().valid(...mediaSourceValues).allow(null),
+  postType: Joi.string().valid(...mediaSourceValues).allow(null),
+  videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow(null),
+  title: Joi.string().max(200).allow("", null),
+  referenceLinks: Joi.array().items(Joi.string().uri()).default([]),
   script: Joi.string().allow("", null),
   description: Joi.string().allow("", null),
-});
+}).unknown(false);
 
 exports.createProjectMonthlySheetSchema = Joi.object({
   month: Joi.number().integer().min(1).max(12).required(),
