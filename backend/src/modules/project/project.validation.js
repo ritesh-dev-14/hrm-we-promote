@@ -67,6 +67,10 @@ exports.updateProjectSchema = Joi.object({
   assignTo: Joi.array().items(Joi.string().required()).min(1),
 }).unknown(false);
 
+exports.updateProjectLogoSchema = Joi.object({
+  logo: Joi.string().uri().allow(null),
+}).unknown(false);
+
 exports.renewProjectSchema = Joi.object({
   renewalDate: Joi.date().required(),
 }).unknown(false);

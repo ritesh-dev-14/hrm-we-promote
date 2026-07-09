@@ -1,17 +1,37 @@
 const service = require("./project.service");
 const cloudinary = require("../../utils/cloudinary");
+const ApiError = require("../../utils/ApiError");
+const ERRORS = require("../../utils/errors");
 
 exports.createProject = async (req, res, next) => {
   try {
     req.body = req.body || {};
 
     if (req.file) {
-      const result = await cloudinary.uploadBuffer(req.file.buffer, {
-        folder: "projects",
-        resource_type: "image",
-      });
+      if (!req.file.buffer) {
+        return next(
+          new ApiError(400, {
+            code: ERRORS.VALIDATION.INVALID_INPUT.code,
+            message: "Uploaded logo file is invalid or empty.",
+          })
+        );
+      }
 
-      req.body.logo = result.secure_url;
+      try {
+        const result = await cloudinary.uploadBuffer(req.file.buffer, {
+          folder: "projects",
+          resource_type: "image",
+        });
+
+        req.body.logo = result.secure_url;
+      } catch (uploadError) {
+        return next(
+          new ApiError(500, {
+            code: ERRORS.SERVER.INTERNAL_ERROR.code,
+            message: `Logo upload failed: ${uploadError.message}`,
+          })
+        );
+      }
     }
 
     const data = await service.createProject(req.user, req.body);
@@ -69,12 +89,30 @@ exports.updateProject = async (req, res, next) => {
     req.body = req.body || {};
 
     if (req.file) {
-      const result = await cloudinary.uploadBuffer(req.file.buffer, {
-        folder: "projects",
-        resource_type: "image",
-      });
+      if (!req.file.buffer) {
+        return next(
+          new ApiError(400, {
+            code: ERRORS.VALIDATION.INVALID_INPUT.code,
+            message: "Uploaded logo file is invalid or empty.",
+          })
+        );
+      }
 
-      req.body.logo = result.secure_url;
+      try {
+        const result = await cloudinary.uploadBuffer(req.file.buffer, {
+          folder: "projects",
+          resource_type: "image",
+        });
+
+        req.body.logo = result.secure_url;
+      } catch (uploadError) {
+        return next(
+          new ApiError(500, {
+            code: ERRORS.SERVER.INTERNAL_ERROR.code,
+            message: `Logo upload failed: ${uploadError.message}`,
+          })
+        );
+      }
     }
 
     const data = await service.updateProject(

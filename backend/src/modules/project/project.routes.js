@@ -10,6 +10,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const {
   createProjectSchema,
   updateProjectSchema,
+  updateProjectLogoSchema,
   renewProjectSchema,
 } = require("./project.validation");
 
@@ -42,7 +43,7 @@ router.patch(
   auth,
   role("ADMIN", "HR", "EA", "MANAGER"),
   upload.single("logo"),
-  validate(updateProjectSchema),
+  validate(updateProjectLogoSchema),
   controller.updateProject
 );
 
