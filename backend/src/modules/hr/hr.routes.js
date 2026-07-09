@@ -127,8 +127,44 @@ router.put(
 router.get(
   "/dashboard/overview",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   controller.getDashboardOverview
+);
+
+// 🔹 ADMIN DASHBOARD API - FULL VISIBILITY
+router.get(
+  "/dashboard/admin-overview",
+  auth,
+  role("ADMIN"),
+  controller.getAdminDashboardOverview
+);
+
+router.get(
+  "/dashboard/employees",
+  auth,
+  role("ADMIN"),
+  controller.getAdminEmployeeProgress
+);
+
+router.get(
+  "/dashboard/task-allocations",
+  auth,
+  role("ADMIN"),
+  controller.getAdminTaskAllocations
+);
+
+router.get(
+  "/dashboard/monthly-sheets",
+  auth,
+  role("ADMIN"),
+  controller.getAdminMonthlySheets
+);
+
+router.get(
+  "/dashboard/projects",
+  auth,
+  role("ADMIN"),
+  controller.getAdminDashboardProjects
 );
 
 module.exports = router;

@@ -258,3 +258,73 @@ exports.getDashboardOverview = async (req, res, next) => {
     next(err);
   }
 };
+
+// 🔥 ADMIN DASHBOARD OVERVIEW
+exports.getAdminDashboardOverview = async (req, res, next) => {
+  try {
+    const data = await service.getAdminDashboardOverview();
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🔥 ADMIN EMPLOYEE PROGRESS
+exports.getAdminEmployeeProgress = async (req, res, next) => {
+  try {
+    const data = await service.getAdminEmployeeProgress();
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🔥 ADMIN TASK ALLOCATIONS
+exports.getAdminTaskAllocations = async (req, res, next) => {
+  try {
+    const data = await service.getAdminTaskAllocations();
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🔥 ADMIN MONTHLY SHEETS
+exports.getAdminMonthlySheets = async (req, res, next) => {
+  try {
+    const data = await service.getAdminMonthlySheets();
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🔥 ADMIN PROJECTS OVERVIEW
+exports.getAdminDashboardProjects = async (req, res, next) => {
+  try {
+    const data = await service.getAdminDashboardProjects();
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

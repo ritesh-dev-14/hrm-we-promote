@@ -1741,3 +1741,465 @@ exports.getDashboardOverview = async () => {
     managerDetails: overview,
   };
 };
+
+// 🔥 ADMIN - FULL DASHBOARD OVERVIEW
+exports.getAdminDashboardOverview = async () => {
+  const [
+    totalManagers,
+    totalEmployees,
+    totalProjects,
+    totalTasks,
+    totalTaskItems,
+    totalTaskAssignments,
+    totalTaskItemAssignments,
+    totalMonthlySheets,
+    totalMonthlySheetDays,
+    totalShootSubTasks,
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: "MANAGER" } }),
+    prisma.user.count({ where: { role: "EMPLOYEE" } }),
+    prisma.project.count(),
+    prisma.task.count(),
+    prisma.taskItem.count(),
+    prisma.taskAssignment.count(),
+    prisma.taskItemAssignment.count(),
+    prisma.projectMonthlySheet.count(),
+    prisma.projectMonthlySheetDay.count(),
+    prisma.shootSubTask.count(),
+  ]);
+
+  const assignmentStats = await prisma.taskItemAssignment.groupBy({
+    by: ["status"],
+    _count: {
+      status: true,
+    },
+  });
+
+  const monthlySheets = await prisma.projectMonthlySheet.findMany({
+    select: {
+      id: true,
+      projectId: true,
+      month: true,
+      year: true,
+      totalReels: true,
+      totalPosts: true,
+      totalReelsUploaded: true,
+      totalPostsUploaded: true,
+    },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+  });
+
+  const employees = await prisma.user.findMany({
+    where: { role: "EMPLOYEE" },
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      email: true,
+      department: true,
+      employeeManagers: {
+        select: {
+          manager: {
+            select: {
+              id: true,
+              employeeId: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const assignmentSummary = assignmentStats.reduce(
+    (summary, row) => {
+      summary[row.status.toLowerCase()] = row._count.status;
+      return summary;
+    },
+    {
+      completed: 0,
+      pending: 0,
+      submitted: 0,
+      rejected: 0,
+    }
+  );
+
+  const employeeProgress = await Promise.all(
+    employees.map(async (employee) => {
+      const assignments = await prisma.taskItemAssignment.findMany({
+        where: { userId: employee.id },
+        select: {
+          status: true,
+          progress: true,
+        },
+      });
+
+      const completed = assignments.filter((a) => a.status === "COMPLETED").length;
+      const pending = assignments.filter((a) => a.status === "PENDING").length;
+      const submitted = assignments.filter((a) => a.status === "SUBMITTED").length;
+      const rejected = assignments.filter((a) => a.status === "REJECTED").length;
+      const averageProgress =
+        assignments.length > 0
+          ? Math.round(
+              assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+                assignments.length
+            )
+          : 0;
+
+      return {
+        id: employee.id,
+        employeeId: employee.employeeId,
+        name: employee.name,
+        email: employee.email,
+        department: employee.department,
+        manager: employee.employeeManagers[0]?.manager || null,
+        assignmentStats: {
+          total: assignments.length,
+          completed,
+          pending,
+          submitted,
+          rejected,
+          averageProgress,
+        },
+      };
+    })
+  );
+
+  return {
+    counts: {
+      totalManagers,
+      totalEmployees,
+      totalProjects,
+      totalTasks,
+      totalTaskItems,
+      totalTaskAssignments,
+      totalTaskItemAssignments,
+      totalMonthlySheets,
+      totalMonthlySheetDays,
+      totalShootSubTasks,
+    },
+    assignmentSummary,
+    monthlySheets,
+    employeeProgress,
+  };
+};
+
+exports.getAdminDashboardProjects = async () => {
+  const projects = await prisma.project.findMany({
+    include: {
+      department: true,
+      createdBy: {
+        select: {
+          id: true,
+          employeeId: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      assignments: {
+        include: {
+          manager: {
+            select: {
+              id: true,
+              employeeId: true,
+              name: true,
+              email: true,
+              position: true,
+            },
+          },
+        },
+      },
+      monthlySheets: {
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              employeeId: true,
+              name: true,
+              email: true,
+            },
+          },
+          days: {
+            include: {
+              shootSubTasks: {
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  submissionLinks: true,
+                  reviewedAt: true,
+                  reviewedBy: {
+                    select: {
+                      id: true,
+                      employeeId: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return projects.map((project) => ({
+    id: project.id,
+    projectName: project.projectName,
+    description: project.description,
+    department: project.department,
+    startDate: project.startDate,
+    endDate: project.endDate,
+    renewalDate: project.renewalDate,
+    frequency: project.frequency,
+    clientName: project.clientName,
+    location: project.location,
+    createdBy: project.createdBy,
+    managers: project.assignments.map((assignment) => assignment.manager),
+    monthlySheets: project.monthlySheets.map((sheet) => ({
+      id: sheet.id,
+      month: sheet.month,
+      year: sheet.year,
+      totalReels: sheet.totalReels,
+      totalPosts: sheet.totalPosts,
+      totalReelsUploaded: sheet.totalReelsUploaded,
+      totalPostsUploaded: sheet.totalPostsUploaded,
+      moodBoardLink: sheet.moodBoardLink,
+      createdBy: sheet.createdBy,
+      days: sheet.days.map((day) => ({
+        id: day.id,
+        date: day.date,
+        title: day.title,
+        reelType: day.reelType,
+        postType: day.postType,
+        videoType: day.videoType,
+        referenceLinks: day.referenceLinks,
+        submissionLinks: day.submissionLinks,
+        script: day.script,
+        description: day.description,
+        shootSubTasks: day.shootSubTasks,
+      })),
+    })),
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+  }));
+};
+
+exports.getAdminEmployeeProgress = async () => {
+  const employees = await prisma.user.findMany({
+    where: { role: "EMPLOYEE" },
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      email: true,
+      department: true,
+      employeeManagers: {
+        select: {
+          manager: {
+            select: {
+              id: true,
+              employeeId: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return Promise.all(
+    employees.map(async (employee) => {
+      const assignments = await prisma.taskItemAssignment.findMany({
+        where: { userId: employee.id },
+        include: {
+          taskItem: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              task: {
+                select: {
+                  id: true,
+                  projectName: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const completed = assignments.filter((a) => a.status === "COMPLETED").length;
+      const pending = assignments.filter((a) => a.status === "PENDING").length;
+      const submitted = assignments.filter((a) => a.status === "SUBMITTED").length;
+      const rejected = assignments.filter((a) => a.status === "REJECTED").length;
+      const averageProgress =
+        assignments.length > 0
+          ? Math.round(
+              assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+                assignments.length
+            )
+          : 0;
+
+      return {
+        id: employee.id,
+        employeeId: employee.employeeId,
+        name: employee.name,
+        email: employee.email,
+        department: employee.department,
+        manager: employee.employeeManagers[0]?.manager || null,
+        assignmentStats: {
+          total: assignments.length,
+          completed,
+          pending,
+          submitted,
+          rejected,
+          averageProgress,
+        },
+        assignments: assignments.map((assignment) => ({
+          id: assignment.id,
+          status: assignment.status,
+          progress: assignment.progress,
+          taskItem: assignment.taskItem,
+        })),
+      };
+    })
+  );
+};
+
+exports.getAdminTaskAllocations = async () => {
+  const taskAssignments = await prisma.taskAssignment.findMany({
+    include: {
+      employee: {
+        select: {
+          id: true,
+          employeeId: true,
+          name: true,
+          email: true,
+        },
+      },
+      task: {
+        select: {
+          id: true,
+          projectName: true,
+          description: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const taskItemAssignments = await prisma.taskItemAssignment.findMany({
+    include: {
+      employee: {
+        select: {
+          id: true,
+          employeeId: true,
+          name: true,
+          email: true,
+        },
+      },
+      taskItem: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          task: {
+            select: {
+              id: true,
+              projectName: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return {
+    taskAssignments,
+    taskItemAssignments,
+  };
+};
+
+exports.getAdminMonthlySheets = async () => {
+  const sheets = await prisma.projectMonthlySheet.findMany({
+    include: {
+      project: {
+        select: {
+          id: true,
+          projectName: true,
+          department: true,
+        },
+      },
+      createdBy: {
+        select: {
+          id: true,
+          employeeId: true,
+          name: true,
+          email: true,
+        },
+      },
+      days: {
+        include: {
+          shootSubTasks: {
+            include: {
+              reviewedBy: {
+                select: {
+                  id: true,
+                  employeeId: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+  });
+
+  return sheets.map((sheet) => ({
+    id: sheet.id,
+    project: sheet.project,
+    month: sheet.month,
+    year: sheet.year,
+    totalReels: sheet.totalReels,
+    totalPosts: sheet.totalPosts,
+    totalReelsUploaded: sheet.totalReelsUploaded,
+    totalPostsUploaded: sheet.totalPostsUploaded,
+    moodBoardLink: sheet.moodBoardLink,
+    createdBy: sheet.createdBy,
+    days: sheet.days.map((day) => ({
+      id: day.id,
+      date: day.date,
+      title: day.title,
+      reelType: day.reelType,
+      postType: day.postType,
+      videoType: day.videoType,
+      referenceLinks: day.referenceLinks,
+      submissionLinks: day.submissionLinks,
+      script: day.script,
+      description: day.description,
+      shootSubTasks: day.shootSubTasks.map((subTask) => ({
+        id: subTask.id,
+        title: subTask.title,
+        status: subTask.status,
+        submissionLinks: subTask.submissionLinks,
+        reviewedBy: subTask.reviewedBy,
+        reviewedAt: subTask.reviewedAt,
+      })),
+      createdAt: day.createdAt,
+      updatedAt: day.updatedAt,
+    })),
+    createdAt: sheet.createdAt,
+    updatedAt: sheet.updatedAt,
+  }));
+};
