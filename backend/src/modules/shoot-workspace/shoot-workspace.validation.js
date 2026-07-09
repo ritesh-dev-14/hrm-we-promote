@@ -42,6 +42,7 @@ exports.createShootSubTaskSchema = Joi.object({
   type: Joi.string().valid("PIC", "REEL").required(),
   referenceLinks: Joi.array().items(Joi.string().uri()).min(1).required(),
   videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").required(),
+  dayId: Joi.string().uuid().optional().allow("", null),
 }).unknown(false);
 
 exports.updateShootSubTaskSchema = Joi.object({

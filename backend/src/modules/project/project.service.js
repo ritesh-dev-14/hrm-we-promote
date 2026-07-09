@@ -502,22 +502,29 @@ exports.updateProject = async (user, projectId, body) => {
   const currentLogo = body.logo !== undefined ? body.logo : project.logo;
 
   if (isSocialMediaDepartment) {
-    if (
-      !currentClientName ||
-      !currentLocation ||
-      !currentPhone ||
-      !currentFbEmail ||
-      !currentFbPassword ||
-      !currentInstaEmail ||
-      !currentInstaPassword ||
-      !currentProjectStartDate
-    ) {
-      throw new ApiError(400, {
-        code: ERRORS.VALIDATION.INVALID_INPUT.code,
-        message:
-          "Social Media credential fields are required when the project department is Social Media.",
-      });
+    // 🔥 Only require fields if project is NEWLY moving to Social Media department
+    const isMovingToSocialMedia = body.departmentId && !FREQUENCY_DEPARTMENTS.includes(project.department.name);
+    
+    if (isMovingToSocialMedia) {
+      // When moving TO Social Media, require all credential fields
+      if (
+        !currentClientName ||
+        !currentLocation ||
+        !currentPhone ||
+        !currentFbEmail ||
+        !currentFbPassword ||
+        !currentInstaEmail ||
+        !currentInstaPassword ||
+        !currentProjectStartDate
+      ) {
+        throw new ApiError(400, {
+          code: ERRORS.VALIDATION.INVALID_INPUT.code,
+          message:
+            "Social Media credential fields are required when moving a project to Social Media department.",
+        });
+      }
     }
+    // 🔥 If already in Social Media, allow partial updates without requiring all fields
   } else if (
     body.clientName ||
     body.location ||

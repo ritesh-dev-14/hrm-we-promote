@@ -1,0 +1,370 @@
+{
+  "info": {
+    "name": "Shoot Monthly Sheet Link API",
+    "description": "API collection for linking shoot submissions to daily monthly sheets",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Shoot Workspace",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"brandName\": \"Social Media Brand\",\n  \"description\": \"Workspace for social media shoots\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Add Workspace Members",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"employeeIds\": [\"EMP-001\", \"EMP-002\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/members",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces",
+            "{{workspaceId}}",
+            "members"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Create Shoot Task",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"July Shoot 01\",\n  \"description\": \"First shoot of July\",\n  \"noOfPics\": 20,\n  \"noOfReels\": 5,\n  \"date\": \"2026-07-08\",\n  \"arrivalTime\": \"09:00 AM\",\n  \"location\": \"Studio A\",\n  \"setupType\": \"PREMIUM\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces",
+            "{{workspaceId}}",
+            "tasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Create Shoot SubTask (with Optional DayId Link)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Product Reel - Horizontal\",\n  \"description\": \"Horizontal reel for product showcase\",\n  \"type\": \"REEL\",\n  \"referenceLinks\": [\n    \"https://example.com/reference1\",\n    \"https://example.com/reference2\"\n  ],\n  \"videoType\": \"HORIZONTAL\",\n  \"dayId\": \"{{dayId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces",
+            "{{workspaceId}}",
+            "tasks",
+            "{{taskId}}",
+            "subtasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Employee Submit SubTask",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{employeeToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"submissionLinks\": [\n    \"https://docs.google.com/spreadsheets/d/submission1\",\n    \"https://drive.google.com/file/d/submission2\"\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}/submit",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces",
+            "{{workspaceId}}",
+            "tasks",
+            "{{taskId}}",
+            "subtasks",
+            "{{subtaskId}}",
+            "submit"
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Manager Review & Approve SubTask",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"APPROVED\",\n  \"reason\": null\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}/review",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces",
+            "{{workspaceId}}",
+            "tasks",
+            "{{taskId}}",
+            "subtasks",
+            "{{subtaskId}}",
+            "review"
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Manager Reject SubTask",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"REJECTED\",\n  \"reason\": \"Quality not up to mark. Please resubmit.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}/review",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces",
+            "{{workspaceId}}",
+            "tasks",
+            "{{taskId}}",
+            "subtasks",
+            "{{subtaskId}}",
+            "review"
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Get Monthly Sheet (View Submission Links)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/projects/{{projectId}}/monthly-sheets/{{monthlySheetId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "projects",
+            "{{projectId}}",
+            "monthly-sheets",
+            "{{monthlySheetId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Get All SubTasks for a Task",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces",
+            "{{workspaceId}}",
+            "tasks",
+            "{{taskId}}",
+            "subtasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Get Single SubTask",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{managerToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/shoot-workspaces/{{workspaceId}}/tasks/{{taskId}}/subtasks/{{subtaskId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "shoot-workspaces",
+            "{{workspaceId}}",
+            "tasks",
+            "{{taskId}}",
+            "subtasks",
+            "{{subtaskId}}"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "managerToken",
+      "value": "your_manager_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "employeeToken",
+      "value": "your_employee_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "workspaceId",
+      "value": "paste_workspace_id_here",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "paste_task_id_here",
+      "type": "string"
+    },
+    {
+      "key": "subtaskId",
+      "value": "paste_subtask_id_here",
+      "type": "string"
+    },
+    {
+      "key": "dayId",
+      "value": "paste_monthly_sheet_day_id_here",
+      "type": "string"
+    },
+    {
+      "key": "projectId",
+      "value": "paste_project_id_here",
+      "type": "string"
+    },
+    {
+      "key": "monthlySheetId",
+      "value": "paste_monthly_sheet_id_here",
+      "type": "string"
+    }
+  ]
+}

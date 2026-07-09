@@ -16,6 +16,7 @@ const formatDay = (day) => ({
   videoType: day.videoType,
   title: day.title,
   referenceLinks: day.referenceLinks,
+  submissionLinks: day.submissionLinks,
   script: day.script,
   description: day.description,
   createdAt: day.createdAt,

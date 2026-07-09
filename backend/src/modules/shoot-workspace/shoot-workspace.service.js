@@ -267,6 +267,7 @@ exports.createShootTask = async (user, workspaceId, body) => {
     updatedAt: task.updatedAt,
     subtasks: task.subtasks.map((subtask) => ({
       id: subtask.id,
+      dayId: subtask.dayId,
       title: subtask.title,
       description: subtask.description,
       type: subtask.type,
@@ -308,6 +309,7 @@ exports.getShootTasks = async (user, workspaceId) => {
     updatedAt: task.updatedAt,
     subtasks: task.subtasks.map((subtask) => ({
       id: subtask.id,
+      dayId: subtask.dayId,
       title: subtask.title,
       description: subtask.description,
       type: subtask.type,
@@ -362,6 +364,7 @@ exports.getMyShootTasks = async (user) => {
     updatedAt: task.updatedAt,
     subtasks: task.subtasks.map((subtask) => ({
       id: subtask.id,
+      dayId: subtask.dayId,
       title: subtask.title,
       description: subtask.description,
       type: subtask.type,
@@ -501,9 +504,27 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
     });
   }
 
+  // 🔥 Validate dayId if provided
+  let validDayId = null;
+  if (body.dayId) {
+    const day = await prisma.projectMonthlySheetDay.findUnique({
+      where: { id: body.dayId },
+    });
+
+    if (!day) {
+      throw new ApiError(404, {
+        code: ERRORS.VALIDATION.INVALID_INPUT.code,
+        message: "Monthly sheet day not found.",
+      });
+    }
+
+    validDayId = body.dayId;
+  }
+
   const subtask = await prisma.shootSubTask.create({
     data: {
       taskId,
+      dayId: validDayId,
       title: body.title,
       description: body.description || null,
       type: body.type,
@@ -517,6 +538,7 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
   return {
     id: subtask.id,
     taskId: subtask.taskId,
+    dayId: subtask.dayId,
     title: subtask.title,
     description: subtask.description,
     type: subtask.type,
@@ -570,6 +592,7 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
   return {
     id: updatedSubtask.id,
     taskId: updatedSubtask.taskId,
+    dayId: updatedSubtask.dayId,
     title: updatedSubtask.title,
     description: updatedSubtask.description,
     type: updatedSubtask.type,
@@ -597,6 +620,7 @@ exports.reviewShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
       id: subtaskId,
       taskId,
     },
+    include: { day: true },
   });
 
   if (!subtask) {
@@ -623,9 +647,33 @@ exports.reviewShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
     },
   });
 
+  // 🔥 When approved, update the monthly sheet day with submission links
+  if (body.status === "APPROVED" && subtask.dayId && subtask.submissionLinks.length > 0) {
+    // Get the current day's submissionLinks
+    const day = await prisma.projectMonthlySheetDay.findUnique({
+      where: { id: subtask.dayId },
+    });
+
+    if (day) {
+      // Merge existing submission links with new ones (avoid duplicates)
+      const mergedLinks = Array.from(
+        new Set([...day.submissionLinks, ...subtask.submissionLinks])
+      );
+
+      // Update the day with merged submission links
+      await prisma.projectMonthlySheetDay.update({
+        where: { id: subtask.dayId },
+        data: {
+          submissionLinks: mergedLinks,
+        },
+      });
+    }
+  }
+
   return {
     id: updatedSubtask.id,
     taskId: updatedSubtask.taskId,
+    dayId: updatedSubtask.dayId,
     title: updatedSubtask.title,
     description: updatedSubtask.description,
     type: updatedSubtask.type,
@@ -656,6 +704,7 @@ exports.getShootSubTasks = async (user, workspaceId, taskId) => {
   return subtasks.map((subtask) => ({
     id: subtask.id,
     taskId: subtask.taskId,
+    dayId: subtask.dayId,
     title: subtask.title,
     description: subtask.description,
     type: subtask.type,
@@ -692,6 +741,7 @@ exports.getShootSubTaskById = async (user, workspaceId, taskId, subtaskId) => {
   return {
     id: subtask.id,
     taskId: subtask.taskId,
+    dayId: subtask.dayId,
     title: subtask.title,
     description: subtask.description,
     type: subtask.type,
@@ -740,12 +790,21 @@ exports.updateShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
   return {
     id: updatedSubtask.id,
     taskId: updatedSubtask.taskId,
+    dayId: updatedSubtask.dayId,
     title: updatedSubtask.title,
     description: updatedSubtask.description,
     type: updatedSubtask.type,
     referenceLinks: updatedSubtask.referenceLinks,
     videoType: updatedSubtask.videoType,
     setupType: updatedSubtask.setupType,
+    submissionLinks: updatedSubtask.submissionLinks,
+    unableToSubmitReason: updatedSubtask.unableToSubmitReason,
+    submittedById: updatedSubtask.submittedById,
+    submittedAt: updatedSubtask.submittedAt,
+    status: updatedSubtask.status,
+    reviewReason: updatedSubtask.reviewReason,
+    reviewedById: updatedSubtask.reviewedById,
+    reviewedAt: updatedSubtask.reviewedAt,
     createdAt: updatedSubtask.createdAt,
     updatedAt: updatedSubtask.updatedAt,
   };
