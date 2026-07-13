@@ -403,9 +403,15 @@ exports.deleteManager = async (employeeId) => {
         where: { createdById: manager.id },
       });
 
-      // Delete shoot workspace memberships
+      // Delete shoot workspace memberships first
+      await tx.shootWorkspaceMember.deleteMany({
+        where: { userId: manager.id },
+      });
+
       await tx.shootSubTask.deleteMany({
-        where: { submittedById: manager.id },
+        where: {
+          OR: [{ submittedById: manager.id }, { reviewedById: manager.id }],
+        },
       });
 
       await tx.shootTask.deleteMany({
@@ -979,9 +985,20 @@ exports.deleteEmployee = async (employeeId) => {
         where: { managerId: employee.id },
       });
 
-      // Delete shoot workspace memberships
+      // Delete shoot workspaces created by this user first
+      await tx.shootWorkspace.deleteMany({
+        where: { createdById: employee.id },
+      });
+
+      // Delete shoot workspace memberships first
+      await tx.shootWorkspaceMember.deleteMany({
+        where: { userId: employee.id },
+      });
+
       await tx.shootSubTask.deleteMany({
-        where: { submittedById: employee.id },
+        where: {
+          OR: [{ submittedById: employee.id }, { reviewedById: employee.id }],
+        },
       });
 
       await tx.shootTask.deleteMany({
