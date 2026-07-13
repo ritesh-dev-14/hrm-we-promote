@@ -398,6 +398,11 @@ exports.deleteManager = async (employeeId) => {
         where: { managerId: manager.id },
       });
 
+      // Delete shoot workspace records created by this user first
+      await tx.shootWorkspace.deleteMany({
+        where: { createdById: manager.id },
+      });
+
       // Delete shoot workspace memberships
       await tx.shootSubTask.deleteMany({
         where: { submittedById: manager.id },
