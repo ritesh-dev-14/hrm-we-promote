@@ -18,42 +18,42 @@ const {
 router.post(
   "/manager",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   validate(createManagerSchema),
   controller.createManager
 );
 
-router.get("/managers", auth, role("HR"), controller.getManagers);
+router.get("/managers", auth, role("HR", "ADMIN"), controller.getManagers);
 
-router.get("/manager/:employeeId", auth, role("HR"), controller.getManager);
+router.get("/manager/:employeeId", auth, role("HR", "ADMIN"), controller.getManager);
 
 router.put(
   "/manager/:employeeId",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   validate(updateManagerSchema),
   controller.updateManager
 );
 
-router.delete("/manager/:employeeId", auth, role("HR"), controller.deleteManager);
+router.delete("/manager/:employeeId", auth, role("HR", "ADMIN"), controller.deleteManager);
 
 // 🔹 Employee Routes
 router.post(
   "/employee",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   validate(createEmployeeSchema),
   controller.createEmployee
 );
 
-router.get("/employees", auth, role("HR"), controller.getEmployees);
+router.get("/employees", auth, role("HR", "ADMIN"), controller.getEmployees);
 
-router.get("/employee/:employeeId", auth, role("HR"), controller.getEmployee);
+router.get("/employee/:employeeId", auth, role("HR", "ADMIN"), controller.getEmployee);
 
 router.put(
   "/employee/:employeeId",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   validate(updateEmployeeSchema),
   controller.updateEmployee
 );
@@ -62,18 +62,18 @@ router.put(
 router.get(
   "/employee/:employeeId/attendance",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   controller.getEmployeeAttendance
 );
 
 router.get(
   "/employee/:employeeId/attendance/summary",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   controller.getEmployeeAttendanceSummary
 );
 
-router.delete("/employee/:employeeId", auth, role("HR"), controller.deleteEmployee);
+router.delete("/employee/:employeeId", auth, role("HR", "ADMIN"), controller.deleteEmployee);
 
 // 🔥 LEAVE MANAGEMENT
 
