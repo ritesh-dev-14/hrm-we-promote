@@ -319,123 +319,108 @@ exports.deleteManager = async (employeeId) => {
   }
 
   try {
-    // Use transaction to ensure all related data is deleted properly
-    // Delete in order of dependencies to handle all foreign key constraints
-    await prisma.$transaction(async (tx) => {
-      // Delete user relationships first
-      await tx.userDepartment.deleteMany({
-        where: { userId: manager.id },
-      });
+    // Clean up dependent records first. Using Prisma's regular client calls here avoids
+    // the stale transaction error seen in production when the cleanup chain becomes large.
+    await prisma.userDepartment.deleteMany({
+      where: { userId: manager.id },
+    });
 
-      await tx.userManager.deleteMany({
-        where: { employeeId: manager.id },
-      });
+    await prisma.userManager.deleteMany({
+      where: { employeeId: manager.id },
+    });
 
-      await tx.userManager.deleteMany({
-        where: { managerId: manager.id },
-      });
+    await prisma.userManager.deleteMany({
+      where: { managerId: manager.id },
+    });
 
-      // Delete notifications
-      await tx.notification.deleteMany({
-        where: { userId: manager.id },
-      });
+    await prisma.notification.deleteMany({
+      where: { userId: manager.id },
+    });
 
-      // Delete task-related records
-      await tx.taskItemAssignment.deleteMany({
-        where: { userId: manager.id },
-      });
+    await prisma.taskItemAssignment.deleteMany({
+      where: { userId: manager.id },
+    });
 
-      await tx.taskAssignment.deleteMany({
-        where: { userId: manager.id },
-      });
+    await prisma.taskAssignment.deleteMany({
+      where: { userId: manager.id },
+    });
 
-      await tx.taskEscalation.deleteMany({
-        where: { employeeId: manager.id },
-      });
+    await prisma.taskEscalation.deleteMany({
+      where: { employeeId: manager.id },
+    });
 
-      await tx.taskEscalation.deleteMany({
-        where: { managerId: manager.id },
-      });
+    await prisma.taskEscalation.deleteMany({
+      where: { managerId: manager.id },
+    });
 
-      // Delete attendance records
-      await tx.attendance.deleteMany({
-        where: { userId: manager.id },
-      });
+    await prisma.attendance.deleteMany({
+      where: { userId: manager.id },
+    });
 
-      // Delete leave records (including where user is reviewer)
-      await tx.leave.deleteMany({
-        where: { reviewedBy: manager.id },
-      });
+    await prisma.leave.deleteMany({
+      where: { reviewedBy: manager.id },
+    });
 
-      await tx.leave.deleteMany({
-        where: { userId: manager.id },
-      });
+    await prisma.leave.deleteMany({
+      where: { userId: manager.id },
+    });
 
-      // Delete coverage records
-      await tx.employeeTaskCoverage.deleteMany({
-        where: { employeeId: manager.id },
-      });
+    await prisma.employeeTaskCoverage.deleteMany({
+      where: { employeeId: manager.id },
+    });
 
-      await tx.employeeTaskCoverage.deleteMany({
-        where: { managerId: manager.id },
-      });
+    await prisma.employeeTaskCoverage.deleteMany({
+      where: { managerId: manager.id },
+    });
 
-      // Delete coordinator assignments
-      await tx.coordinatorFollowUp.deleteMany({
-        where: { senderId: manager.id },
-      });
+    await prisma.coordinatorFollowUp.deleteMany({
+      where: { senderId: manager.id },
+    });
 
-      await tx.coordinatorAssignment.deleteMany({
-        where: { assignedToId: manager.id },
-      });
+    await prisma.coordinatorAssignment.deleteMany({
+      where: { assignedToId: manager.id },
+    });
 
-      await tx.coordinatorAssignment.deleteMany({
-        where: { createdById: manager.id },
-      });
+    await prisma.coordinatorAssignment.deleteMany({
+      where: { createdById: manager.id },
+    });
 
-      // Delete project assignments
-      await tx.projectAssignment.deleteMany({
-        where: { managerId: manager.id },
-      });
+    await prisma.projectAssignment.deleteMany({
+      where: { managerId: manager.id },
+    });
 
-      // Delete shoot workspace records created by this user first
-      await tx.shootWorkspace.deleteMany({
-        where: { createdById: manager.id },
-      });
+    await prisma.shootWorkspace.deleteMany({
+      where: { createdById: manager.id },
+    });
 
-      // Delete shoot workspace memberships first
-      await tx.shootWorkspaceMember.deleteMany({
-        where: { userId: manager.id },
-      });
+    await prisma.shootWorkspaceMember.deleteMany({
+      where: { userId: manager.id },
+    });
 
-      await tx.shootSubTask.deleteMany({
-        where: {
-          OR: [{ submittedById: manager.id }, { reviewedById: manager.id }],
-        },
-      });
+    await prisma.shootSubTask.deleteMany({
+      where: {
+        OR: [{ submittedById: manager.id }, { reviewedById: manager.id }],
+      },
+    });
 
-      await tx.shootTask.deleteMany({
-        where: { createdById: manager.id },
-      });
+    await prisma.shootTask.deleteMany({
+      where: { createdById: manager.id },
+    });
 
-      // Delete project-related records
-      await tx.projectMonthlySheet.deleteMany({
-        where: { createdById: manager.id },
-      });
+    await prisma.projectMonthlySheet.deleteMany({
+      where: { createdById: manager.id },
+    });
 
-      await tx.project.deleteMany({
-        where: { createdById: manager.id },
-      });
+    await prisma.project.deleteMany({
+      where: { createdById: manager.id },
+    });
 
-      // Delete tasks created by this user
-      await tx.task.deleteMany({
-        where: { createdById: manager.id },
-      });
+    await prisma.task.deleteMany({
+      where: { createdById: manager.id },
+    });
 
-      // Delete the user
-      await tx.user.delete({
-        where: { id: manager.id },
-      });
+    await prisma.user.delete({
+      where: { id: manager.id },
     });
 
     return { id: manager.id, employeeId: manager.employeeId };
@@ -906,123 +891,106 @@ exports.deleteEmployee = async (employeeId) => {
   }
 
   try {
-    // Use transaction to ensure all related data is deleted properly
-    // Delete in order of dependencies to handle all foreign key constraints
-    await prisma.$transaction(async (tx) => {
-      // Delete user relationships first
-      await tx.userDepartment.deleteMany({
-        where: { userId: employee.id },
-      });
+    await prisma.userDepartment.deleteMany({
+      where: { userId: employee.id },
+    });
 
-      await tx.userManager.deleteMany({
-        where: { employeeId: employee.id },
-      });
+    await prisma.userManager.deleteMany({
+      where: { employeeId: employee.id },
+    });
 
-      await tx.userManager.deleteMany({
-        where: { managerId: employee.id },
-      });
+    await prisma.userManager.deleteMany({
+      where: { managerId: employee.id },
+    });
 
-      // Delete notifications
-      await tx.notification.deleteMany({
-        where: { userId: employee.id },
-      });
+    await prisma.notification.deleteMany({
+      where: { userId: employee.id },
+    });
 
-      // Delete task-related records
-      await tx.taskItemAssignment.deleteMany({
-        where: { userId: employee.id },
-      });
+    await prisma.taskItemAssignment.deleteMany({
+      where: { userId: employee.id },
+    });
 
-      await tx.taskAssignment.deleteMany({
-        where: { userId: employee.id },
-      });
+    await prisma.taskAssignment.deleteMany({
+      where: { userId: employee.id },
+    });
 
-      await tx.taskEscalation.deleteMany({
-        where: { employeeId: employee.id },
-      });
+    await prisma.taskEscalation.deleteMany({
+      where: { employeeId: employee.id },
+    });
 
-      await tx.taskEscalation.deleteMany({
-        where: { managerId: employee.id },
-      });
+    await prisma.taskEscalation.deleteMany({
+      where: { managerId: employee.id },
+    });
 
-      // Delete attendance records
-      await tx.attendance.deleteMany({
-        where: { userId: employee.id },
-      });
+    await prisma.attendance.deleteMany({
+      where: { userId: employee.id },
+    });
 
-      // Delete leave records (including where user is reviewer)
-      await tx.leave.deleteMany({
-        where: { reviewedBy: employee.id },
-      });
+    await prisma.leave.deleteMany({
+      where: { reviewedBy: employee.id },
+    });
 
-      await tx.leave.deleteMany({
-        where: { userId: employee.id },
-      });
+    await prisma.leave.deleteMany({
+      where: { userId: employee.id },
+    });
 
-      // Delete coverage records
-      await tx.employeeTaskCoverage.deleteMany({
-        where: { employeeId: employee.id },
-      });
+    await prisma.employeeTaskCoverage.deleteMany({
+      where: { employeeId: employee.id },
+    });
 
-      await tx.employeeTaskCoverage.deleteMany({
-        where: { managerId: employee.id },
-      });
+    await prisma.employeeTaskCoverage.deleteMany({
+      where: { managerId: employee.id },
+    });
 
-      // Delete coordinator assignments
-      await tx.coordinatorFollowUp.deleteMany({
-        where: { senderId: employee.id },
-      });
+    await prisma.coordinatorFollowUp.deleteMany({
+      where: { senderId: employee.id },
+    });
 
-      await tx.coordinatorAssignment.deleteMany({
-        where: { assignedToId: employee.id },
-      });
+    await prisma.coordinatorAssignment.deleteMany({
+      where: { assignedToId: employee.id },
+    });
 
-      await tx.coordinatorAssignment.deleteMany({
-        where: { createdById: employee.id },
-      });
+    await prisma.coordinatorAssignment.deleteMany({
+      where: { createdById: employee.id },
+    });
 
-      // Delete project assignments
-      await tx.projectAssignment.deleteMany({
-        where: { managerId: employee.id },
-      });
+    await prisma.projectAssignment.deleteMany({
+      where: { managerId: employee.id },
+    });
 
-      // Delete shoot workspaces created by this user first
-      await tx.shootWorkspace.deleteMany({
-        where: { createdById: employee.id },
-      });
+    await prisma.shootWorkspace.deleteMany({
+      where: { createdById: employee.id },
+    });
 
-      // Delete shoot workspace memberships first
-      await tx.shootWorkspaceMember.deleteMany({
-        where: { userId: employee.id },
-      });
+    await prisma.shootWorkspaceMember.deleteMany({
+      where: { userId: employee.id },
+    });
 
-      await tx.shootSubTask.deleteMany({
-        where: {
-          OR: [{ submittedById: employee.id }, { reviewedById: employee.id }],
-        },
-      });
+    await prisma.shootSubTask.deleteMany({
+      where: {
+        OR: [{ submittedById: employee.id }, { reviewedById: employee.id }],
+      },
+    });
 
-      await tx.shootTask.deleteMany({
-        where: { createdById: employee.id },
-      });
+    await prisma.shootTask.deleteMany({
+      where: { createdById: employee.id },
+    });
 
-      // Delete project-related records
-      await tx.projectMonthlySheet.deleteMany({
-        where: { createdById: employee.id },
-      });
+    await prisma.projectMonthlySheet.deleteMany({
+      where: { createdById: employee.id },
+    });
 
-      await tx.project.deleteMany({
-        where: { createdById: employee.id },
-      });
+    await prisma.project.deleteMany({
+      where: { createdById: employee.id },
+    });
 
-      // Delete tasks created by this user
-      await tx.task.deleteMany({
-        where: { createdById: employee.id },
-      });
+    await prisma.task.deleteMany({
+      where: { createdById: employee.id },
+    });
 
-      // Delete the user
-      await tx.user.delete({
-        where: { id: employee.id },
-      });
+    await prisma.user.delete({
+      where: { id: employee.id },
     });
 
     return { id: employee.id, employeeId: employee.employeeId };
