@@ -1,6 +1,7 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const { sendProjectAssignedToManagerMail } = require("../mail/mail.service");
 
 const FREQUENCY_DEPARTMENTS = [
   "SEO",
@@ -245,7 +246,34 @@ exports.createProject = async (user, body) => {
     },
   });
 
-  return formatProject(project);
+  const formatted = formatProject(project);
+
+  // 🔥 Send email notifications to each assigned manager (fire-and-forget)
+  const startDateStr = project.startDate
+    ? new Date(project.startDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+    : null;
+  const endDateStr = project.endDate
+    ? new Date(project.endDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+    : null;
+
+  for (const assignment of project.assignments) {
+    if (assignment.manager && assignment.manager.email) {
+      sendProjectAssignedToManagerMail({
+        email: assignment.manager.email,
+        managerName: assignment.manager.name,
+        projectName: project.projectName,
+        departmentName: project.department?.name || null,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        hrName: user.name || null,
+        description: project.description || null,
+      }).catch((err) =>
+        console.error(`[Mail] Failed to send project assignment email to ${assignment.manager.email}:`, err.message)
+      );
+    }
+  }
+
+  return formatted;
 };
 
 exports.getProjects = async (user) => {
@@ -665,7 +693,36 @@ exports.updateProject = async (user, projectId, body) => {
     },
   });
 
-  return formatProject(updatedProject);
+  const formatted = formatProject(updatedProject);
+
+  // 🔥 Send email notifications when managers are reassigned (fire-and-forget)
+  if (body.assignTo) {
+    const startDateStr = updatedProject.startDate
+      ? new Date(updatedProject.startDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+      : null;
+    const endDateStr = updatedProject.endDate
+      ? new Date(updatedProject.endDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+      : null;
+
+    for (const assignment of updatedProject.assignments) {
+      if (assignment.manager && assignment.manager.email) {
+        sendProjectAssignedToManagerMail({
+          email: assignment.manager.email,
+          managerName: assignment.manager.name,
+          projectName: updatedProject.projectName,
+          departmentName: updatedProject.department?.name || null,
+          startDate: startDateStr,
+          endDate: endDateStr,
+          hrName: user.name || null,
+          description: updatedProject.description || null,
+        }).catch((err) =>
+          console.error(`[Mail] Failed to send project assignment email to ${assignment.manager.email}:`, err.message)
+        );
+      }
+    }
+  }
+
+  return formatted;
 };
 
 exports.deleteProject = async (user, projectId) => {

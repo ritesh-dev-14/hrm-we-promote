@@ -32,6 +32,18 @@ const coordinatorAssignmentTemplate = require(
   "./templates/coordinatorAssignment.template"
 );
 
+const projectAssignedToManagerTemplate = require(
+  "./templates/projectAssignedToManager.template"
+);
+
+const taskItemAssignedToEmployeeTemplate = require(
+  "./templates/taskItemAssignedToEmployee.template"
+);
+
+const shootTaskAssignedToEmployeeTemplate = require(
+  "./templates/shootTaskAssignedToEmployee.template"
+);
+
 const mailEnabled = process.env.MAIL_ENABLED !== "false";
 
 const brevoApiKey = process.env.BREVO_API_KEY;
@@ -122,10 +134,17 @@ const sendViaBrevoApi = async ({
     body: JSON.stringify({
       sender,
       to: [{ email: to }],
+      replyTo: { email: sender.email, name: sender.name || "WePromote HRM" },
       subject,
       htmlContent: html,
+      headers: {
+        "X-Mailer": "WePromote HRM Notification System",
+        "X-Entity-Ref-ID": `wepromote-${Date.now()}`,
+      },
+      tags: ["hrm-notification"],
     }),
   });
+
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -468,6 +487,107 @@ exports.sendCoordinatorAssignmentMail =
     await sendMail({
       to: email,
       subject: "You got task from coordinator",
+      html,
+    });
+  };
+
+//
+// 🔥 HR → MANAGER (PROJECT ASSIGNED)
+//
+exports.sendProjectAssignedToManagerMail =
+  async ({
+    email,
+    managerName,
+    projectName,
+    departmentName,
+    startDate,
+    endDate,
+    hrName,
+    description,
+  }) => {
+
+    const html =
+      projectAssignedToManagerTemplate({
+        managerName,
+        projectName,
+        departmentName,
+        startDate,
+        endDate,
+        hrName,
+        description,
+      });
+
+    await sendMail({
+      to: email,
+      subject: `New Project Assigned: ${projectName}`,
+      html,
+    });
+  };
+
+//
+// 🔥 MANAGER → EMPLOYEE (TASK ITEM ASSIGNED)
+//
+exports.sendTaskItemAssignedToEmployeeMail =
+  async ({
+    email,
+    employeeName,
+    managerName,
+    taskTitle,
+    projectName,
+    dueDate,
+    priority,
+    description,
+    referenceLink,
+  }) => {
+
+    const html =
+      taskItemAssignedToEmployeeTemplate({
+        employeeName,
+        managerName,
+        taskTitle,
+        projectName,
+        dueDate,
+        priority,
+        description,
+        referenceLink,
+      });
+
+    await sendMail({
+      to: email,
+      subject: `New Task Assigned: ${taskTitle}`,
+      html,
+    });
+  };
+
+//
+// 🔥 MANAGER → EMPLOYEE (SHOOT TASK ASSIGNED)
+//
+exports.sendShootTaskAssignedToEmployeeMail =
+  async ({
+    email,
+    employeeName,
+    managerName,
+    workspaceName,
+    taskTitle,
+    taskDate,
+    taskLocation,
+    description,
+  }) => {
+
+    const html =
+      shootTaskAssignedToEmployeeTemplate({
+        employeeName,
+        managerName,
+        workspaceName,
+        taskTitle,
+        taskDate,
+        taskLocation,
+        description,
+      });
+
+    await sendMail({
+      to: email,
+      subject: `Shoot Task Assigned: ${taskTitle || workspaceName}`,
       html,
     });
   };

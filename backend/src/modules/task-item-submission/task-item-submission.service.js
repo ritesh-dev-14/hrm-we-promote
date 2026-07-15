@@ -938,6 +938,13 @@ const ApiError = require("../../utils/ApiError");
 
 const ERRORS = require("../../utils/errors");
 
+const {
+  sendSubmissionMailToManager,
+  sendApprovalMailToEmployee,
+  sendRejectionMailToEmployee,
+} = require("../mail/mail.service");
+
+
 //
 // ======================================================
 // 🔥 GET MY ASSIGNED ITEMS
@@ -1155,7 +1162,7 @@ exports.updateItemProgress =
           startedAt:
             body.progress > 0
               ? assignment.startedAt ||
-                new Date()
+              new Date()
               : null,
 
           completedAt:
@@ -1302,8 +1309,53 @@ exports.submitTaskItem =
       assignment.taskItemId
     );
 
+    // 🔥 Email the manager that employee has submitted (fire-and-forget)
+    // Checks task creator first; if creator is HR, finds assigned manager instead
+    prisma.taskItem.findUnique({
+      where: { id: assignment.taskItemId },
+      include: {
+        task: {
+          include: {
+            createdBy: true,
+            assignments: { include: { employee: true } },
+          },
+        },
+      },
+    }).then(async (taskItem) => {
+      if (!taskItem?.task) return;
+
+      const creator = taskItem.task.createdBy;
+      const emp = await prisma.user.findUnique({ where: { id: user.id } });
+
+      // If creator is a manager, email them directly
+      // Otherwise look for a manager in TaskAssignments (HR-assigned tasks)
+      let manager = null;
+      if (creator && creator.role === "MANAGER") {
+        manager = creator;
+      } else {
+        const managerAssignment = taskItem.task.assignments.find(
+          (a) => a.employee && a.employee.role === "MANAGER"
+        );
+        manager = managerAssignment?.employee || creator; // fall back to creator (HR)
+      }
+
+      if (!manager?.email) return;
+      return sendSubmissionMailToManager({
+        email: manager.email,
+        managerName: manager.name,
+        employeeName: emp?.name || "Employee",
+        taskTitle: taskItem.title,
+        remarks: body.remarks || "No additional remarks provided",
+        driveLink: body.driveLink || "",
+      });
+    }).catch((err) =>
+      console.error("[Mail] Failed to send submission email to manager:", err.message)
+    );
+
     return submission;
   };
+
+
 
 //
 // ======================================================
@@ -1474,11 +1526,24 @@ exports.verifySubmission =
       assignment.taskItemId
     );
 
+    // 🔥 Send approval email to employee (fire-and-forget)
+    prisma.user.findUnique({ where: { id: assignment.userId } })
+      .then((emp) => {
+        if (emp && emp.email) {
+          return sendApprovalMailToEmployee({
+            email: emp.email,
+            employeeName: emp.name,
+            taskTitle: assignment.taskItem.title,
+          });
+        }
+      })
+      .catch((err) =>
+        console.error("[Mail] Failed to send approval email to employee:", err.message)
+      );
+
     return {
       success: true,
-
-      message:
-        "Submission verified successfully",
+      message: "Submission verified successfully",
     };
   };
 
@@ -1561,11 +1626,25 @@ exports.rejectSubmission =
       assignment.taskItemId
     );
 
+    // 🔥 Send rejection email to employee (fire-and-forget)
+    prisma.user.findUnique({ where: { id: assignment.userId } })
+      .then((emp) => {
+        if (emp && emp.email) {
+          return sendRejectionMailToEmployee({
+            email: emp.email,
+            employeeName: emp.name,
+            taskTitle: assignment.taskItem.title,
+            reason: body.rejectionReason || "No details provided",
+          });
+        }
+      })
+      .catch((err) =>
+        console.error("[Mail] Failed to send rejection email to employee:", err.message)
+      );
+
     return {
       success: true,
-
-      message:
-        "Submission rejected",
+      message: "Submission rejected",
     };
   };
 
@@ -1603,7 +1682,7 @@ const recalculateTaskItem =
             (a.progress || 0),
           0
         ) /
-          assignments.length
+        assignments.length
       );
 
     //

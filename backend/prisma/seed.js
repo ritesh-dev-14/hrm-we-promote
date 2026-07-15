@@ -152,6 +152,13 @@
               });
             }
 
+            const hrDepartment = departments["HR Department"];
+            const socialMediaDepartment = departments["Social Media Department"];
+
+            if (!hrDepartment || !socialMediaDepartment) {
+              throw new Error("Required departments were not created successfully");
+            }
+
             // =========================
             // ADMIN
             // =========================
@@ -178,7 +185,7 @@
               where: { email: "hrwepromote@gmail.com" },
               update: {
                 password,
-                departmentId: departments["HR"].id,
+                departmentId: hrDepartment.id,
               },
               create: {
                 employeeId: "HR-001",
@@ -186,7 +193,7 @@
                 email: "hrwepromote@gmail.com",
                 password,
                 role: "HR",
-                departmentId: departments["HR"].id,
+                departmentId: hrDepartment.id,
               },
             });
 
@@ -198,7 +205,7 @@
               where: { email: "ea.wepromote001@gmail.com" },
               update: {
                 password,
-                departmentId: departments["Social Media"].id,
+                departmentId: socialMediaDepartment.id,
               },
               create: {
                 employeeId: "COORD-001",
@@ -206,7 +213,7 @@
                 email: "ea.wepromote001@gmail.com",
                 password,
                 role: "COORDINATOR",
-                departmentId: departments["Social Media"].id,
+                departmentId: socialMediaDepartment.id,
               },
             });
 
@@ -218,7 +225,7 @@
               where: { email: "ea.manager@company.com" },
               update: {
                 password,
-                departmentId: departments["Social Media"].id,
+                departmentId: socialMediaDepartment.id,
                 position: "Executive Assistant",
               },
               create: {
@@ -228,7 +235,7 @@
                 password,
                 role: "EA",
                 position: "Executive Assistant",
-                departmentId: departments["Social Media"].id,
+                departmentId: socialMediaDepartment.id,
               },
             });
 

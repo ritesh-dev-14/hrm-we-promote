@@ -1,6 +1,13 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const {
+  sendShootTaskAssignedToEmployeeMail,
+  sendSubmissionMailToManager,
+  sendApprovalMailToEmployee,
+  sendRejectionMailToEmployee,
+} = require("../mail/mail.service");
+
 
 const getWorkspace = async (workspaceId) => {
   return prisma.shootWorkspace.findUnique({
@@ -201,6 +208,32 @@ exports.addShootWorkspaceMembers = async (user, workspaceId, body) => {
   }
 
   const updatedWorkspace = await getWorkspace(workspace.id);
+
+  // 🔥 Send email to each newly added member (fire-and-forget)
+  if (newMembers.length > 0) {
+    const managerUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { name: true },
+    });
+
+    for (const emp of newMembers) {
+      if (emp.email) {
+        sendShootTaskAssignedToEmployeeMail({
+          email: emp.email,
+          employeeName: emp.name,
+          managerName: managerUser?.name || null,
+          workspaceName: workspace.name,
+          taskTitle: null,
+          taskDate: null,
+          taskLocation: null,
+          description: workspace.description || null,
+        }).catch((err) =>
+          console.error(`[Mail] Failed to send shoot workspace email to ${emp.email}:`, err.message)
+        );
+      }
+    }
+  }
+
   return formatWorkspace(updatedWorkspace);
 };
 
@@ -535,7 +568,7 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
     },
   });
 
-  return {
+  const result = {
     id: subtask.id,
     taskId: subtask.taskId,
     dayId: subtask.dayId,
@@ -549,6 +582,50 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
     createdAt: subtask.createdAt,
     updatedAt: subtask.updatedAt,
   };
+
+  // 🔥 Notify all workspace members about the new shoot subtask (fire-and-forget)
+  try {
+    const workspace = await prisma.shootWorkspace.findUnique({
+      where: { id: workspaceId },
+      include: {
+        members: {
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+      },
+    });
+
+    if (workspace && workspace.members.length > 0) {
+      const managerUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { name: true },
+      });
+
+      const taskDateStr = task.date
+        ? new Date(task.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+        : null;
+
+      for (const member of workspace.members) {
+        if (member.user.email) {
+          sendShootTaskAssignedToEmployeeMail({
+            email: member.user.email,
+            employeeName: member.user.name,
+            managerName: managerUser?.name || null,
+            workspaceName: workspace.name,
+            taskTitle: subtask.title,
+            taskDate: taskDateStr,
+            taskLocation: task.location || null,
+            description: subtask.description || null,
+          }).catch((err) =>
+            console.error(`[Mail] Failed to send shoot subtask email to ${member.user.email}:`, err.message)
+          );
+        }
+      }
+    }
+  } catch (mailErr) {
+    console.error("[Mail] Error fetching workspace members for shoot subtask email:", mailErr.message);
+  }
+
+  return result;
 };
 
 exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) => {
@@ -588,6 +665,28 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
       reviewedById: null,
     },
   });
+
+  // 🔥 Email the workspace creator (manager) that employee submitted (fire-and-forget)
+  if (body.submissionLinks && body.submissionLinks.length > 0) {
+    prisma.shootWorkspace.findUnique({
+      where: { id: workspaceId },
+      include: { createdBy: true },
+    }).then(async (workspace) => {
+      if (!workspace?.createdBy?.email) return;
+      const manager = workspace.createdBy;
+      const emp = await prisma.user.findUnique({ where: { id: user.id } });
+      return sendSubmissionMailToManager({
+        email: manager.email,
+        managerName: manager.name,
+        employeeName: emp?.name || "Employee",
+        taskTitle: updatedSubtask.title,
+        remarks: `Shoot subtask submission in workspace: ${workspace.name}`,
+        driveLink: (body.submissionLinks || []).join(", "),
+      });
+    }).catch((err) =>
+      console.error("[Mail] Failed to send shoot submission email to manager:", err.message)
+    );
+  }
 
   return {
     id: updatedSubtask.id,
@@ -641,7 +740,7 @@ exports.reviewShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
     where: { id: subtaskId },
     data: {
       status: body.status,
-      reviewReason: body.reason || null,
+      reviewReason: body.reviewReason || null,
       reviewedById: user.id,
       reviewedAt: new Date(),
     },
@@ -668,6 +767,31 @@ exports.reviewShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
         },
       });
     }
+  }
+
+  // 🔥 Email the employee who submitted about the review result (fire-and-forget)
+  if (subtask.submittedById) {
+    prisma.user.findUnique({ where: { id: subtask.submittedById } })
+      .then((emp) => {
+        if (!emp?.email) return;
+        if (body.status === "APPROVED") {
+          return sendApprovalMailToEmployee({
+            email: emp.email,
+            employeeName: emp.name,
+            taskTitle: subtask.title,
+          });
+        } else if (body.status === "REJECTED") {
+          return sendRejectionMailToEmployee({
+            email: emp.email,
+            employeeName: emp.name,
+            taskTitle: subtask.title,
+            reason: body.reviewReason || "No details provided",
+          });
+        }
+      })
+      .catch((err) =>
+        console.error("[Mail] Failed to send shoot review email to employee:", err.message)
+      );
   }
 
   return {

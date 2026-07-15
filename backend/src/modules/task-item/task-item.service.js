@@ -4,6 +4,8 @@ const ApiError = require("../../utils/ApiError");
 
 const ERRORS = require("../../utils/errors");
 
+const { sendTaskItemAssignedToEmployeeMail } = require("../mail/mail.service");
+
 //
 // 🔥 CREATE TASK ITEM WITH ASSIGNMENT
 //
@@ -151,6 +153,33 @@ exports.createTaskItem = async (
       entityId: item.id,
     },
   });
+
+  // 🔥 Send email to employee (fire-and-forget)
+  if (employee.email) {
+    const dueDateStr = body.dueDate
+      ? new Date(body.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+      : null;
+
+    // Fetch assigning manager's name
+    const assigningUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { name: true },
+    });
+
+    sendTaskItemAssignedToEmployeeMail({
+      email: employee.email,
+      employeeName: employee.name,
+      managerName: assigningUser?.name || null,
+      taskTitle: item.title,
+      projectName: task.projectName,
+      dueDate: dueDateStr,
+      priority: item.priority || null,
+      description: item.description || null,
+      referenceLink: item.referenceLink || null,
+    }).catch((err) =>
+      console.error(`[Mail] Failed to send task item email to ${employee.email}:`, err.message)
+    );
+  }
 
   //
   // ✅ RETURN RESPONSE
@@ -480,6 +509,32 @@ exports.assignTaskItem = async (
       })
     ),
   });
+
+  // 🔥 Send emails to all assigned employees (fire-and-forget)
+  {
+    const assigningUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { name: true },
+    });
+
+    for (const emp of employees) {
+      if (emp.email) {
+        sendTaskItemAssignedToEmployeeMail({
+          email: emp.email,
+          employeeName: emp.name,
+          managerName: assigningUser?.name || null,
+          taskTitle: item.title,
+          projectName: item.task?.projectName || null,
+          dueDate: null,
+          priority: item.priority || null,
+          description: item.description || null,
+          referenceLink: item.referenceLink || null,
+        }).catch((err) =>
+          console.error(`[Mail] Failed to send task item email to ${emp.email}:`, err.message)
+        );
+      }
+    }
+  }
 
   return {
     success: true,

@@ -63,9 +63,10 @@ exports.submitShootSubTaskSchema = Joi.object({
 
 exports.reviewShootSubTaskSchema = Joi.object({
   status: Joi.string().valid("APPROVED", "REJECTED").required(),
-  reason: Joi.string().max(1000).when("status", {
+  reviewReason: Joi.string().max(1000).when("status", {
     is: "REJECTED",
     then: Joi.required(),
     otherwise: Joi.optional().allow("", null),
   }),
 }).unknown(false);
+
