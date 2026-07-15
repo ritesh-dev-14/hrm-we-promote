@@ -5,6 +5,8 @@ const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
 
 const { sendTaskItemAssignedToEmployeeMail } = require("../mail/mail.service");
+const { incrementUnread } = require("../../services/sidebarUnread.service");
+
 
 //
 // 🔥 CREATE TASK ITEM WITH ASSIGNMENT
@@ -179,6 +181,29 @@ exports.createTaskItem = async (
     }).catch((err) =>
       console.error(`[Mail] Failed to send task item email to ${employee.email}:`, err.message)
     );
+  }
+
+  // 🔔 Increment sidebar unread badge for employee (department-aware)
+  try {
+    let deptName = null;
+    if (employee.departmentId) {
+      const dept = await prisma.department.findUnique({
+        where: { id: employee.departmentId },
+        select: { name: true },
+      });
+      deptName = dept?.name?.toLowerCase() || null;
+    }
+
+    let menuId = "projects";
+    if (deptName && deptName.includes("content") && deptName.includes("creative")) {
+      menuId = "creative";
+    } else if (deptName && deptName.includes("video")) {
+      menuId = "editor";
+    }
+
+    incrementUnread(employee.id, menuId).catch(() => {});
+  } catch (deptErr) {
+    console.error("[SidebarUnread] Failed department lookup for task-item badge:", deptErr.message);
   }
 
   //

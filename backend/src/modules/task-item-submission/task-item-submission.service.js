@@ -82,9 +82,8 @@
 
 // const prisma = require("../../config/prisma");
 
-// const ApiError = require("../../utils/ApiError");
-
 // const ERRORS = require("../../utils/errors");
+const { incrementUnread } = require("../../services/sidebarUnread.service");
 
 // // 🔥 GET MY ASSIGNED ITEMS
 // exports.getMyAssignedItems =
@@ -1340,6 +1339,30 @@ exports.submitTaskItem =
       }
 
       if (!manager?.email) return;
+      
+      // 🔔 Increment sidebar unread badge for manager (department-aware)
+      try {
+        let deptName = null;
+        if (emp?.departmentId) {
+          const dept = await prisma.department.findUnique({
+            where: { id: emp.departmentId },
+            select: { name: true },
+          });
+          deptName = dept?.name?.toLowerCase() || null;
+        }
+
+        let menuId = "projects";
+        if (deptName && deptName.includes("content") && deptName.includes("creative")) {
+          menuId = "creative";
+        } else if (deptName && deptName.includes("video")) {
+          menuId = "editor";
+        }
+
+        incrementUnread(manager.id, menuId).catch(() => {});
+      } catch (deptErr) {
+        console.error("[SidebarUnread] Failed department lookup for submission badge:", deptErr.message);
+      }
+
       return sendSubmissionMailToManager({
         email: manager.email,
         managerName: manager.name,

@@ -7,7 +7,7 @@ const {
   sendApprovalMailToEmployee,
   sendRejectionMailToEmployee,
 } = require("../mail/mail.service");
-
+const { incrementUnread } = require("../../services/sidebarUnread.service");
 
 const getWorkspace = async (workspaceId) => {
   return prisma.shootWorkspace.findUnique({
@@ -231,6 +231,9 @@ exports.addShootWorkspaceMembers = async (user, workspaceId, body) => {
           console.error(`[Mail] Failed to send shoot workspace email to ${emp.email}:`, err.message)
         );
       }
+      
+      // 🔔 Increment sidebar unread badge for new employee
+      incrementUnread(emp.id, "shoots").catch(() => {});
     }
   }
 
@@ -619,6 +622,9 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
             console.error(`[Mail] Failed to send shoot subtask email to ${member.user.email}:`, err.message)
           );
         }
+        
+        // 🔔 Increment sidebar unread badge for workspace member
+        incrementUnread(member.user.id, "shoots").catch(() => {});
       }
     }
   } catch (mailErr) {
@@ -675,6 +681,9 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
       if (!workspace?.createdBy?.email) return;
       const manager = workspace.createdBy;
       const emp = await prisma.user.findUnique({ where: { id: user.id } });
+      // 🔔 Increment sidebar unread badge for workspace creator (manager)
+      incrementUnread(manager.id, "shoots").catch(() => {});
+
       return sendSubmissionMailToManager({
         email: manager.email,
         managerName: manager.name,

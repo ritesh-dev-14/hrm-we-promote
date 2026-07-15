@@ -2,6 +2,8 @@ const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
 const { sendProjectAssignedToManagerMail } = require("../mail/mail.service");
+const { incrementUnread } = require("../../services/sidebarUnread.service");
+
 
 const FREQUENCY_DEPARTMENTS = [
   "SEO",
@@ -270,6 +272,9 @@ exports.createProject = async (user, body) => {
       }).catch((err) =>
         console.error(`[Mail] Failed to send project assignment email to ${assignment.manager.email}:`, err.message)
       );
+
+      // 🔔 Increment sidebar unread badge for assigned manager
+      incrementUnread(assignment.manager.id, "projects").catch(() => {});
     }
   }
 
@@ -718,6 +723,9 @@ exports.updateProject = async (user, projectId, body) => {
         }).catch((err) =>
           console.error(`[Mail] Failed to send project assignment email to ${assignment.manager.email}:`, err.message)
         );
+
+        // 🔔 Increment sidebar unread badge for reassigned manager
+        incrementUnread(assignment.manager.id, "projects").catch(() => {});
       }
     }
   }

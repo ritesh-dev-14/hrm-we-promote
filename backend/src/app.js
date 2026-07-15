@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const cors = require("cors");
 const errorMiddleware = require("./middlewares/error.middleware");
 const attendanceRoutes = require("./modules/attendance/attendance.routes");
@@ -81,6 +81,12 @@ app.use(
   "/api/escalations",
   require("./modules/escalation/escalation.routes")
 );
+
+app.use(
+  "/api/sidebar-unread",
+  require("./modules/sidebar-unread/sidebar-unread.routes")
+);
+
 
 // Error handling middleware
 
