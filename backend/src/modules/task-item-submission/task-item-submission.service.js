@@ -1120,27 +1120,17 @@ exports.updateItemProgress =
     //
     // ✅ DETERMINE STATUS
     //
-    let status = "PENDING";
+    let status = assignment.status;
 
-    if (
-      body.progress === 0
-    ) {
-      status = "PENDING";
-    }
-
-    else if (
-      body.progress > 0 &&
-      body.progress < 100
-    ) {
-      status =
-        "IN_PROGRESS";
-    }
-
-    else if (
-      body.progress === 100
-    ) {
-      status =
-        "COMPLETED";
+    // If the assignment is not already REJECTED, SUBMITTED, etc, auto-update it based on progress
+    if (["PENDING", "IN_PROGRESS", "COMPLETED", "ASSIGNED"].includes(status)) {
+      if (body.progress === 0) {
+        status = "PENDING";
+      } else if (body.progress > 0 && body.progress < 100) {
+        status = "IN_PROGRESS";
+      } else if (body.progress === 100) {
+        status = "COMPLETED";
+      }
     }
 
     //
@@ -1669,6 +1659,167 @@ exports.rejectSubmission =
       success: true,
       message: "Submission rejected",
     };
+  };
+
+
+//
+// ======================================================
+// 🔥 RESUBMIT TASK ITEM (after manager rejection)
+// ======================================================
+//
+exports.resubmitTaskItem =
+  async (
+    user,
+    assignmentId,
+    body
+  ) => {
+
+    //
+    // ✅ FIND ASSIGNMENT
+    //
+    const assignment =
+      await prisma.taskItemAssignment.findUnique({
+        where: {
+          id: assignmentId,
+        },
+
+        include: {
+          taskItem: true,
+        },
+      });
+
+    if (!assignment) {
+      throw new ApiError(
+        404,
+        { message: "Assignment not found" }
+      );
+    }
+
+    //
+    // ✅ ONLY ASSIGNED EMPLOYEE
+    //
+    if (
+      assignment.userId !== user.id
+    ) {
+      throw new ApiError(
+        403,
+        ERRORS.AUTH.ACCESS_DENIED
+      );
+    }
+
+    //
+    // ✅ ONLY ALLOW IF REJECTED (or COMPLETED if caught in the previous bug)
+    //
+    if (
+      assignment.status !== "REJECTED" && assignment.status !== "COMPLETED"
+    ) {
+      throw new ApiError(
+        400,
+        { message: `Cannot resubmit. Current status is "${assignment.status}". Only rejected assignments can be resubmitted.` }
+      );
+    }
+
+    //
+    // ✅ MUST STILL BE 100% COMPLETE
+    //
+    console.debug(`[resubmitTaskItem] Check progress. Current progress = ${assignment.progress}`);
+    if (assignment.progress < 100) {
+      throw new ApiError(
+        400,
+        { message: "Task progress must be 100% before resubmitting" }
+      );
+    }
+
+    //
+    // ✅ DELETE OLD SUBMISSION (so a fresh one can be created)
+    //
+    await prisma.taskItemSubmission.deleteMany({
+      where: {
+        assignmentId,
+      },
+    });
+
+    //
+    // ✅ CREATE NEW SUBMISSION
+    //
+    const submission =
+      await prisma.taskItemSubmission.create({
+        data: {
+          assignmentId,
+
+          driveLink:
+            body.driveLink || null,
+
+          remarks:
+            body.remarks || null,
+        },
+      });
+
+    //
+    // ✅ RESET ASSIGNMENT STATUS
+    //
+    await prisma.taskItemAssignment.update({
+      where: {
+        id: assignmentId,
+      },
+
+      data: {
+        status: "SUBMITTED",
+        submittedAt: new Date(),
+        rejectedAt: null,
+        rejectionReason: null,
+      },
+    });
+
+    //
+    // ✅ UPDATE MAIN ITEM
+    //
+    await recalculateTaskItem(
+      assignment.taskItemId
+    );
+
+    // 🔥 Email the manager about resubmission (fire-and-forget)
+    prisma.taskItem.findUnique({
+      where: { id: assignment.taskItemId },
+      include: {
+        task: {
+          include: {
+            createdBy: true,
+            assignments: { include: { employee: true } },
+          },
+        },
+      },
+    }).then(async (taskItem) => {
+      if (!taskItem?.task) return;
+
+      const creator = taskItem.task.createdBy;
+      const emp = await prisma.user.findUnique({ where: { id: user.id } });
+
+      let manager = null;
+      if (creator && creator.role === "MANAGER") {
+        manager = creator;
+      } else {
+        const managerAssignment = taskItem.task.assignments.find(
+          (a) => a.employee && a.employee.role === "MANAGER"
+        );
+        manager = managerAssignment?.employee || creator;
+      }
+
+      if (!manager?.email) return;
+
+      return sendSubmissionMailToManager({
+        email: manager.email,
+        managerName: manager.name,
+        employeeName: emp?.name || "Employee",
+        taskTitle: taskItem.title,
+        remarks: `[RESUBMISSION] ${body.remarks || "Employee has resubmitted after rejection"}`,
+        driveLink: body.driveLink || "",
+      });
+    }).catch((err) =>
+      console.error("[Mail] Failed to send resubmission email to manager:", err.message)
+    );
+
+    return submission;
   };
 
 //

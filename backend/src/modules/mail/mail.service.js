@@ -247,10 +247,11 @@ const sendMail = async ({
 
   if (mailRuntimeState.disabled) {
     if (!mailRuntimeState.warned) {
-      console.warn(`Mail disabled, skipping email to ${to}: ${subject}`);
+      console.warn(`[Mail] Suppressed — runtime disabled: ${mailRuntimeState.reason}`);
       mailRuntimeState.warned = true;
+    } else {
+      console.warn(`[Mail] Suppressed email to ${to}: "${subject}" — reason: ${mailRuntimeState.reason}`);
     }
-
     return;
   }
 

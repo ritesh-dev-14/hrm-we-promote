@@ -159,3 +159,31 @@ exports.unableToSubmit =
       next(err);
     }
   };
+
+//
+// 🔥 RESUBMIT TASK ITEM (after manager rejection)
+//
+exports.resubmitTaskItem =
+  async (
+    req,
+    res,
+    next
+  ) => {
+    try {
+
+      const data =
+        await service.resubmitTaskItem(
+          req.user,
+          req.params.assignmentId,
+          req.body
+        );
+
+      res.json({
+        success: true,
+        data,
+      });
+
+    } catch (err) {
+      next(err);
+    }
+  };

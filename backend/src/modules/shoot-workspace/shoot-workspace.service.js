@@ -87,8 +87,10 @@ const verifyWorkspaceAccess = async (user, workspaceId) => {
     });
   }
 
+  const userRole = (user.role || "").toUpperCase();
   const isMember = workspace.members.some((member) => member.userId === user.id);
-  const canView = ["ADMIN", "HR", "MANAGER"].includes(user.role) || isMember;
+  const isOwner = workspace.createdById === user.id;
+  const canView = ["ADMIN", "HR", "MANAGER", "COORDINATOR"].includes(userRole) || isMember || isOwner;
   if (!canView) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
@@ -113,8 +115,9 @@ exports.createShootWorkspace = async (user, body) => {
 
 exports.getShootWorkspaces = async (user) => {
   const taskInclude = { include: { subtasks: true } };
+  const userRole = (user.role || "").toUpperCase();
 
-  if (["ADMIN", "HR"].includes(user.role)) {
+  if (["ADMIN", "HR"].includes(userRole)) {
     const workspaces = await prisma.shootWorkspace.findMany({
       include: { createdBy: true, members: { include: { user: true } }, tasks: taskInclude },
       orderBy: { createdAt: "desc" },
@@ -122,7 +125,7 @@ exports.getShootWorkspaces = async (user) => {
     return workspaces.map(formatWorkspace);
   }
 
-  if (user.role === "MANAGER") {
+  if (userRole === "MANAGER") {
     const workspaces = await prisma.shootWorkspace.findMany({
       where: { createdById: user.id },
       include: { createdBy: true, members: { include: { user: true } }, tasks: taskInclude },
@@ -654,9 +657,14 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
   if (subtask.status === "SUBMITTED" || subtask.status === "APPROVED") {
     throw new ApiError(400, {
       code: ERRORS.TASK.ALREADY_SUBMITTED.code,
-      message: ERRORS.TASK.ALREADY_SUBMITTED.message,
+      message:
+        subtask.status === "APPROVED"
+          ? "This shoot subtask has already been approved and cannot be resubmitted."
+          : "This shoot subtask is already pending review. Wait for the manager's decision.",
     });
   }
+
+  // ✅ REJECTED status is explicitly allowed for resubmission — fall through
 
   const updatedSubtask = await prisma.shootSubTask.update({
     where: { id: subtaskId },
@@ -672,8 +680,10 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
     },
   });
 
-  // 🔥 Email the workspace creator (manager) that employee submitted (fire-and-forget)
+  // 🔥 Email the workspace creator (manager) about submission (fire-and-forget)
   if (body.submissionLinks && body.submissionLinks.length > 0) {
+    const isResubmission = subtask.status === "REJECTED";
+
     prisma.shootWorkspace.findUnique({
       where: { id: workspaceId },
       include: { createdBy: true },
@@ -689,7 +699,9 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
         managerName: manager.name,
         employeeName: emp?.name || "Employee",
         taskTitle: updatedSubtask.title,
-        remarks: `Shoot subtask submission in workspace: ${workspace.name}`,
+        remarks: isResubmission
+          ? `[RESUBMISSION] Employee has resubmitted this shoot subtask after rejection. Workspace: ${workspace.name}`
+          : `Shoot subtask submission in workspace: ${workspace.name}`,
         driveLink: (body.submissionLinks || []).join(", "),
       });
     }).catch((err) =>

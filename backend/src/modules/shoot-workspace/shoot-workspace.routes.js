@@ -130,7 +130,7 @@ router.post(
 router.post(
   "/:workspaceId/tasks/:taskId/subtasks/:subtaskId/review",
   auth,
-  role("MANAGER"),
+  role("MANAGER", "ADMIN", "HR", "COORDINATOR"),
   validate(reviewShootSubTaskSchema),
   controller.reviewShootSubTask
 );

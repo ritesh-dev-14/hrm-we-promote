@@ -179,4 +179,19 @@ router.post(
   controller.unableToSubmit
 );
 
-module.exports = router;
+//
+// 🔥 RESUBMIT TASK ITEM (after manager rejection)
+//
+router.post(
+  "/:assignmentId/resubmit",
+
+  auth,
+
+  role("EMPLOYEE"),
+
+  validate(submitSchema),
+
+  controller.resubmitTaskItem
+);
+
+module.exports = router;
