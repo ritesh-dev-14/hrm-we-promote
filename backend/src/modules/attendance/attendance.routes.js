@@ -17,19 +17,19 @@ router.get("/summary", auth, controller.getAttendanceSummary);
 
 // Hr Api
 
-router.get("/", auth, role("HR"), controller.getAllAttendance);
+router.get("/", auth, role("HR", "ADMIN"), controller.getAllAttendance);
 
 router.get(
   "/dashboard",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   controller.getAttendanceDashboard
 );
 
 router.get(
   "/:employeeId",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   controller.getEmployeeAttendance
 );
 

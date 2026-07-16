@@ -102,7 +102,7 @@ router.delete("/employee/:employeeId", auth, role("HR", "ADMIN"), controller.del
 router.get(
   "/leaves",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   controller.getAllLeaves
 );
 
@@ -110,7 +110,7 @@ router.get(
 router.get(
   "/leave/employee/:employeeId",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   controller.getEmployeeLeaveSummary
 );
 
@@ -118,7 +118,7 @@ router.get(
 router.put(
   "/leave/:id",
   auth,
-  role("HR"),
+  role("HR", "ADMIN"),
   validate(updateLeaveSchema),
   controller.updateLeaveStatus
 );
