@@ -11,6 +11,7 @@ const server = http.createServer(app);
 
 // Setup Socket.IO
 const io = setupSocketIO(server);
+global.io = io;
 
 // Setup all escalation jobs
 setupEscalationJobs(io);

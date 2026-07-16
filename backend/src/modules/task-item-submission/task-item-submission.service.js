@@ -1329,26 +1329,53 @@ exports.submitTaskItem =
       }
 
       if (!manager?.email) return;
-      
+
       // 🔔 Increment sidebar unread badge for manager (department-aware)
       try {
         let deptName = null;
-        if (emp?.departmentId) {
+        if (manager?.departmentId) {
           const dept = await prisma.department.findUnique({
-            where: { id: emp.departmentId },
+            where: { id: manager.departmentId },
             select: { name: true },
           });
           deptName = dept?.name?.toLowerCase() || null;
         }
 
+        // Fallback: If manager has no department (e.g. Admin/HR), try looking at the project's department
+        if (!deptName && taskItem?.task?.projectName) {
+          const project = await prisma.project.findFirst({
+            where: { projectName: taskItem.task.projectName },
+            include: { department: true }
+          });
+          if (project?.department?.name) {
+            deptName = project.department.name.toLowerCase();
+          }
+        }
+
         let menuId = "projects";
-        if (deptName && deptName.includes("content") && deptName.includes("creative")) {
-          menuId = "creative";
-        } else if (deptName && deptName.includes("video")) {
+        if (deptName) {
+          if (deptName.includes("content") || deptName.includes("creative")) {
+            menuId = "creative";
+          } else if (deptName.includes("video") || deptName.includes("editor") || deptName.includes("social media")) {
+            menuId = "editor";
+          }
+        }
+
+        // Fallback 2: Check reference links directly just in case it was created via Editor route
+        if (menuId === "projects" && (taskItem?.referenceLink?.includes("/editor") || taskItem?.rawDataLink?.includes("/editor"))) {
           menuId = "editor";
         }
 
-        incrementUnread(manager.id, menuId).catch(() => {});
+        incrementUnread(manager.id, menuId).catch(() => { });
+        
+        // Emit toast popup via socket if global io is available
+        if (global.io) {
+          global.io.to(`user-${manager.id}`).emit("task-submitted-popup", {
+            projectName: taskItem.task.projectName || taskItem.task.title,
+            employeeName: emp?.name || "Employee",
+          });
+        }
+
       } catch (deptErr) {
         console.error("[SidebarUnread] Failed department lookup for submission badge:", deptErr.message);
       }
