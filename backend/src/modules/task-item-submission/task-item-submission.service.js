@@ -1028,6 +1028,12 @@ exports.getMyAssignedItems =
         instructions:
           a.taskItem.instructions,
 
+        referenceLink:
+          a.taskItem.referenceLink,
+
+        rawDataLink:
+          a.taskItem.rawDataLink,
+
         status:
           a.taskItem.status,
 
