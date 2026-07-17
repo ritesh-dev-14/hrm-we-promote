@@ -41,8 +41,10 @@ const formatProject = (project) => {
     fbPassword: project.fbPassword,
     instaEmail: project.instaEmail,
     instaPassword: project.instaPassword,
-    referenceLink: project.referenceLink,
-    tasteLink: project.tasteLink,
+    reference: project.reference || [],
+    taste: project.taste || [],
+    instaUsername: project.instaUsername,
+    facebookUsername: project.facebookUsername,
     linkedinEmail: project.linkedinEmail,
     linkedinPassword: project.linkedinPassword,
     youtubeEmail: project.youtubeEmail,
@@ -138,7 +140,9 @@ exports.createProject = async (user, body) => {
     body.fbPassword ||
     body.instaEmail ||
     body.instaPassword ||
-    body.projectStartDate
+    body.projectStartDate ||
+    body.instaUsername ||
+    body.facebookUsername
   ) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
@@ -221,8 +225,10 @@ exports.createProject = async (user, body) => {
       projectStartDate: body.projectStartDate
         ? new Date(body.projectStartDate)
         : null,
-      referenceLink: body.referenceLink || null,
-      tasteLink: body.tasteLink || null,
+      reference: body.reference || [],
+      taste: body.taste || [],
+      instaUsername: body.instaUsername || null,
+      facebookUsername: body.facebookUsername || null,
       linkedinEmail: body.linkedinEmail || null,
       linkedinPassword: body.linkedinPassword || null,
       youtubeEmail: body.youtubeEmail || null,
@@ -413,8 +419,10 @@ exports.updateProject = async (user, projectId, body) => {
       "fbPassword",
       "instaEmail",
       "instaPassword",
-      "referenceLink",
-      "tasteLink",
+      "reference",
+      "taste",
+      "instaUsername",
+      "facebookUsername",
       "linkedinEmail",
       "linkedinPassword",
       "youtubeEmail",
@@ -516,10 +524,14 @@ exports.updateProject = async (user, projectId, body) => {
         ? new Date(body.projectStartDate)
         : null
       : project.projectStartDate;
-  const currentReferenceLink =
-    body.referenceLink !== undefined ? body.referenceLink : project.referenceLink;
-  const currentTasteLink =
-    body.tasteLink !== undefined ? body.tasteLink : project.tasteLink;
+  const currentReference =
+    body.reference !== undefined ? body.reference : project.reference;
+  const currentTaste =
+    body.taste !== undefined ? body.taste : project.taste;
+  const currentInstaUsername =
+    body.instaUsername !== undefined ? body.instaUsername : project.instaUsername;
+  const currentFacebookUsername =
+    body.facebookUsername !== undefined ? body.facebookUsername : project.facebookUsername;
   const currentLinkedinEmail =
     body.linkedinEmail !== undefined ? body.linkedinEmail : project.linkedinEmail;
   const currentLinkedinPassword =
@@ -566,7 +578,9 @@ exports.updateProject = async (user, projectId, body) => {
     body.fbPassword ||
     body.instaEmail ||
     body.instaPassword ||
-    body.projectStartDate
+    body.projectStartDate ||
+    body.instaUsername ||
+    body.facebookUsername
   ) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
@@ -593,10 +607,14 @@ exports.updateProject = async (user, projectId, body) => {
   if (body.fbPassword !== undefined) data.fbPassword = body.fbPassword || null;
   if (body.instaEmail !== undefined) data.instaEmail = body.instaEmail || null;
   if (body.instaPassword !== undefined) data.instaPassword = body.instaPassword || null;
-  if (body.referenceLink !== undefined)
-    data.referenceLink = body.referenceLink || null;
-  if (body.tasteLink !== undefined)
-    data.tasteLink = body.tasteLink || null;
+  if (body.reference !== undefined)
+    data.reference = body.reference || [];
+  if (body.taste !== undefined)
+    data.taste = body.taste || [];
+  if (body.instaUsername !== undefined)
+    data.instaUsername = body.instaUsername || null;
+  if (body.facebookUsername !== undefined)
+    data.facebookUsername = body.facebookUsername || null;
   if (body.linkedinEmail !== undefined)
     data.linkedinEmail = body.linkedinEmail || null;
   if (body.linkedinPassword !== undefined)
@@ -628,8 +646,10 @@ exports.updateProject = async (user, projectId, body) => {
     data.fbPassword = null;
     data.instaEmail = null;
     data.instaPassword = null;
-    data.referenceLink = null;
-    data.tasteLink = null;
+    data.reference = [];
+    data.taste = [];
+    data.instaUsername = null;
+    data.facebookUsername = null;
     data.linkedinEmail = null;
     data.linkedinPassword = null;
     data.youtubeEmail = null;

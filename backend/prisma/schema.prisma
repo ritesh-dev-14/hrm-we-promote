@@ -375,8 +375,10 @@ model Project {
   instaEmail    String?
   instaPassword String?
   projectStartDate DateTime?
-  referenceLink String?
-  tasteLink     String?
+  reference     String[]           @default([])
+  taste         String[]           @default([])
+  instaUsername String?
+  facebookUsername String?
   linkedinEmail String?
   linkedinPassword String?
   youtubeEmail  String?
