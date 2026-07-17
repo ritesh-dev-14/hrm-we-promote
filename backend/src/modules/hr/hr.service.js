@@ -1476,9 +1476,9 @@ exports.getEmployeeLeaveSummary = async (employeeId) => {
 
     balance: balance
       ? {
-          casualLeft: balance.casual - balance.usedCasual,
-          sickLeft: balance.sick - balance.usedSick,
-        }
+        casualLeft: balance.casual - balance.usedCasual,
+        sickLeft: balance.sick - balance.usedSick,
+      }
       : null,
   };
 };
@@ -1602,9 +1602,9 @@ exports.getDashboardOverview = async () => {
       const averageProgress =
         assignments.length > 0
           ? Math.round(
-              assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
-                assignments.length
-            )
+            assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+            assignments.length
+          )
           : 0;
 
       // Group assignments by employee for quick lookup
@@ -1630,8 +1630,8 @@ exports.getDashboardOverview = async () => {
           completionRate:
             assignments.length > 0
               ? Math.round(
-                  (completedAssignments / assignments.length) * 100
-                )
+                (completedAssignments / assignments.length) * 100
+              )
               : 0,
         },
         employees: employees.map((emp) => ({
@@ -1649,11 +1649,11 @@ exports.getDashboardOverview = async () => {
           averageProgress:
             assignmentsByEmployee[emp.id].length > 0
               ? Math.round(
-                  assignmentsByEmployee[emp.id].reduce(
-                    (sum, a) => sum + (a.progress || 0),
-                    0
-                  ) / assignmentsByEmployee[emp.id].length
-                )
+                assignmentsByEmployee[emp.id].reduce(
+                  (sum, a) => sum + (a.progress || 0),
+                  0
+                ) / assignmentsByEmployee[emp.id].length
+              )
               : 0,
         })),
         tasks: tasks.map((task) => {
@@ -1712,17 +1712,17 @@ exports.getDashboardOverview = async () => {
     globalAverageProgress:
       allAssignments.length > 0
         ? Math.round(
-            allAssignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
-              allAssignments.length
-          )
+          allAssignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+          allAssignments.length
+        )
         : 0,
     globalCompletionRate:
       allAssignments.length > 0
         ? Math.round(
-            (allAssignments.filter((a) => a.status === "COMPLETED").length /
-              allAssignments.length) *
-              100
-          )
+          (allAssignments.filter((a) => a.status === "COMPLETED").length /
+            allAssignments.length) *
+          100
+        )
         : 0,
   };
 
@@ -1831,9 +1831,9 @@ exports.getAdminDashboardOverview = async () => {
       const averageProgress =
         assignments.length > 0
           ? Math.round(
-              assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
-                assignments.length
-            )
+            assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+            assignments.length
+          )
           : 0;
 
       return {
@@ -2030,9 +2030,9 @@ exports.getAdminEmployeeProgress = async () => {
       const averageProgress =
         assignments.length > 0
           ? Math.round(
-              assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
-                assignments.length
-            )
+            assignments.reduce((sum, a) => sum + (a.progress || 0), 0) /
+            assignments.length
+          )
           : 0;
 
       return {
