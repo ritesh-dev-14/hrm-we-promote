@@ -293,7 +293,7 @@ exports.getProjects = async (user) => {
       ? { assignments: { some: { managerId: user.id } } }
       : undefined;
 
-  if (!where && !["ADMIN", "HR", "EA"].includes(user.role)) {
+  if (!where && !["ADMIN", "HR", "EA", "COORDINATOR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
