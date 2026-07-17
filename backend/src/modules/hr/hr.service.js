@@ -1725,10 +1725,21 @@ exports.getDashboardOverview = async () => {
         )
         : 0,
   };
+  const allUsers = await prisma.user.findMany({
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      department: true,
+      role: true,
+    },
+    orderBy: { name: "asc" },
+  });
 
   return {
     globalStats,
     managerDetails: overview,
+    allUsers,
   };
 };
 
