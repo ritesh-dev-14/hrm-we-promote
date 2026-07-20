@@ -487,13 +487,13 @@ exports.getAttendanceDashboard = async () => {
 
   let present = 0;
   let halfDay = 0;
-  let absent = 0;
 
   todayAttendance.forEach((a) => {
     if (a.status === "PRESENT") present++;
     else if (a.status === "HALF_DAY") halfDay++;
-    else if (a.status === "ABSENT") absent++;
   });
+
+  const absent = Math.max(0, totalEmployees - (present + halfDay));
 
   return {
     totalEmployees,
