@@ -1673,6 +1673,13 @@ exports.rejectSubmission =
     );
 
     // 🔥 Send rejection email to employee (fire-and-forget)
+    if (global.io) {
+      global.io.to(`user-${assignment.userId}`).emit("task-rejected-popup", {
+        projectName: assignment.taskItem.task.projectName || "General",
+        taskTitle: assignment.taskItem.title,
+        reason: body.rejectionReason || "No details provided",
+      });
+    }
     prisma.user.findUnique({ where: { id: assignment.userId } })
       .then((emp) => {
         if (emp && emp.email) {
@@ -1839,6 +1846,14 @@ exports.resubmitTaskItem =
       }
 
       if (!manager?.email) return;
+
+      if (global.io && manager?.id) {
+        global.io.to(`user-${manager.id}`).emit("task-resubmitted-popup", {
+          projectName: taskItem.task?.projectName || "General",
+          taskTitle: taskItem.title,
+          employeeName: emp?.name || "Employee",
+        });
+      }
 
       return sendSubmissionMailToManager({
         email: manager.email,

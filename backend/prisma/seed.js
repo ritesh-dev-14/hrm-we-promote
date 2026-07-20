@@ -239,6 +239,26 @@
               },
             });
 
+            // =========================
+            // EMPLOYEE
+            // =========================
+
+            await prisma.user.upsert({
+              where: { email: "employee@test.com" },
+              update: {
+                password,
+                departmentId: socialMediaDepartment.id,
+              },
+              create: {
+                employeeId: "EMP-001",
+                name: "Employee User",
+                email: "employee@test.com",
+                password,
+                role: "EMPLOYEE",
+                departmentId: socialMediaDepartment.id,
+              },
+            });
+
             console.log("🌱 Seed data inserted successfully");
           }
 

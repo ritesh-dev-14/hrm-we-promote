@@ -87,6 +87,12 @@ app.use(
   require("./modules/sidebar-unread/sidebar-unread.routes")
 );
 
+app.use(
+  "/api/reports",
+  require("./modules/report/report.routes")
+);
+
+
 
 // Error handling middleware
 
