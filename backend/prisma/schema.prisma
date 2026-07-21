@@ -16,6 +16,7 @@ model User {
   role                    Role
   position                String?
   managerId               String?
+  probationPeriod         Boolean                   @default(true)
   createdById             String?
   createdAt               DateTime                  @default(now())
   departmentId            String?
@@ -176,7 +177,7 @@ model Leave {
 model LeaveBalance {
   id         String   @id @default(uuid())
   userId     String
-  casual     Int      @default(14)
+  casual     Int      @default(6)
   sick       Int      @default(6)
   usedCasual Int      @default(0)
   usedSick   Int      @default(0)

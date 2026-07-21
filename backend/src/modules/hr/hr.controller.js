@@ -30,6 +30,7 @@ exports.getManager = async (req, res, next) => {
 
 exports.updateManager = async (req, res, next) => {
   try {
+    console.log("UPDATE MANAGER BODY:", req.body);
     const data = await service.updateManager(req.params.employeeId, req.body);
     res.json({ success: true, data });
   } catch (err) {
@@ -90,6 +91,7 @@ exports.getEmployee = async (req, res, next) => {
 
 exports.updateEmployee = async (req, res, next) => {
   try {
+    console.log("UPDATE EMPLOYEE BODY:", req.body);
     const data = await service.updateEmployee(req.params.employeeId, req.body);
     res.json({ success: true, data });
   } catch (err) {

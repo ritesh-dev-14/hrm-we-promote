@@ -21,6 +21,7 @@ exports.createManagerSchema = Joi.object({
     ),
 
   position: Joi.string().min(2).max(50),
+  probationPeriod: Joi.boolean(),
 });
 
 exports.updateManagerSchema = Joi.object({
@@ -43,6 +44,7 @@ exports.updateManagerSchema = Joi.object({
   position: Joi.string(),
 
   role: Joi.string().valid("MANAGER", "HR", "EMPLOYEE"),
+  probationPeriod: Joi.boolean(),
 });
 
 exports.createEmployeeSchema = Joi.object({
@@ -76,6 +78,8 @@ exports.createEmployeeSchema = Joi.object({
 
   managerIds: Joi.alternatives()
     .try(Joi.string().uuid(), Joi.array().items(Joi.string().uuid()).min(1)),
+
+  probationPeriod: Joi.boolean(),
 });
 
 // 🔹 Update Employee
@@ -117,6 +121,7 @@ exports.updateEmployeeSchema =
       "MANAGER",
       "HR"
     ),
+    probationPeriod: Joi.boolean(),
   });
 
 exports.updateLeaveSchema = Joi.object({

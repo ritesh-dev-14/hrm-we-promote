@@ -191,6 +191,15 @@ exports.submitTask = async (user, assignmentId, body) => {
 exports.applyLeave = async (user, body) => {
   const { startDate, endDate, reason, type } = body;
 
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id }
+  });
+
+  // 🔥 check probation period
+  if (dbUser && dbUser.probationPeriod) {
+    throw new ApiError(400, "Cannot apply for leave during probation period");
+  }
+
   // 🔥 validate type
   if (!["CASUAL", "SICK"].includes(type)) {
     throw new ApiError(400, ERRORS.LEAVE.INVALID_TYPE);
@@ -218,6 +227,10 @@ exports.applyLeave = async (user, body) => {
   // 🔥 calculate days
   const days =
     Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+  if (days > 1) {
+    throw new ApiError(400, "You can only apply for 1 day of leave per request.");
+  }
 
   // ❗ prevent overlap (ignore rejected)
   const overlap = await prisma.leave.findFirst({
@@ -259,26 +272,6 @@ exports.applyLeave = async (user, body) => {
     if (balance.casual - balance.usedCasual < days) {
       throw new ApiError(400, ERRORS.LEAVE.INSUFFICIENT_BALANCE);
     }
-
-    // 🔥 FIXED monthly rule
-    const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
-    const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 0);
-
-    const monthlyLeave = await prisma.leave.findFirst({
-      where: {
-        userId: user.id,
-        type: "CASUAL",
-        status: { in: ["PENDING", "APPROVED"] },
-
-        // 🔥 overlap with current month
-        startDate: { lte: monthEnd },
-        endDate: { gte: monthStart },
-      },
-    });
-
-    if (monthlyLeave) {
-      throw new ApiError(400, ERRORS.LEAVE.MONTHLY_LIMIT_EXCEEDED);
-    }
   }
 
   if (type === "SICK") {
@@ -287,8 +280,26 @@ exports.applyLeave = async (user, body) => {
     }
   }
 
+  // 🔥 GLOBAL monthly rule (1 leave per month total)
+  const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+  const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+
+  const monthlyLeave = await prisma.leave.findFirst({
+    where: {
+      userId: user.id,
+      status: { in: ["PENDING", "APPROVED"] },
+      // 🔥 overlap with current month
+      startDate: { lte: monthEnd },
+      endDate: { gte: monthStart },
+    },
+  });
+
+  if (monthlyLeave) {
+    throw new ApiError(400, "Only 1 leave is allowed per month.");
+  }
+
   // 🔥 CREATE LEAVE
-  return prisma.leave.create({
+  const leave = await prisma.leave.create({
     data: {
       userId: user.id,
       startDate: start,
@@ -298,6 +309,38 @@ exports.applyLeave = async (user, body) => {
       days,
     },
   });
+
+  // 🔥 UPDATE ATTENDANCE IMMEDATELY
+  const dates = [];
+  let current = new Date(leave.startDate);
+
+  while (current <= new Date(leave.endDate)) {
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  await prisma.$transaction(
+    dates.map((date) =>
+      prisma.attendance.upsert({
+        where: {
+          userId_date: {
+            userId: leave.userId,
+            date,
+          },
+        },
+        update: {
+          status: "LEAVE",
+        },
+        create: {
+          userId: leave.userId,
+          date,
+          status: "LEAVE",
+        },
+      }),
+    ),
+  );
+
+  return leave;
 };
 
 // 🔹 GET MY LEAVES

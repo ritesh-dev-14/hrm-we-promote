@@ -83,6 +83,7 @@ exports.createManager = async (user, body) => {
       ...(hashed && { password: hashed }),
       role: "MANAGER",
       position: body.position || null,
+      probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : true,
       ...(creator ? { createdBy: { connect: { id: creator.id } } } : {}),
     },
     select: {
@@ -92,6 +93,7 @@ exports.createManager = async (user, body) => {
       email: true,
       role: true,
       position: true,
+      probationPeriod: true,
       createdAt: true,
       userDepartments: {
         select: {
@@ -133,6 +135,7 @@ exports.createManager = async (user, body) => {
       email: true,
       role: true,
       position: true,
+      probationPeriod: true,
       createdAt: true,
       userDepartments: {
         select: {
@@ -162,6 +165,7 @@ exports.getManagers = async (user) => {
       email: true,
       role: true,
       position: true,
+      probationPeriod: true,
       createdAt: true,
       userDepartments: {
         select: {
@@ -189,6 +193,7 @@ exports.getManager = async (employeeId) => {
       email: true,
       role: true,
       position: true,
+      probationPeriod: true,
       createdAt: true,
       userDepartments: {
         select: {
@@ -275,6 +280,7 @@ exports.updateManager = async (employeeId, body) => {
         name: body.name,
         email: body.email,
         position: body.position,
+        probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : undefined,
         role: body.role,
         ...(hashedPassword && { password: hashedPassword }),
       },
@@ -285,6 +291,7 @@ exports.updateManager = async (employeeId, body) => {
         email: true,
         role: true,
         position: true,
+        probationPeriod: true,
         createdAt: true,
         userDepartments: {
           select: {
@@ -539,6 +546,7 @@ exports.createEmployee = async (user, body) => {
       ...(hashed && { password: hashed }),
       role: body.role,
       position: body.position,
+      probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : true,
       ...(creator ? { createdBy: { connect: { id: creator.id } } } : {}),
     },
     select: {
@@ -548,6 +556,7 @@ exports.createEmployee = async (user, body) => {
       email: true,
       role: true,
       position: true,
+      probationPeriod: true,
       createdAt: true,
     },
   });
@@ -587,6 +596,7 @@ exports.createEmployee = async (user, body) => {
       email: true,
       role: true,
       position: true,
+      probationPeriod: true,
       createdAt: true,
       userDepartments: {
         select: {
@@ -627,6 +637,7 @@ exports.getEmployees = async (user) => {
       email: true,
       role: true,
       position: true,
+      probationPeriod: true,
       createdAt: true,
       userDepartments: {
         select: {
@@ -665,6 +676,7 @@ exports.getEmployee = async (employeeId) => {
       email: true,
       role: true,
       position: true,
+      probationPeriod: true,
       createdAt: true,
       userDepartments: {
         select: {
@@ -828,6 +840,7 @@ exports.updateEmployee = async (employeeId, body) => {
         name: body.name,
         email: body.email,
         position: body.position,
+        probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : undefined,
         role: body.role,
         ...(hashedPassword && { password: hashedPassword }),
       },
@@ -838,6 +851,7 @@ exports.updateEmployee = async (employeeId, body) => {
         email: true,
         role: true,
         position: true,
+        probationPeriod: true,
         createdAt: true,
         userDepartments: {
           select: {
@@ -1398,8 +1412,8 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
           ? { usedCasual: { increment: leave.days } }
           : { usedSick: { increment: leave.days } },
     });
-
-    // 🔥 UPDATE ATTENDANCE (OPTIMIZED)
+  } else if (status === "REJECTED") {
+    // 🔥 REVERT ATTENDANCE
     const dates = [];
     let current = new Date(leave.startDate);
 
@@ -1408,26 +1422,13 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
       current.setDate(current.getDate() + 1);
     }
 
-    await prisma.$transaction(
-      dates.map((date) =>
-        prisma.attendance.upsert({
-          where: {
-            userId_date: {
-              userId: leave.userId,
-              date: normalizeDate(date),
-            },
-          },
-          update: {
-            status: "LEAVE",
-          },
-          create: {
-            userId: leave.userId,
-            date: normalizeDate(date),
-            status: "LEAVE",
-          },
-        }),
-      ),
-    );
+    await prisma.attendance.deleteMany({
+      where: {
+        userId: leave.userId,
+        date: { in: dates.map(d => normalizeDate(d)) },
+        status: "LEAVE",
+      },
+    });
   }
 
   // 🔥 FINAL UPDATE
