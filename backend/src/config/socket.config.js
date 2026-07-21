@@ -7,9 +7,15 @@ const prisma = new PrismaClient();
 // 🔥 SETUP SOCKET.IO FOR REAL-TIME NOTIFICATIONS
 //
 const setupSocketIO = (server) => {
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    "http://localhost:5173",
+    "https://hrm.wepromoteindia.com"
+  ].filter(Boolean);
+
   const io = new Server(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || "http://localhost:5173",
+      origin: allowedOrigins,
       methods: ["GET", "POST"],
       credentials: true,
     },
