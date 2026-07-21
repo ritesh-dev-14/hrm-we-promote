@@ -2,6 +2,7 @@ const prisma = require("../../config/prisma");
 const bcrypt = require("bcrypt");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const { sendLeaveReviewedMailToEmployee } = require("../mail/mail.service");
 
 const parseArrayField = (value) => {
   if (value == null || value === "") return [];
@@ -1432,7 +1433,7 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
   }
 
   // 🔥 FINAL UPDATE
-  return prisma.leave.update({
+  const updatedLeave = await prisma.leave.update({
     where: { id: leaveId },
     data: {
       status,
@@ -1443,11 +1444,31 @@ exports.updateLeaveStatus = async (leaveId, hrId, body) => {
       user: {
         select: {
           name: true,
+          email: true,
           employeeId: true,
         },
       },
     },
   });
+
+  // 🔥 SEND NOTIFICATION TO EMPLOYEE
+  if (updatedLeave.user && updatedLeave.user.email) {
+    try {
+      await sendLeaveReviewedMailToEmployee({
+        employeeEmail: updatedLeave.user.email,
+        employeeName: updatedLeave.user.name,
+        leaveType: updatedLeave.type,
+        startDate: updatedLeave.startDate,
+        endDate: updatedLeave.endDate,
+        status: updatedLeave.status,
+        reason: reviewNote
+      });
+    } catch (err) {
+      console.error("Failed to send leave review email to employee", err);
+    }
+  }
+
+  return updatedLeave;
 };
 
 // 🔹 EMPLOYEE LEAVE SUMMARY

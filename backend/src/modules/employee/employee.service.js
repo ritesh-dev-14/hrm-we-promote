@@ -1,6 +1,7 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const { sendLeaveAppliedMailToHR } = require("../mail/mail.service");
 
 // 🔹 GET ASSIGNED TASKS
 exports.getTasks = async (user) => {
@@ -309,6 +310,30 @@ exports.applyLeave = async (user, body) => {
       days,
     },
   });
+
+  // 🔥 SEND EMAIL TO HR
+  try {
+    const hrUsers = await prisma.user.findMany({
+      where: { role: "HR" },
+      select: { email: true }
+    });
+    
+    for (const hr of hrUsers) {
+      if (hr.email) {
+        await sendLeaveAppliedMailToHR({
+          hrEmail: hr.email,
+          employeeName: user.name || dbUser.name,
+          leaveType: type,
+          startDate: start,
+          endDate: end,
+          reason,
+          days
+        }).catch(err => console.error("Error sending leave email to HR:", err));
+      }
+    }
+  } catch (err) {
+    console.error("Failed to notify HR about leave application", err);
+  }
 
   // 🔥 UPDATE ATTENDANCE IMMEDATELY
   const dates = [];

@@ -44,6 +44,14 @@ const shootTaskAssignedToEmployeeTemplate = require(
   "./templates/shootTaskAssignedToEmployee.template"
 );
 
+const leaveAppliedToHRTemplate = require(
+  "./templates/leaveAppliedToHR.template"
+);
+
+const leaveReviewedToEmployeeTemplate = require(
+  "./templates/leaveReviewedToEmployee.template"
+);
+
 const mailEnabled = process.env.MAIL_ENABLED !== "false";
 
 const brevoApiKey = process.env.BREVO_API_KEY;
@@ -524,6 +532,62 @@ exports.sendProjectAssignedToManagerMail =
       html,
     });
   };
+
+//
+// 🔥 NOTIFY MANAGER ON TASK COMPLETION
+//
+exports.sendTaskCompletedToManagerMail = async ({ managerEmail, managerName, employeeName, projectName, taskTitle, projectType }) => {
+  const subject = `Task Completed by ${employeeName}: ${taskTitle}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2>Task Completed</h2>
+      <p>Hello ${managerName},</p>
+      <p><strong>${employeeName}</strong> has completed the task: <strong>${taskTitle}</strong> in the project <strong>${projectName}</strong> (${projectType}).</p>
+      <p>Please review the submission in the dashboard.</p>
+    </div>
+  `;
+  await sendMail({ to: managerEmail, subject, html });
+};
+
+//
+// 🔥 LEAVE APPLIED -> HR
+//
+exports.sendLeaveAppliedMailToHR = async ({ hrEmail, employeeName, leaveType, startDate, endDate, reason, days }) => {
+  const html = leaveAppliedToHRTemplate({
+    employeeName,
+    leaveType,
+    startDate,
+    endDate,
+    reason,
+    days
+  });
+
+  await sendMail({
+    to: hrEmail,
+    subject: `New Leave Application: ${employeeName}`,
+    html,
+  });
+};
+
+//
+// 🔥 LEAVE REVIEWED -> EMPLOYEE
+//
+exports.sendLeaveReviewedMailToEmployee = async ({ employeeEmail, employeeName, leaveType, startDate, endDate, status, reason }) => {
+  const html = leaveReviewedToEmployeeTemplate({
+    employeeName,
+    leaveType,
+    startDate,
+    endDate,
+    status,
+    reason
+  });
+
+  await sendMail({
+    to: employeeEmail,
+    subject: `Leave Application ${status}`,
+    html,
+  });
+};
 
 //
 // 🔥 MANAGER → EMPLOYEE (TASK ITEM ASSIGNED)
