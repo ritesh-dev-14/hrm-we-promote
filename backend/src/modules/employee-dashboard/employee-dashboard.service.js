@@ -15,7 +15,7 @@ exports.getSummary = async (user) => {
       where: {
         userId: user.id,
 
-        status: "APPROVED",
+        status: "COMPLETED",
       },
     });
 
@@ -34,23 +34,21 @@ exports.getSummary = async (user) => {
   // OVERDUE (for now 0)
   const overdue = 0;
 
-  // THIS WEEK HOURS
-  const startOfWeek = new Date();
-  const dayOfWeek = startOfWeek.getDay();
-  const diffToMonday = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-  startOfWeek.setDate(diffToMonday);
-  startOfWeek.setHours(0, 0, 0, 0);
+  // THIS MONTH HOURS
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
 
-  const thisWeekAttendances = await prisma.attendance.findMany({
+  const thisMonthAttendances = await prisma.attendance.findMany({
     where: {
       userId: user.id,
       date: {
-        gte: startOfWeek,
+        gte: startOfMonth,
       },
     },
   });
 
-  const thisWeekHours = thisWeekAttendances.reduce((acc, curr) => acc + (curr.totalHours || 0), 0);
+  const thisMonthHours = thisMonthAttendances.reduce((acc, curr) => acc + (curr.totalHours || 0), 0);
 
   // PERFORMANCE SCORE
   let performanceScore = 0;
@@ -65,7 +63,7 @@ exports.getSummary = async (user) => {
     completed,
     pending,
     overdue,
-    thisWeekHours: parseFloat(thisWeekHours.toFixed(1)),
+    thisMonthHours: parseFloat(thisMonthHours.toFixed(1)),
     performanceScore,
   };
 };
