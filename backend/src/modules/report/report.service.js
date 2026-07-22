@@ -10,10 +10,64 @@ exports.getEmployeeStats = async (userId) => {
   
   const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+  // SHOOT WORKSPACE SUBTASKS
+  const shootMemberships = await prisma.shootWorkspaceMember.findMany({
+    where: { userId },
+    include: {
+      workspace: {
+        include: {
+          tasks: {
+            include: {
+              subtasks: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  let totalShoots = 0;
+  let completedShoots = 0;
+  let pendingShoots = 0;
+  const shootSubtasks = [];
+
+  shootMemberships.forEach((membership) => {
+    if (membership.workspace && membership.workspace.tasks) {
+      membership.workspace.tasks.forEach((task) => {
+        if (task.subtasks) {
+          task.subtasks.forEach((subtask) => {
+            totalShoots += 1;
+            if (subtask.status === "APPROVED") {
+              completedShoots += 1;
+            } else {
+              pendingShoots += 1;
+            }
+            shootSubtasks.push({
+              id: subtask.id,
+              title: subtask.title,
+              type: subtask.type,
+              status: subtask.status,
+              workspaceName: membership.workspace.name,
+              taskTitle: task.title,
+              date: task.date
+            });
+          });
+        }
+      });
+    }
+  });
+
+  const shootCompletionPercentage = totalShoots > 0 ? Math.round((completedShoots / totalShoots) * 100) : 0;
+
   return {
     totalTasks,
     completedTasks,
     completionPercentage,
+    totalShoots,
+    completedShoots,
+    pendingShoots,
+    shootCompletionPercentage,
+    shootSubtasks
   };
 };
 
