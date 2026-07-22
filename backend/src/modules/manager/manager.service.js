@@ -176,9 +176,8 @@ exports.getDashboardStats = async (user) => {
   // For each employee, count their task assignments by status
   const employeeStats = await Promise.all(
     employees.map(async (emp) => {
-      const assignments = await prisma.taskAssignment.findMany({
+      const assignments = await prisma.taskItemAssignment.findMany({
         where: { userId: emp.id },
-        include: { task: true },
       });
 
       return {
@@ -188,13 +187,13 @@ exports.getDashboardStats = async (user) => {
         email: emp.email,
         totalTasksAssigned: assignments.length,
         completedTasksCount: assignments.filter(
-          (a) => a.task.status === "COMPLETED"
+          (a) => a.status === "COMPLETED" || a.status === "VERIFIED"
         ).length,
         inProgressTasksCount: assignments.filter(
-          (a) => a.task.status === "IN_PROGRESS"
+          (a) => a.status === "IN_PROGRESS" || a.status === "SUBMITTED"
         ).length,
         draftTasksCount: assignments.filter(
-          (a) => a.task.status === "DRAFT"
+          (a) => a.status === "ASSIGNED" || a.status === "PENDING" || a.status === "REJECTED" || a.status === "UNABLE_TO_SUBMIT"
         ).length,
       };
     })
