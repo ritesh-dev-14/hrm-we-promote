@@ -9,8 +9,10 @@ const monthlySheetDaySchema = Joi.object({
   postType: Joi.string().valid(...mediaSourceValues).allow(null),
   videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow(null),
   title: Joi.string().max(200).allow("", null),
-  referenceLinks: Joi.array().items(Joi.string().uri()).default([]),
-  submissionLinks: Joi.array().items(Joi.string()).optional(),
+  referenceLinks: Joi.array().items(Joi.string().allow("")).default([]),
+  submissionLinks: Joi.array().items(Joi.string().allow("")).optional(),
+  contentUploadLinks: Joi.array().items(Joi.string().allow("")).optional(),
+  videoUploadLinks: Joi.array().items(Joi.string().allow("")).optional(),
   script: Joi.string().allow("", null),
   description: Joi.string().allow("", null),
 }).unknown(true);

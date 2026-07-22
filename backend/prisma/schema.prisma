@@ -446,6 +446,8 @@ model ProjectMonthlySheetDay {
   title          String?
   referenceLinks String[]           @default([])
   submissionLinks String[]          @default([])
+  contentUploadLinks String[]       @default([])
+  videoUploadLinks String[]         @default([])
   script         String?
   description    String?
   createdAt      DateTime           @default(now())

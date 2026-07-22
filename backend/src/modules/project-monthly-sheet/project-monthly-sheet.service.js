@@ -15,8 +15,10 @@ const formatDay = (day) => ({
   postType: day.postType,
   videoType: day.videoType,
   title: day.title,
-  referenceLinks: day.referenceLinks,
-  submissionLinks: day.submissionLinks,
+  referenceLinks: day.referenceLinks || [],
+  submissionLinks: day.submissionLinks || [],
+  contentUploadLinks: day.contentUploadLinks || [],
+  videoUploadLinks: day.videoUploadLinks || [],
   script: day.script,
   description: day.description,
   createdAt: day.createdAt,
@@ -118,6 +120,9 @@ exports.createProjectMonthlySheet = async (user, projectId, body) => {
           videoType: day.videoType || null,
           title: day.title || null,
           referenceLinks: day.referenceLinks || [],
+          submissionLinks: day.submissionLinks || [],
+          contentUploadLinks: day.contentUploadLinks || [],
+          videoUploadLinks: day.videoUploadLinks || [],
           script: day.script || null,
           description: day.description || null,
         })),
@@ -244,6 +249,16 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
         );
       }
 
+      let contentUploadLinksToKeep = existingDay ? (existingDay.contentUploadLinks || []) : [];
+      if (Array.isArray(dayInput.contentUploadLinks)) {
+        contentUploadLinksToKeep = dayInput.contentUploadLinks;
+      }
+
+      let videoUploadLinksToKeep = existingDay ? (existingDay.videoUploadLinks || []) : [];
+      if (Array.isArray(dayInput.videoUploadLinks)) {
+        videoUploadLinksToKeep = dayInput.videoUploadLinks;
+      }
+
       if (existingDay) {
         // Update existing day record IN-PLACE so day ID and shootSubTask relations are preserved!
         await prisma.projectMonthlySheetDay.update({
@@ -258,6 +273,8 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
             script: dayInput.script !== undefined ? (dayInput.script || null) : existingDay.script,
             description: dayInput.description !== undefined ? (dayInput.description || null) : existingDay.description,
             submissionLinks: submissionLinksToKeep,
+            contentUploadLinks: contentUploadLinksToKeep,
+            videoUploadLinks: videoUploadLinksToKeep,
           },
         });
       } else {
@@ -272,6 +289,8 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
             title: dayInput.title || null,
             referenceLinks: dayInput.referenceLinks || [],
             submissionLinks: submissionLinksToKeep,
+            contentUploadLinks: contentUploadLinksToKeep,
+            videoUploadLinks: videoUploadLinksToKeep,
             script: dayInput.script || null,
             description: dayInput.description || null,
           },
