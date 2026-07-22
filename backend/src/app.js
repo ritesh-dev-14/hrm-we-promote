@@ -101,7 +101,10 @@ app.use(
   require("./modules/report/report.routes")
 );
 
-
+app.use(
+  "/api/payslips",
+  require("./modules/payslip/payslip.routes")
+);
 
 // Error handling middleware
 

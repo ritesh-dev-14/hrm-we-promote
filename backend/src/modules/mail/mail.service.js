@@ -52,6 +52,10 @@ const leaveReviewedToEmployeeTemplate = require(
   "./templates/leaveReviewedToEmployee.template"
 );
 
+const payslipSentTemplate = require(
+  "./templates/payslipSent.template"
+);
+
 const mailEnabled = process.env.MAIL_ENABLED !== "false";
 
 const brevoApiKey = process.env.BREVO_API_KEY;
@@ -656,6 +660,35 @@ exports.sendShootTaskAssignedToEmployeeMail =
       html,
     });
   };
+
+exports.sendPayslipEmail = async ({
+  email,
+  employeeName,
+  monthName,
+  year,
+  title,
+  remarks,
+  imageUrl,
+  uploaderName,
+}) => {
+  const html = payslipSentTemplate({
+    employeeName,
+    monthName,
+    year,
+    title,
+    remarks,
+    imageUrl,
+    uploaderName,
+  });
+
+  const subject = title ? `Payslip: ${title}` : `Payslip Available for ${monthName} ${year}`;
+
+  await sendMail({
+    to: email,
+    subject,
+    html,
+  });
+};
 
 //
 // 🔥 EXPORT SEND MAIL FOR GENERAL USE

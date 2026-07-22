@@ -209,6 +209,29 @@ module.exports = {
       code: "SVR_003",
       message: "Service temporarily unavailable. Please try again later."
     }
+  },
+
+  PAYSLIP: {
+    NOT_FOUND: {
+      code: "PAY_001",
+      message: "Payslip not found."
+    },
+    IMAGE_REQUIRED: {
+      code: "PAY_002",
+      message: "Payslip image file is required."
+    },
+    EMPLOYEE_REQUIRED: {
+      code: "PAY_003",
+      message: "Target employee (userId) is required."
+    },
+    INVALID_MONTH: {
+      code: "PAY_004",
+      message: "Invalid month. Month must be between 1 and 12."
+    },
+    INVALID_YEAR: {
+      code: "PAY_005",
+      message: "Invalid year. Year must be a valid 4-digit number."
+    }
   }
 
 };

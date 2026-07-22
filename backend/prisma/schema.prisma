@@ -52,6 +52,8 @@ model User {
   employeeManagers        UserManager[]             @relation("EmployeeManagers")
   managerEmployees        UserManager[]             @relation("ManagerEmployees")
   sidebarUnreads          SidebarUnread[]
+  payslips                Payslip[]                 @relation("EmployeePayslips")
+  uploadedPayslips        Payslip[]                 @relation("UploadedPayslips")
 }
 
 model Attendance {
@@ -690,3 +692,26 @@ model SidebarUnread {
   @@unique([userId, menuId])
   @@index([userId])
 }
+
+model Payslip {
+  id           String   @id @default(uuid())
+  userId       String
+  uploadedById String
+  month        Int
+  year         Int
+  title        String?
+  imageUrl     String
+  publicId     String?
+  remarks      String?
+  sentEmail    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User @relation("EmployeePayslips", fields: [userId], references: [id], onDelete: Cascade)
+  uploadedBy User @relation("UploadedPayslips", fields: [uploadedById], references: [id])
+
+  @@unique([userId, month, year])
+  @@index([userId])
+  @@index([month, year])
+}
+
