@@ -218,26 +218,76 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
     },
   };
 
-  if (body.days) {
-    await prisma.projectMonthlySheetDay.deleteMany({
-      where: { sheetId },
+  if (body.days && Array.isArray(body.days)) {
+    const existingDays = sheet.days || [];
+    const existingDaysByDateMap = new Map();
+    const existingDaysByIdMap = new Map();
+
+    existingDays.forEach((d) => {
+      const dateKey = new Date(d.date).toISOString().split("T")[0];
+      existingDaysByDateMap.set(dateKey, d);
+      existingDaysByIdMap.set(d.id, d);
     });
 
-    updateData.data.days = {
-      create: body.days.map((day) => ({
-        date: new Date(day.date),
-        reelType: day.reelType || null,
-        postType: day.postType || null,
-        videoType: day.videoType || null,
-        title: day.title || null,
-        referenceLinks: day.referenceLinks || [],
-        script: day.script || null,
-        description: day.description || null,
-      })),
-    };
+    for (const dayInput of body.days) {
+      const inputDate = new Date(dayInput.date);
+      const dateKey = inputDate.toISOString().split("T")[0];
+
+      const existingDay = (dayInput.id && existingDaysByIdMap.get(dayInput.id)) ||
+                          existingDaysByDateMap.get(dateKey);
+
+      // Preserve submission links from shoot subtask approvals / existing day data
+      let submissionLinksToKeep = existingDay ? (existingDay.submissionLinks || []) : [];
+      if (Array.isArray(dayInput.submissionLinks) && dayInput.submissionLinks.length > 0) {
+        submissionLinksToKeep = Array.from(
+          new Set([...submissionLinksToKeep, ...dayInput.submissionLinks])
+        );
+      }
+
+      if (existingDay) {
+        // Update existing day record IN-PLACE so day ID and shootSubTask relations are preserved!
+        await prisma.projectMonthlySheetDay.update({
+          where: { id: existingDay.id },
+          data: {
+            date: inputDate,
+            reelType: dayInput.reelType !== undefined ? (dayInput.reelType || null) : existingDay.reelType,
+            postType: dayInput.postType !== undefined ? (dayInput.postType || null) : existingDay.postType,
+            videoType: dayInput.videoType !== undefined ? (dayInput.videoType || null) : existingDay.videoType,
+            title: dayInput.title !== undefined ? (dayInput.title || null) : existingDay.title,
+            referenceLinks: dayInput.referenceLinks !== undefined ? (dayInput.referenceLinks || []) : existingDay.referenceLinks,
+            script: dayInput.script !== undefined ? (dayInput.script || null) : existingDay.script,
+            description: dayInput.description !== undefined ? (dayInput.description || null) : existingDay.description,
+            submissionLinks: submissionLinksToKeep,
+          },
+        });
+      } else {
+        // Create new day record if it didn't exist before
+        await prisma.projectMonthlySheetDay.create({
+          data: {
+            sheetId,
+            date: inputDate,
+            reelType: dayInput.reelType || null,
+            postType: dayInput.postType || null,
+            videoType: dayInput.videoType || null,
+            title: dayInput.title || null,
+            referenceLinks: dayInput.referenceLinks || [],
+            submissionLinks: submissionLinksToKeep,
+            script: dayInput.script || null,
+            description: dayInput.description || null,
+          },
+        });
+      }
+    }
   }
 
-  const updatedSheet = await prisma.projectMonthlySheet.update(updateData);
+  const updatedSheet = await prisma.projectMonthlySheet.update({
+    where: { id: sheetId },
+    data,
+    include: {
+      createdBy: true,
+      days: true,
+    },
+  });
 
   return formatSheet(updatedSheet);
 };

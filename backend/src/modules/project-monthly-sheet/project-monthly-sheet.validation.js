@@ -3,15 +3,17 @@ const Joi = require("joi");
 const mediaSourceValues = ["SHOOT", "AI"];
 
 const monthlySheetDaySchema = Joi.object({
+  id: Joi.string().optional(),
   date: Joi.date().required(),
   reelType: Joi.string().valid(...mediaSourceValues).allow(null),
   postType: Joi.string().valid(...mediaSourceValues).allow(null),
   videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow(null),
   title: Joi.string().max(200).allow("", null),
   referenceLinks: Joi.array().items(Joi.string().uri()).default([]),
+  submissionLinks: Joi.array().items(Joi.string()).optional(),
   script: Joi.string().allow("", null),
   description: Joi.string().allow("", null),
-}).unknown(false);
+}).unknown(true);
 
 exports.createProjectMonthlySheetSchema = Joi.object({
   month: Joi.number().integer().min(1).max(12).required(),
