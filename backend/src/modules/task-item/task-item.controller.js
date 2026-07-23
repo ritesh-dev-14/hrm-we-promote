@@ -178,3 +178,33 @@ exports.updateTaskItemStatus = async (
     next(err);
   }
 };
+
+//
+// 🔥 UPDATE TASK ITEM
+//
+exports.updateTaskItem = async (req, res, next) => {
+  try {
+    const data = await service.updateTaskItem(req.params.itemId, req.body);
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//
+// 🔥 DELETE TASK ITEM
+//
+exports.deleteTaskItem = async (req, res, next) => {
+  try {
+    const data = await service.deleteTaskItem(req.params.itemId);
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

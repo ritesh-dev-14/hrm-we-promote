@@ -1154,3 +1154,34 @@ exports.getTaskItemsWithDetails =
       ),
     };
   };
+
+//
+// 🔥 UPDATE TASK DETAILS (MANAGER/HR/ADMIN)
+//
+exports.updateTask = async (taskId, body) => {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) throw new ApiError(404, "Task not found");
+
+  const updated = await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      ...(body.projectName && { projectName: body.projectName }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.startDate !== undefined && { startDate: body.startDate }),
+      ...(body.endDate !== undefined && { endDate: body.endDate }),
+      ...(body.status && { status: body.status }),
+    },
+  });
+  return updated;
+};
+
+//
+// 🔥 DELETE TASK (MANAGER/HR/ADMIN)
+//
+exports.deleteTask = async (taskId) => {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) throw new ApiError(404, "Task not found");
+
+  await prisma.task.delete({ where: { id: taskId } });
+  return { deleted: true };
+};

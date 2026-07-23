@@ -170,3 +170,33 @@ exports.getTaskItemsWithDetails =
       next(err);
     }
   };
+
+//
+// 🔥 UPDATE TASK
+//
+exports.updateTask = async (req, res, next) => {
+  try {
+    const data = await service.updateTask(req.params.id, req.body);
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//
+// 🔥 DELETE TASK
+//
+exports.deleteTask = async (req, res, next) => {
+  try {
+    const data = await service.deleteTask(req.params.id);
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

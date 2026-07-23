@@ -86,4 +86,24 @@ router.patch(
   controller.updateTaskAssignmentStatus
 );
 
+//
+// 🔥 UPDATE TASK DETAILS
+//
+router.patch(
+  "/:id",
+  auth,
+  role("ADMIN", "HR", "MANAGER"),
+  controller.updateTask
+);
+
+//
+// 🔥 DELETE TASK
+//
+router.delete(
+  "/:id",
+  auth,
+  role("ADMIN", "HR", "MANAGER"),
+  controller.deleteTask
+);
+
 module.exports = router;

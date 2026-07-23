@@ -119,4 +119,24 @@ router.patch(
   controller.updateTaskItemStatus
 );
 
+//
+// 🔥 UPDATE TASK ITEM DETAILS
+//
+router.patch(
+  "/:itemId",
+  auth,
+  role("ADMIN", "HR", "MANAGER"),
+  controller.updateTaskItem
+);
+
+//
+// 🔥 DELETE TASK ITEM
+//
+router.delete(
+  "/:itemId",
+  auth,
+  role("ADMIN", "HR", "MANAGER"),
+  controller.deleteTaskItem
+);
+
 module.exports = router;

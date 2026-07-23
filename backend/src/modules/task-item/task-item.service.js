@@ -728,3 +728,74 @@ exports.updateTaskItemStatus = async (
     startedAt: updated.startedAt,
   };
 };
+
+//
+// 🔥 UPDATE TASK ITEM DETAILS
+//
+exports.updateTaskItem = async (itemId, body) => {
+  const item = await prisma.taskItem.findUnique({
+    where: { id: itemId },
+    include: { assignments: true },
+  });
+  if (!item) throw new ApiError(404, "Task item not found");
+
+  const updatedItem = await prisma.taskItem.update({
+    where: { id: itemId },
+    data: {
+      ...(body.title && { title: body.title }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.priority && { priority: body.priority }),
+      ...(body.dueDate !== undefined && { dueDate: body.dueDate }),
+      ...(body.referenceLink !== undefined && { referenceLink: body.referenceLink }),
+      ...(body.rawDataLink !== undefined && { rawDataLink: body.rawDataLink }),
+      ...(body.status && { status: body.status }),
+    },
+  });
+
+  if (body.employeeId) {
+    const employee = await prisma.user.findFirst({
+      where: { employeeId: body.employeeId },
+    });
+    if (employee) {
+      await prisma.taskItemAssignment.deleteMany({
+        where: { taskItemId: itemId },
+      });
+
+      const validAssignmentStatuses = [
+        "ASSIGNED",
+        "IN_PROGRESS",
+        "SUBMITTED",
+        "VERIFIED",
+        "REJECTED",
+        "COMPLETED",
+        "PENDING",
+        "UNABLE_TO_SUBMIT",
+      ];
+      const assignmentStatus =
+        body.status && validAssignmentStatuses.includes(body.status)
+          ? body.status
+          : "ASSIGNED";
+
+      await prisma.taskItemAssignment.create({
+        data: {
+          taskItemId: itemId,
+          userId: employee.id,
+          status: assignmentStatus,
+        },
+      });
+    }
+  }
+
+  return updatedItem;
+};
+
+//
+// 🔥 DELETE TASK ITEM
+//
+exports.deleteTaskItem = async (itemId) => {
+  const item = await prisma.taskItem.findUnique({ where: { id: itemId } });
+  if (!item) throw new ApiError(404, "Task item not found");
+
+  await prisma.taskItem.delete({ where: { id: itemId } });
+  return { deleted: true };
+};
