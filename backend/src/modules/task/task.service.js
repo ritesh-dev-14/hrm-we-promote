@@ -809,7 +809,11 @@ exports.getTasks = async (
           },
         },
 
-        items: true,
+        items: {
+          include: {
+            assignments: true,
+          },
+        },
       },
 
       orderBy: {
@@ -817,23 +821,40 @@ exports.getTasks = async (
       },
     });
 
-  return tasks.map((task) => ({
-    id: task.id,
-    projectName: task.projectName,
-    description: task.description,
-    startDate: task.startDate,
-    endDate: task.endDate,
-    status: task.status,
-    createdAt: task.createdAt,
-    createdBy: task.createdBy,
-    assignments: task.assignments.map((a) => ({
-      userId: a.userId,
-      employee: a.employee,
-      status: a.status,
-      progress: a.progress || 0,
-    })),
-    totalItems: task.items.length,
-  }));
+  return tasks.map((task) => {
+    const submittedItemsCount = (task.items || []).reduce((sum, item) => {
+      const isSubmitted =
+        (item.assignments || []).some(
+          (a) => a.status === "SUBMITTED" || a.status === "UNABLE_TO_SUBMIT"
+        ) || item.status === "SUBMITTED" || item.status === "UNABLE_TO_SUBMIT";
+      return sum + (isSubmitted ? 1 : 0);
+    }, 0);
+
+    const submittedAssignmentsCount = (task.assignments || []).filter(
+      (a) => a.status === "SUBMITTED" || a.status === "UNABLE_TO_SUBMIT"
+    ).length;
+
+    const totalPendingSubmissions = Math.max(submittedItemsCount, submittedAssignmentsCount);
+
+    return {
+      id: task.id,
+      projectName: task.projectName,
+      description: task.description,
+      startDate: task.startDate,
+      endDate: task.endDate,
+      status: task.status,
+      createdAt: task.createdAt,
+      createdBy: task.createdBy,
+      assignments: task.assignments.map((a) => ({
+        userId: a.userId,
+        employee: a.employee,
+        status: a.status,
+        progress: a.progress || 0,
+      })),
+      totalItems: task.items.length,
+      submittedItemsCount: totalPendingSubmissions,
+    };
+  });
 };
 
 //

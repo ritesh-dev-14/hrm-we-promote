@@ -37,29 +37,30 @@ exports.updateShootTaskSchema = Joi.object({
 }).unknown(false);
 
 exports.createShootSubTaskSchema = Joi.object({
-  title: Joi.string().min(2).max(200).required(),
-  description: Joi.string().max(1000).allow("", null),
+  title: Joi.string().min(1).max(200).required(),
+  description: Joi.string().max(1000).allow("", null).optional(),
   type: Joi.string().valid("PIC", "REEL").required(),
-  referenceLinks: Joi.array().items(Joi.string().uri()).min(1).required(),
-  videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").required(),
-  dayId: Joi.string().uuid().optional().allow("", null),
-}).unknown(false);
+  referenceLinks: Joi.array().items(Joi.string().allow("")).default([]).optional(),
+  videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow("", null).optional(),
+  setupType: Joi.string().valid("PREMIUM", "VERY_PREMIUM", "PHONE").allow("", null).optional(),
+  dayId: Joi.string().allow("", null).optional(),
+}).unknown(true);
 
 exports.updateShootSubTaskSchema = Joi.object({
-  title: Joi.string().min(2).max(200),
-  description: Joi.string().max(1000).allow("", null),
-  type: Joi.string().valid("PIC", "REEL"),
-  referenceLinks: Joi.array().items(Joi.string().uri()).min(1),
-  videoType: Joi.string().valid("HORIZONTAL", "VERTICAL"),
-}).unknown(false);
+  title: Joi.string().min(1).max(200).optional(),
+  description: Joi.string().max(1000).allow("", null).optional(),
+  type: Joi.string().valid("PIC", "REEL").optional(),
+  referenceLinks: Joi.array().items(Joi.string().allow("")).default([]).optional(),
+  videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow("", null).optional(),
+  setupType: Joi.string().valid("PREMIUM", "VERY_PREMIUM", "PHONE").allow("", null).optional(),
+  dayId: Joi.string().allow("", null).optional(),
+}).unknown(true);
 
 exports.submitShootSubTaskSchema = Joi.object({
-  submissionLinks: Joi.array().items(Joi.string().uri()).min(1),
-  unableToSubmitReason: Joi.string().max(1000),
+  submissionLinks: Joi.array().items(Joi.string().allow("")).optional(),
+  unableToSubmitReason: Joi.string().max(1000).allow("", null).optional(),
 })
-  .xor("submissionLinks", "unableToSubmitReason")
-  .required()
-  .unknown(false);
+  .unknown(true);
 
 exports.reviewShootSubTaskSchema = Joi.object({
   status: Joi.string().valid("APPROVED", "REJECTED").required(),

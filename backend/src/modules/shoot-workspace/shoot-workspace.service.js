@@ -28,41 +28,63 @@ const getWorkspace = async (workspaceId) => {
   });
 };
 
-const formatWorkspace = (workspace) => ({
-  id: workspace.id,
-  name: workspace.name,
-  description: workspace.description,
-  createdBy: {
-    id: workspace.createdBy.id,
-    employeeId: workspace.createdBy.employeeId,
-    name: workspace.createdBy.name,
-    email: workspace.createdBy.email,
-  },
-  members: workspace.members.map((member) => ({
-    id: member.user.id,
-    employeeId: member.user.employeeId,
-    name: member.user.name,
-    email: member.user.email,
-    role: member.user.role,
-  })),
-  tasks: workspace.tasks.map((task) => ({
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    noOfPics: task.noOfPics,
-    noOfReels: task.noOfReels,
-    date: task.date,
-    arrivalTime: task.arrivalTime,
-    location: task.location,
-    setupType: task.setupType,
-    createdById: task.createdById,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    subtaskCount: task.subtasks?.length ?? 0,
-  })),
-  createdAt: workspace.createdAt,
-  updatedAt: workspace.updatedAt,
-});
+const formatWorkspace = (workspace) => {
+  let pendingSubmissionsCount = 0;
+
+  const formattedTasks = (workspace.tasks || []).map((task) => {
+    const taskPendingCount = (task.subtasks || []).filter(
+      (sub) => sub.status === "SUBMITTED" || sub.status === "UNABLE_TO_SUBMIT"
+    ).length;
+
+    pendingSubmissionsCount += taskPendingCount;
+
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      noOfPics: task.noOfPics,
+      noOfReels: task.noOfReels,
+      date: task.date,
+      arrivalTime: task.arrivalTime,
+      location: task.location,
+      setupType: task.setupType,
+      createdById: task.createdById,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      subtaskCount: task.subtasks?.length ?? 0,
+      pendingSubmissionsCount: taskPendingCount,
+      subtasks: (task.subtasks || []).map((st) => ({
+        id: st.id,
+        title: st.title,
+        status: st.status,
+        submittedAt: st.submittedAt,
+      })),
+    };
+  });
+
+  return {
+    id: workspace.id,
+    name: workspace.name,
+    description: workspace.description,
+    createdBy: {
+      id: workspace.createdBy.id,
+      employeeId: workspace.createdBy.employeeId,
+      name: workspace.createdBy.name,
+      email: workspace.createdBy.email,
+    },
+    members: (workspace.members || []).map((member) => ({
+      id: member.user.id,
+      employeeId: member.user.employeeId,
+      name: member.user.name,
+      email: member.user.email,
+      role: member.user.role,
+    })),
+    tasks: formattedTasks,
+    pendingSubmissionsCount,
+    createdAt: workspace.createdAt,
+    updatedAt: workspace.updatedAt,
+  };
+};
 
 const verifyWorkspaceOwnership = async (user, workspaceId) => {
   const workspace = await getWorkspace(workspaceId);
@@ -545,19 +567,13 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
 
   // 🔥 Validate dayId if provided
   let validDayId = null;
-  if (body.dayId) {
+  if (body.dayId && typeof body.dayId === "string" && body.dayId.trim() !== "") {
     const day = await prisma.projectMonthlySheetDay.findUnique({
-      where: { id: body.dayId },
+      where: { id: body.dayId.trim() },
     });
-
-    if (!day) {
-      throw new ApiError(404, {
-        code: ERRORS.VALIDATION.INVALID_INPUT.code,
-        message: "Monthly sheet day not found.",
-      });
+    if (day) {
+      validDayId = day.id;
     }
-
-    validDayId = body.dayId;
   }
 
   const subtask = await prisma.shootSubTask.create({
@@ -567,8 +583,8 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
       title: body.title,
       description: body.description || null,
       type: body.type,
-      referenceLinks: body.referenceLinks,
-      videoType: body.videoType,
+      referenceLinks: Array.isArray(body.referenceLinks) ? body.referenceLinks : [],
+      videoType: body.type === "REEL" ? (body.videoType || "HORIZONTAL") : null,
       setupType: body.setupType ?? null,
       status: "DRAFT",
     },
@@ -920,15 +936,28 @@ exports.updateShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
     });
   }
 
+  let validDayId = undefined;
+  if (body.dayId !== undefined) {
+    if (body.dayId && typeof body.dayId === "string" && body.dayId.trim() !== "") {
+      const day = await prisma.projectMonthlySheetDay.findUnique({
+        where: { id: body.dayId.trim() },
+      });
+      validDayId = day ? day.id : null;
+    } else {
+      validDayId = null;
+    }
+  }
+
   const updatedSubtask = await prisma.shootSubTask.update({
     where: { id: subtaskId },
     data: {
       ...(body.title !== undefined ? { title: body.title } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
       ...(body.type !== undefined ? { type: body.type } : {}),
-      ...(body.referenceLinks !== undefined ? { referenceLinks: body.referenceLinks } : {}),
-      ...(body.videoType !== undefined ? { videoType: body.videoType } : {}),
+      ...(body.referenceLinks !== undefined ? { referenceLinks: Array.isArray(body.referenceLinks) ? body.referenceLinks : [] } : {}),
+      ...(body.videoType !== undefined ? { videoType: body.videoType || null } : {}),
       ...(body.setupType !== undefined ? { setupType: body.setupType ?? null } : {}),
+      ...(validDayId !== undefined ? { dayId: validDayId } : {}),
     },
   });
 
