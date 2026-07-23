@@ -259,6 +259,46 @@
               },
             });
 
+            // =========================
+            // TEST ADMIN - test1@gmail.com
+            // =========================
+
+            await prisma.user.upsert({
+              where: { email: "test1@gmail.com" },
+              update: {
+                password,
+                role: "ADMIN",
+              },
+              create: {
+                employeeId: "ADMIN-TEST1",
+                name: "Test Admin",
+                email: "test1@gmail.com",
+                password,
+                role: "ADMIN",
+              },
+            });
+
+            // =========================
+            // TEST HR - test2@gmail.com
+            // =========================
+
+            await prisma.user.upsert({
+              where: { email: "test2@gmail.com" },
+              update: {
+                password,
+                role: "HR",
+                departmentId: hrDepartment.id,
+              },
+              create: {
+                employeeId: "HR-TEST2",
+                name: "Test HR",
+                email: "test2@gmail.com",
+                password,
+                role: "HR",
+                departmentId: hrDepartment.id,
+              },
+            });
+
             console.log("🌱 Seed data inserted successfully");
           }
 
