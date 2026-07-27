@@ -9,7 +9,8 @@ const app = express();
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:5173",
-  "https://hrm.wepromoteindia.com"
+  "https://hrm.wepromoteindia.com",
+  "https://hrm-frontend-iota-topaz.vercel.app"
 ].filter(Boolean);
 
 app.use(cors({
