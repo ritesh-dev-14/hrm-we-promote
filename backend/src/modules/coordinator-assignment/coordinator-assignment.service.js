@@ -1125,3 +1125,185 @@ exports.getAllUsers = async (user) => {
       createdAt: m.createdAt,
     }));
   };
+
+//
+// 🔥 APPROVE OR REJECT A SUBMITTED TASK (Coordinator Only)
+//
+// Only the coordinator who CREATED the assignment can approve/reject.
+// Valid statuses: "COMPLETED" (approve) | "REJECTED" (reject, reason required)
+//
+exports.approveOrRejectSubmission = async (user, assignmentId, body) => {
+  const { status, reason } = body;
+
+  if (user.role !== "COORDINATOR") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  if (!["COMPLETED", "REJECTED"].includes(status)) {
+    throw new ApiError(400, "Status must be COMPLETED or REJECTED for coordinator review");
+  }
+
+  if (status === "REJECTED" && (!reason || reason.trim() === "")) {
+    throw new ApiError(400, "Reason is required when rejecting a submission");
+  }
+
+  const assignment = await prisma.coordinatorAssignment.findUnique({
+    where: { id: assignmentId },
+    include: {
+      task: true,
+      assignedTo: true,
+      createdBy: true,
+    },
+  });
+
+  if (!assignment) {
+    throw new ApiError(404, "Assignment not found");
+  }
+
+  if (assignment.createdById !== user.id) {
+    throw new ApiError(403, "Only the coordinator who created this assignment can review it");
+  }
+
+  if (assignment.status !== "SUBMITTED") {
+    throw new ApiError(
+      400,
+      `Cannot review an assignment with status "${assignment.status}". Only SUBMITTED tasks can be approved or rejected.`
+    );
+  }
+
+  const updateData = {
+    status,
+    reason: reason || null,
+  };
+
+  if (status === "COMPLETED") {
+    updateData.completedAt = new Date();
+  } else if (status === "REJECTED") {
+    updateData.rejectedAt = new Date();
+    updateData.rejectionReason = reason;
+  }
+
+  const updated = await prisma.coordinatorAssignment.update({
+    where: { id: assignmentId },
+    data: updateData,
+    include: { task: true, assignedTo: true, createdBy: true },
+  });
+
+  // Notify the employee
+  const notifMessage =
+    status === "COMPLETED"
+      ? `Your submission for "${assignment.task.projectName}" has been approved by ${user.name}.`
+      : `Your submission for "${assignment.task.projectName}" was rejected by ${user.name}. Reason: ${reason}`;
+
+  await prisma.notification.create({
+    data: {
+      userId: assignment.assignedToId,
+      title: status === "COMPLETED" ? "Submission Approved ✅" : "Submission Rejected ❌",
+      message: notifMessage,
+      type: status === "COMPLETED" ? "TASK_SUBMITTED" : "GENERAL",
+      level: status === "COMPLETED" ? "INFO" : "WARNING",
+      entityId: assignmentId,
+    },
+  });
+
+  if (status === "COMPLETED") {
+    await sendBestEffortMail(
+      () =>
+        mailService.sendEmployeeSubmissionApprovedMail({
+          email: updated.assignedTo.email,
+          employeeName: updated.assignedTo.name,
+          coordinatorName: user.name,
+          taskTitle: updated.task.projectName,
+        }),
+      `approval email ${assignmentId}`
+    );
+  } else {
+    await sendBestEffortMail(
+      () =>
+        mailService.sendEmployeeSubmissionRejectedMail({
+          email: updated.assignedTo.email,
+          employeeName: updated.assignedTo.name,
+          coordinatorName: user.name,
+          taskTitle: updated.task.projectName,
+          reason,
+        }),
+      `rejection email ${assignmentId}`
+    );
+  }
+
+  return {
+    id: updated.id,
+    status: updated.status,
+    reason: updated.reason,
+    completedAt: updated.completedAt,
+    rejectedAt: updated.rejectedAt,
+    message:
+      status === "COMPLETED"
+        ? "Submission approved successfully"
+        : "Submission rejected successfully",
+  };
+};
+
+//
+// 🔥 CHECK OVERDUE ASSIGNMENTS & ALERT COORDINATORS
+//
+// Finds all assignments past their completionDate with status ASSIGNED or IN_PROGRESS.
+// Sends a "missed target" email to the coordinator who created each assignment.
+// Avoids repeat emails within 24 hours.
+//
+exports.checkOverdueAssignments = async () => {
+  const now = new Date();
+
+  const overdueAssignments = await prisma.coordinatorAssignment.findMany({
+    where: {
+      completionDate: { lt: now },
+      status: { in: ["ASSIGNED", "IN_PROGRESS"] },
+      OR: [
+        { overdueAlertSentAt: null },
+        {
+          overdueAlertSentAt: {
+            lt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+          },
+        },
+      ],
+    },
+    include: {
+      task: true,
+      assignedTo: true,
+      createdBy: true,
+    },
+  });
+
+  let alertsSent = 0;
+
+  for (const assignment of overdueAssignments) {
+    if (!assignment.createdBy) continue;
+
+    await sendBestEffortMail(
+      () =>
+        mailService.sendCoordinatorOverdueAlertMail({
+          coordinatorEmail: assignment.createdBy.email,
+          coordinatorName: assignment.createdBy.name,
+          employeeName: assignment.assignedTo.name,
+          employeeId: assignment.assignedTo.employeeId,
+          taskTitle: assignment.task.projectName,
+          completionDate: assignment.completionDate,
+        }),
+      `overdue alert ${assignment.id}`
+    );
+
+    await prisma.coordinatorAssignment.update({
+      where: { id: assignment.id },
+      data: { overdueAlertSentAt: now },
+    });
+
+    alertsSent++;
+  }
+
+  return {
+    checked: overdueAssignments.length,
+    alertsSent,
+    message: `Overdue check complete. ${alertsSent} alert(s) sent.`,
+  };
+};
+

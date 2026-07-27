@@ -148,3 +148,27 @@ exports.createCoordinatorTaskSchema = Joi.object({
     }),
 })
   .unknown(false);
+
+//
+// 🔥 COORDINATOR REVIEW: APPROVE OR REJECT A SUBMITTED TASK
+//
+exports.reviewSubmissionSchema = Joi.object({
+  status: Joi.string()
+    .valid("COMPLETED", "REJECTED")
+    .required()
+    .messages({
+      "any.required": "Status is required",
+      "any.only": "Status must be COMPLETED (approve) or REJECTED (reject)",
+    }),
+
+  reason: Joi.when("status", {
+    is: "REJECTED",
+    then: Joi.string().min(3).max(500).required().messages({
+      "any.required": "Reason is required when rejecting a submission",
+      "string.min": "Reason must be at least 3 characters",
+      "string.max": "Reason cannot exceed 500 characters",
+    }),
+    otherwise: Joi.string().max(500).allow("", null).optional(),
+  }),
+}).unknown(false);
+

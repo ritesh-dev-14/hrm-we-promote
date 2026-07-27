@@ -514,6 +514,7 @@ model CoordinatorAssignment {
   rejectedAt       DateTime?
   rejectionReason  String?
   startedAt        DateTime?
+  overdueAlertSentAt DateTime?      // Tracks last overdue alert email timestamp
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   
@@ -528,6 +529,7 @@ model CoordinatorAssignment {
   @@index([status])
   @@index([assignedTime])
 }
+
 
 model CoordinatorFollowUp {
   id           String                 @id @default(uuid())

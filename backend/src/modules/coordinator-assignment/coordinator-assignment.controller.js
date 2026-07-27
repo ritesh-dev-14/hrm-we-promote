@@ -259,3 +259,40 @@ exports.getFollowUpMessages = async (req, res, next) => {
     next(error);
   }
 };
+
+//
+// 🔥 APPROVE OR REJECT A SUBMITTED TASK (Coordinator review)
+//
+exports.approveOrRejectSubmission = async (req, res, next) => {
+  try {
+    const result = await service.approveOrRejectSubmission(
+      req.user,
+      req.params.assignmentId,
+      req.body
+    );
+    res.json({
+      success: true,
+      data: result,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//
+// 🔥 TRIGGER OVERDUE ASSIGNMENTS CHECK
+//
+exports.triggerOverdueCheck = async (req, res, next) => {
+  try {
+    const result = await service.checkOverdueAssignments();
+    res.json({
+      success: true,
+      data: result,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

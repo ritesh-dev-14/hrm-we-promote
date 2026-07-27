@@ -16,6 +16,7 @@ const {
   createAssignmentSchema,
   updateAssignmentStatusSchema,
   createCoordinatorTaskSchema,
+  reviewSubmissionSchema,
 } = require("./coordinator-assignment.validation");
 const {
   sendFollowUpMessageSchema,
@@ -160,6 +161,28 @@ router.get(
   auth,
   role("COORDINATOR", "ADMIN"),
   controller.listAllAssignments
+);
+
+//
+// 🔥 COORDINATOR APPROVES OR REJECTS A SUBMITTED TASK
+// Only COORDINATOR who created the assignment can call this
+//
+router.patch(
+  "/:assignmentId/review",
+  auth,
+  role("COORDINATOR"),
+  validate(reviewSubmissionSchema),
+  controller.approveOrRejectSubmission
+);
+
+//
+// 🔥 TRIGGER OVERDUE ASSIGNMENTS CHECK
+// Intended for cron or admin use; sends overdue alert emails to coordinators
+//
+router.post(
+  "/check-overdue",
+  auth,
+  controller.triggerOverdueCheck
 );
 
 module.exports = router;

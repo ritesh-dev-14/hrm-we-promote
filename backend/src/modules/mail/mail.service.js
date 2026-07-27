@@ -56,6 +56,14 @@ const payslipSentTemplate = require(
   "./templates/payslipSent.template"
 );
 
+const coordinatorTaskOverdueTemplate = require(
+  "./templates/coordinatorTaskOverdue.template"
+);
+
+const employeeTaskApprovedTemplate = require(
+  "./templates/employeeTaskApproved.template"
+);
+
 const mailEnabled = process.env.MAIL_ENABLED !== "false";
 
 const brevoApiKey = process.env.BREVO_API_KEY;
@@ -686,6 +694,73 @@ exports.sendPayslipEmail = async ({
   await sendMail({
     to: email,
     subject,
+    html,
+  });
+};
+
+//
+// 🔥 COORDINATOR → COORDINATOR (OVERDUE ALERT)
+//
+exports.sendCoordinatorOverdueAlertMail = async ({
+  coordinatorEmail,
+  coordinatorName,
+  employeeName,
+  employeeId,
+  taskTitle,
+  completionDate,
+}) => {
+  const html = coordinatorTaskOverdueTemplate({
+    coordinatorName,
+    employeeName,
+    employeeId,
+    taskTitle,
+    completionDate,
+  });
+
+  await sendMail({
+    to: coordinatorEmail,
+    subject: `⚠️ Target Missed: ${employeeName} has not completed "${taskTitle}"`,
+    html,
+  });
+};
+
+//
+// 🔥 COORDINATOR → EMPLOYEE (SUBMISSION APPROVED)
+//
+exports.sendEmployeeSubmissionApprovedMail = async ({
+  email,
+  employeeName,
+  coordinatorName,
+  taskTitle,
+}) => {
+  const html = employeeTaskApprovedTemplate({
+    employeeName,
+    coordinatorName,
+    taskTitle,
+  });
+
+  await sendMail({
+    to: email,
+    subject: `✅ Task Approved: "${taskTitle}"`,
+    html,
+  });
+};
+
+//
+// 🔥 COORDINATOR → EMPLOYEE (SUBMISSION REJECTED)
+//
+exports.sendEmployeeSubmissionRejectedMail = async ({
+  email,
+  employeeName,
+  coordinatorName,
+  taskTitle,
+  reason,
+}) => {
+  const html = require("./templates/rejection.template")({ employeeName, taskTitle, reason });
+
+  await sendMail({
+    to: email,
+    subject: `❌ Task Submission Rejected: "${taskTitle}"`,
     html,
   });
 };
