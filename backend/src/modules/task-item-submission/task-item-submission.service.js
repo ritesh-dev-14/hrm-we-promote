@@ -971,6 +971,26 @@ exports.getMyAssignedItems =
                       role: true,
                     },
                   },
+                  // Include linked project for Web Development credential display
+                  project: {
+                    select: {
+                      id: true,
+                      clientName: true,
+                      phone: true,
+                      domainName: true,
+                      domainPassword: true,
+                      clientEmail: true,
+                      clientEmailPassword: true,
+                      requirements: true,
+                      startDate: true,
+                      endDate: true,
+                      department: {
+                        select: {
+                          name: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -1060,6 +1080,23 @@ exports.getMyAssignedItems =
 
           createdBy:
             a.taskItem.task.createdBy,
+
+          // Include linked project data (Web Development dept credentials)
+          project: a.taskItem.task.project
+            ? {
+                id: a.taskItem.task.project.id,
+                clientName: a.taskItem.task.project.clientName,
+                phone: a.taskItem.task.project.phone,
+                domainName: a.taskItem.task.project.domainName,
+                domainPassword: a.taskItem.task.project.domainPassword,
+                clientEmail: a.taskItem.task.project.clientEmail,
+                clientEmailPassword: a.taskItem.task.project.clientEmailPassword,
+                requirements: a.taskItem.task.project.requirements,
+                startDate: a.taskItem.task.project.startDate,
+                endDate: a.taskItem.task.project.endDate,
+                department: a.taskItem.task.project.department,
+              }
+            : null,
         },
       },
     }));
@@ -1997,9 +2034,7 @@ const recalculateTaskItem =
         "UNABLE_TO_SUBMIT";
     }
 
-    //
     // ✅ UPDATE TASK ITEM
-    //
     await prisma.taskItem.update({
       where: {
         id: taskItemId,
@@ -2012,6 +2047,42 @@ const recalculateTaskItem =
         status,
       },
     });
+
+    // ✅ UPDATE PARENT TASK
+    const taskItem = await prisma.taskItem.findUnique({
+      where: { id: taskItemId },
+      select: { taskId: true }
+    });
+
+    if (taskItem?.taskId) {
+      const taskItems = await prisma.taskItem.findMany({
+        where: { taskId: taskItem.taskId }
+      });
+
+      if (taskItems.length > 0) {
+        const avgTaskProgress = Math.round(
+          taskItems.reduce((sum, item) => sum + (item.progress || 0), 0) / taskItems.length
+        );
+
+        const taskStatuses = taskItems.map(item => item.status);
+        let taskStatus = "PENDING";
+        if (taskStatuses.every(s => s === "VERIFIED")) taskStatus = "COMPLETED";
+        else if (taskStatuses.some(s => s === "SUBMITTED")) taskStatus = "PENDING"; // standard logic is that if any item submitted, task isn't complete yet
+        else if (taskStatuses.some(s => s === "COMPLETED")) taskStatus = "COMPLETED"; // actually task items don't have a COMPLETED status usually unless it's VERIFIED, but let's map them
+        else if (taskStatuses.some(s => s === "IN_PROGRESS")) taskStatus = "IN_PROGRESS";
+        else taskStatus = "DRAFT"; // Or PENDING depending on what is standard
+
+        await prisma.task.update({
+          where: { id: taskItem.taskId },
+          data: { progress: avgTaskProgress }
+        });
+
+        await prisma.taskAssignment.updateMany({
+          where: { taskId: taskItem.taskId },
+          data: { progress: avgTaskProgress }
+        });
+      }
+    }
   };
 
 //

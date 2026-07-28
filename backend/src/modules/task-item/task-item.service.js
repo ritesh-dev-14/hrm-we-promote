@@ -310,6 +310,7 @@ exports.getTaskItems = async (
                 email: true,
               },
             },
+            submission: true,
           },
         },
       },
@@ -352,6 +353,15 @@ exports.getTaskItems = async (
       completedAt:
         assignment?.completedAt || null,
       createdAt: item.createdAt,
+      assignmentId: assignment?.id || null,
+      submission: assignment?.submission ? {
+        id: assignment.submission.id,
+        driveLink: assignment.submission.driveLink,
+        remarks: assignment.submission.remarks,
+        verifiedByManager: assignment.submission.verifiedByManager,
+        unableToSubmitReason: assignment.submission.unableToSubmitReason,
+        submittedAt: assignment.submission.submittedAt,
+      } : null,
     };
   });
 };

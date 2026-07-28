@@ -36,6 +36,12 @@ exports.createProjectSchema = Joi.object({
   twitterPassword: Joi.string().min(1).max(200),
   logo: Joi.string().uri(),
   assignTo: Joi.array().items(Joi.string().required()).min(1).required(),
+  // Web Development Department specific fields
+  domainName: Joi.string().min(1).max(500).allow(null, ""),
+  domainPassword: Joi.string().min(1).max(500).allow(null, ""),
+  clientEmail: Joi.string().email().allow(null, ""),
+  clientEmailPassword: Joi.string().min(1).max(500).allow(null, ""),
+  requirements: Joi.string().allow(null, ""),
 }).unknown(false);
 
 exports.updateProjectSchema = Joi.object({
@@ -49,9 +55,9 @@ exports.updateProjectSchema = Joi.object({
   }),
   renewalDate: Joi.date().allow(null),
   frequency: Joi.string().valid(...frequencyValues).allow(null),
-  clientName: Joi.string().min(1).max(200).allow(null),
+  clientName: Joi.string().min(1).max(200).allow(null, ""),
   location: Joi.string().min(1).max(200).allow(null),
-  phone: Joi.string().min(1).max(50).allow(null),
+  phone: Joi.string().min(1).max(50).allow(null, ""),
   fbEmail: Joi.string().email().allow(null),
   fbPassword: Joi.string().min(1).max(200).allow(null),
   instaEmail: Joi.string().email().allow(null),
@@ -69,6 +75,12 @@ exports.updateProjectSchema = Joi.object({
   twitterPassword: Joi.string().min(1).max(200).allow(null),
   logo: Joi.string().uri().allow(null),
   assignTo: Joi.array().items(Joi.string().required()).min(1),
+  // Web Development Department specific fields
+  domainName: Joi.string().min(1).max(500).allow(null, ""),
+  domainPassword: Joi.string().min(1).max(500).allow(null, ""),
+  clientEmail: Joi.string().email().allow(null, ""),
+  clientEmailPassword: Joi.string().min(1).max(500).allow(null, ""),
+  requirements: Joi.string().allow(null, ""),
 }).unknown(false);
 
 exports.updateProjectLogoSchema = Joi.object({

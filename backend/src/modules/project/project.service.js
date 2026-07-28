@@ -11,6 +11,12 @@ const FREQUENCY_DEPARTMENTS = [
   "Social Media Department",
 ];
 
+const WEB_DEV_DEPARTMENTS = [
+  "Web Development",
+  "Web Development Department",
+  "IT",
+];
+
 const formatProject = (project) => {
   const department = project.department || { id: null, name: null };
   const createdBy =
@@ -53,6 +59,12 @@ const formatProject = (project) => {
     twitterPassword: project.twitterPassword,
     logo: project.logo,
     projectStartDate: project.projectStartDate,
+    // Web Development Department specific fields
+    domainName: project.domainName,
+    domainPassword: project.domainPassword,
+    clientEmail: project.clientEmail,
+    clientEmailPassword: project.clientEmailPassword,
+    requirements: project.requirements,
     createdBy: {
       id: createdBy.id,
       employeeId: createdBy.employeeId,
@@ -98,6 +110,7 @@ exports.createProject = async (user, body) => {
     "Social Media",
     "Social Media Department",
   ].includes(department.name);
+  const isWebDevDepartment = WEB_DEV_DEPARTMENTS.includes(department.name);
 
   if (isFrequencyDepartment) {
     if (!body.frequency) {
@@ -133,9 +146,8 @@ exports.createProject = async (user, body) => {
     // Social Media projects may be created before credentials are collected.
     // The assigned manager will fill these fields later.
   } else if (
-    body.clientName ||
+    (!isWebDevDepartment && (body.clientName || body.phone)) ||
     body.location ||
-    body.phone ||
     body.fbEmail ||
     body.fbPassword ||
     body.instaEmail ||
@@ -236,6 +248,12 @@ exports.createProject = async (user, body) => {
       twitterEmail: body.twitterEmail || null,
       twitterPassword: body.twitterPassword || null,
       logo: body.logo || null,
+      // Web Development Department specific fields
+      domainName: body.domainName || null,
+      domainPassword: body.domainPassword || null,
+      clientEmail: body.clientEmail || null,
+      clientEmailPassword: body.clientEmailPassword || null,
+      requirements: body.requirements || null,
       createdById: user.id,
       assignments: {
         create: managers.map((manager) => ({
@@ -431,6 +449,12 @@ exports.updateProject = async (user, projectId, body) => {
       "twitterPassword",
       "logo",
       "projectStartDate",
+      // Web Development Department specific fields
+      "domainName",
+      "domainPassword",
+      "clientEmail",
+      "clientEmailPassword",
+      "requirements",
     ]);
 
     const invalidFields = Object.keys(body).filter(
@@ -441,7 +465,7 @@ exports.updateProject = async (user, projectId, body) => {
       throw new ApiError(403, {
         code: ERRORS.VALIDATION.INVALID_INPUT.code,
         message:
-          "Managers can only update Social Media credential fields on assigned projects.",
+          "Managers can only update credential fields on assigned projects.",
       });
     }
   }
@@ -466,6 +490,7 @@ exports.updateProject = async (user, projectId, body) => {
     "Social Media",
     "Social Media Department",
   ].includes(department.name);
+  const isWebDevDepartment = WEB_DEV_DEPARTMENTS.includes(department.name);
   const currentEndDate = body.endDate
     ? new Date(body.endDate)
     : project.endDate;
@@ -571,9 +596,8 @@ exports.updateProject = async (user, projectId, body) => {
     }
     // 🔥 If already in Social Media, allow partial updates without requiring all fields
   } else if (
-    body.clientName ||
+    (!isWebDevDepartment && (body.clientName || body.phone)) ||
     body.location ||
-    body.phone ||
     body.fbEmail ||
     body.fbPassword ||
     body.instaEmail ||
@@ -632,6 +656,12 @@ exports.updateProject = async (user, projectId, body) => {
     data.projectStartDate = body.projectStartDate
       ? new Date(body.projectStartDate)
       : null;
+  // Web Development Department specific fields
+  if (body.domainName !== undefined) data.domainName = body.domainName || null;
+  if (body.domainPassword !== undefined) data.domainPassword = body.domainPassword || null;
+  if (body.clientEmail !== undefined) data.clientEmail = body.clientEmail || null;
+  if (body.clientEmailPassword !== undefined) data.clientEmailPassword = body.clientEmailPassword || null;
+  if (body.requirements !== undefined) data.requirements = body.requirements || null;
 
   if (!isFrequencyDepartment) {
     data.frequency = null;
@@ -639,9 +669,11 @@ exports.updateProject = async (user, projectId, body) => {
   }
 
   if (!isSocialMediaDepartment) {
-    data.clientName = null;
+    if (!isWebDevDepartment) {
+      data.clientName = null;
+      data.phone = null;
+    }
     data.location = null;
-    data.phone = null;
     data.fbEmail = null;
     data.fbPassword = null;
     data.instaEmail = null;
@@ -658,6 +690,14 @@ exports.updateProject = async (user, projectId, body) => {
     data.twitterPassword = null;
     data.logo = null;
     data.projectStartDate = null;
+  }
+
+  if (!isWebDevDepartment) {
+    data.domainName = null;
+    data.domainPassword = null;
+    data.clientEmail = null;
+    data.clientEmailPassword = null;
+    data.requirements = null;
   }
 
   if (body.assignTo) {

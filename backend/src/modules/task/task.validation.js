@@ -16,6 +16,9 @@ exports.createTaskSchema = Joi.object({
   endDate: Joi.date()
     .greater(Joi.ref("startDate"))
     .required(),
+
+  // Optional link to a Project record (used by Web Development department)
+  projectId: Joi.string().uuid().allow(null, ""),
 }).unknown(false);
 
 //

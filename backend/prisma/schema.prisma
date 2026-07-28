@@ -91,7 +91,9 @@ model Task {
   endDate     DateTime
   projectName String
   startDate   DateTime
+  projectId   String?          // Optional link to a Project record (used by Web Dev dept)
   createdBy   User             @relation("CreatedTasks", fields: [createdById], references: [id])
+  project     Project?         @relation("TaskProject", fields: [projectId], references: [id], onDelete: SetNull)
   assignments TaskAssignment[]
   coordinatorAssignments CoordinatorAssignment[] @relation("CoordinatorAssignments")
   items       TaskItem[]
@@ -99,6 +101,7 @@ model Task {
   @@index([createdById])
   @@index([startDate])
   @@index([endDate])
+  @@index([projectId])
 }
 
 model TaskAssignment {
@@ -389,6 +392,12 @@ model Project {
   twitterEmail  String?
   twitterPassword String?
   logo          String?
+  // Web Development Department specific fields
+  domainName    String?
+  domainPassword String?
+  clientEmail   String?
+  clientEmailPassword String?
+  requirements  String?            // Rich text + URLs for Web Dev project requirements
   createdById   String
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -397,6 +406,7 @@ model Project {
   createdBy     User               @relation("CreatedProjects", fields: [createdById], references: [id])
   assignments   ProjectAssignment[]
   monthlySheets ProjectMonthlySheet[]
+  tasks         Task[]             @relation("TaskProject")
 }
 
 model ProjectAssignment {

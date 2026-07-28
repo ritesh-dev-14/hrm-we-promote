@@ -31,6 +31,8 @@ exports.createTask = async (user, body) => {
       endDate: new Date(body.endDate),
       createdById: user.id,
       status: "DRAFT",
+      // Optionally link to a Project record (used by Web Dev department)
+      projectId: body.projectId || null,
     },
   });
 
@@ -42,6 +44,7 @@ exports.createTask = async (user, body) => {
     startDate: task.startDate,
     endDate: task.endDate,
     createdById: task.createdById,
+    projectId: task.projectId || null,
     status: task.status,
     createdAt: task.createdAt,
     progress: 0,
@@ -542,6 +545,11 @@ exports.getMyAssignedTasks =
             a.task
               .referenceLink,
 
+          startDate: a.task.startDate,
+          endDate: a.task.endDate,
+          projectId: a.task.projectId,
+          projectName: a.task.projectName,
+
           date: a.task.date,
 
           location:
@@ -839,10 +847,12 @@ exports.getTasks = async (
     return {
       id: task.id,
       projectName: task.projectName,
+      projectId: task.projectId,
       description: task.description,
       startDate: task.startDate,
       endDate: task.endDate,
       status: task.status,
+      progress: task.progress,
       createdAt: task.createdAt,
       createdBy: task.createdBy,
       assignments: task.assignments.map((a) => ({
