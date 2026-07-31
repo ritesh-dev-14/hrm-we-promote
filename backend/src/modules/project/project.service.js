@@ -65,6 +65,7 @@ const formatProject = (project) => {
     clientEmail: project.clientEmail,
     clientEmailPassword: project.clientEmailPassword,
     requirements: project.requirements,
+    status: project.status,
     createdBy: {
       id: createdBy.id,
       employeeId: createdBy.employeeId,
@@ -455,6 +456,7 @@ exports.updateProject = async (user, projectId, body) => {
       "clientEmail",
       "clientEmailPassword",
       "requirements",
+      "status",
     ]);
 
     const invalidFields = Object.keys(body).filter(
@@ -662,6 +664,7 @@ exports.updateProject = async (user, projectId, body) => {
   if (body.clientEmail !== undefined) data.clientEmail = body.clientEmail || null;
   if (body.clientEmailPassword !== undefined) data.clientEmailPassword = body.clientEmailPassword || null;
   if (body.requirements !== undefined) data.requirements = body.requirements || null;
+  if (body.status !== undefined) data.status = body.status;
 
   if (!isFrequencyDepartment) {
     data.frequency = null;

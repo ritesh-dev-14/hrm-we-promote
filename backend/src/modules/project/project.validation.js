@@ -81,6 +81,7 @@ exports.updateProjectSchema = Joi.object({
   clientEmail: Joi.string().email().allow(null, ""),
   clientEmailPassword: Joi.string().min(1).max(500).allow(null, ""),
   requirements: Joi.string().allow(null, ""),
+  status: Joi.string().valid("ONGOING", "SUBMITTED", "VERIFIED"),
 }).unknown(false);
 
 exports.updateProjectLogoSchema = Joi.object({

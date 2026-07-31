@@ -31,6 +31,7 @@ app.use("/api/manager/tasks", require("./modules/task/task.routes"));
 app.use("/api/employee", require("./modules/employee/employee.routes"));
 app.use("/api/manager", require("./modules/manager/manager.routes"));
 app.use("/api/projects", require("./modules/project/project.routes"));
+app.use("/api/project-reports", require("./modules/project-report/project-report.routes"));
 app.use(
   "/api/projects/:projectId/monthly-sheets",
   require("./modules/project-monthly-sheet/project-monthly-sheet.routes")
