@@ -1,6 +1,6 @@
 const Joi = require("joi");
 
-const mediaSourceValues = ["SHOOT", "AI"];
+const mediaSourceValues = ["SHOOT", "AI", "SHOOT_REQUIRED", "AI_REQUIRED", "DATA_AVAILABLE"];
 
 const monthlySheetDaySchema = Joi.object({
   id: Joi.string().optional(),

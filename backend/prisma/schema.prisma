@@ -672,6 +672,9 @@ enum Priority {
 enum MediaSource {
   SHOOT
   AI
+  SHOOT_REQUIRED
+  AI_REQUIRED
+  DATA_AVAILABLE
 }
 
 enum ShootSubTaskType {
