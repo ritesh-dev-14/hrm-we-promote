@@ -11,6 +11,12 @@ const FREQUENCY_DEPARTMENTS = [
   "Social Media Department",
 ];
 
+const SEO_DEPARTMENTS = [
+  "SEO",
+  "SEO Department",
+  "Seo Department",
+];
+
 const WEB_DEV_DEPARTMENTS = [
   "Web Development",
   "Web Development Department",
@@ -65,6 +71,11 @@ const formatProject = (project) => {
     clientEmail: project.clientEmail,
     clientEmailPassword: project.clientEmailPassword,
     requirements: project.requirements,
+    // SEO Department specific fields
+    seoEmail: project.seoEmail,
+    seoPassword: project.seoPassword,
+    seoName: project.seoName,
+    seoContact: project.seoContact,
     status: project.status,
     createdBy: {
       id: createdBy.id,
@@ -255,6 +266,11 @@ exports.createProject = async (user, body) => {
       clientEmail: body.clientEmail || null,
       clientEmailPassword: body.clientEmailPassword || null,
       requirements: body.requirements || null,
+      // SEO Department specific fields
+      seoEmail: body.seoEmail || null,
+      seoPassword: body.seoPassword || null,
+      seoName: body.seoName || null,
+      seoContact: body.seoContact || null,
       createdById: user.id,
       assignments: {
         create: managers.map((manager) => ({
@@ -456,6 +472,11 @@ exports.updateProject = async (user, projectId, body) => {
       "clientEmail",
       "clientEmailPassword",
       "requirements",
+      // SEO Department specific fields
+      "seoEmail",
+      "seoPassword",
+      "seoName",
+      "seoContact",
       "status",
     ]);
 
@@ -664,6 +685,11 @@ exports.updateProject = async (user, projectId, body) => {
   if (body.clientEmail !== undefined) data.clientEmail = body.clientEmail || null;
   if (body.clientEmailPassword !== undefined) data.clientEmailPassword = body.clientEmailPassword || null;
   if (body.requirements !== undefined) data.requirements = body.requirements || null;
+  // SEO Department specific fields
+  if (body.seoEmail !== undefined) data.seoEmail = body.seoEmail || null;
+  if (body.seoPassword !== undefined) data.seoPassword = body.seoPassword || null;
+  if (body.seoName !== undefined) data.seoName = body.seoName || null;
+  if (body.seoContact !== undefined) data.seoContact = body.seoContact || null;
   if (body.status !== undefined) data.status = body.status;
 
   if (!isFrequencyDepartment) {
@@ -701,6 +727,17 @@ exports.updateProject = async (user, projectId, body) => {
     data.clientEmail = null;
     data.clientEmailPassword = null;
     data.requirements = null;
+  }
+
+  // Clear SEO fields if not an SEO department
+  const isSeoDepartment = SEO_DEPARTMENTS.some((s) =>
+    department.name?.toLowerCase().includes("seo")
+  );
+  if (!isSeoDepartment) {
+    data.seoEmail = null;
+    data.seoPassword = null;
+    data.seoName = null;
+    data.seoContact = null;
   }
 
   if (body.assignTo) {

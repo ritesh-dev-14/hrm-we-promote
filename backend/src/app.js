@@ -108,6 +108,11 @@ app.use(
   require("./modules/payslip/payslip.routes")
 );
 
+app.use(
+  "/api/seo-reports",
+  require("./modules/seo-report/seo-report.routes")
+);
+
 // Error handling middleware
 
 app.use(errorMiddleware);

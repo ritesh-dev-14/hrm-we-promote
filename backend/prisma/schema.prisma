@@ -55,6 +55,7 @@ model User {
   payslips                Payslip[]                 @relation("EmployeePayslips")
   uploadedPayslips        Payslip[]                 @relation("UploadedPayslips")
   projectDailyReports     ProjectDailyReport[]      @relation("EmployeeDailyReports")
+  seoReports              SeoReport[]               @relation("ManagerSeoReports")
 }
 
 model Attendance {
@@ -399,17 +400,23 @@ model Project {
   clientEmail   String?
   clientEmailPassword String?
   requirements  String?            // Rich text + URLs for Web Dev project requirements
-  createdById   String
+  // SEO Department specific fields
+  seoEmail      String?
+  seoPassword   String?
+  seoName       String?
+  seoContact    String?
+  createdById   String?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
   department    Department         @relation(fields: [departmentId], references: [id])
-  createdBy     User               @relation("CreatedProjects", fields: [createdById], references: [id])
+  createdBy     User?              @relation("CreatedProjects", fields: [createdById], references: [id])
   assignments   ProjectAssignment[]
   monthlySheets ProjectMonthlySheet[]
   tasks         Task[]             @relation("TaskProject")
   status        ProjectStatus      @default(ONGOING)
   dailyReports  ProjectDailyReport[]
+  seoReports    SeoReport[]
 }
 
 model ProjectAssignment {
@@ -755,5 +762,26 @@ enum ProjectStatus {
   ONGOING
   SUBMITTED
   VERIFIED
+}
+
+model SeoReport {
+  id                 String   @id @default(uuid())
+  projectId          String
+  managerId          String
+  keywords           String[]
+  rankingNo          Int
+  checkDate          DateTime
+  screenshotUrl      String
+  screenshotPublicId String?
+  remarks            String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  manager  User    @relation("ManagerSeoReports", fields: [managerId], references: [id])
+
+  @@index([projectId])
+  @@index([managerId])
+  @@index([checkDate])
 }
 
