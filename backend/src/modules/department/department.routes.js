@@ -44,7 +44,7 @@ router.get(
 router.get(
   "/with-employees/all",
   auth,
-  role("ADMIN", "HR", "MANAGER"),
+  role("ADMIN", "HR", "MANAGER", "EA", "COORDINATOR"),
   controller.getDepartmentsWithEmployees
 );
 

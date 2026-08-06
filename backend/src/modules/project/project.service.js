@@ -102,7 +102,7 @@ const formatProject = (project) => {
 };
 
 exports.createProject = async (user, body) => {
-  if (!["ADMIN", "HR", "EA"].includes(user.role)) {
+  if (!["ADMIN", "HR", "EA", "COORDINATOR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -410,7 +410,7 @@ exports.getProjectById = async (user, projectId) => {
     if (!assigned) {
       throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
     }
-  } else if (!["ADMIN", "HR", "EA"].includes(user.role)) {
+  } else if (!["ADMIN", "HR", "EA", "COORDINATOR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -418,7 +418,7 @@ exports.getProjectById = async (user, projectId) => {
 };
 
 exports.updateProject = async (user, projectId, body) => {
-  if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
+  if (!["ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -834,7 +834,7 @@ exports.updateProject = async (user, projectId, body) => {
 };
 
 exports.deleteProject = async (user, projectId) => {
-  if (!["ADMIN", "HR", "EA"].includes(user.role)) {
+  if (!["ADMIN", "HR", "EA", "COORDINATOR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -873,7 +873,7 @@ exports.deleteProject = async (user, projectId) => {
 };
 
 exports.renewProject = async (user, projectId, body) => {
-  if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
+  if (!["ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 

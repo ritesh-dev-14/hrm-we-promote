@@ -17,7 +17,7 @@ const {
 router.post(
   "/",
   auth,
-  role("ADMIN", "HR", "EA"),
+  role("ADMIN", "HR", "EA", "COORDINATOR"),
   upload.single("logo"),
   validate(createProjectSchema),
   controller.createProject
@@ -32,7 +32,7 @@ router.get("/:id", auth, controller.getProjectById);
 router.patch(
   "/:id",
   auth,
-  role("ADMIN", "HR", "EA", "MANAGER"),
+  role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"),
   upload.single("logo"),
   validate(updateProjectSchema),
   controller.updateProject
@@ -41,7 +41,7 @@ router.patch(
 router.patch(
   "/:id/logo",
   auth,
-  role("ADMIN", "HR", "EA", "MANAGER"),
+  role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"),
   upload.single("logo"),
   validate(updateProjectLogoSchema),
   controller.updateProject
@@ -50,7 +50,7 @@ router.patch(
 router.patch(
   "/:id/renew",
   auth,
-  role("ADMIN", "HR", "EA"),
+  role("ADMIN", "HR", "EA", "COORDINATOR"),
   validate(renewProjectSchema),
   controller.renewProject
 );
@@ -58,7 +58,7 @@ router.patch(
 router.delete(
   "/:id",
   auth,
-  role("ADMIN", "HR", "EA"),
+  role("ADMIN", "HR", "EA", "COORDINATOR"),
   controller.deleteProject
 );
 

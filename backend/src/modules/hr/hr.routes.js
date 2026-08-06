@@ -23,9 +23,9 @@ router.post(
   controller.createManager
 );
 
-router.get("/managers", auth, role("HR", "ADMIN"), controller.getManagers);
+router.get("/managers", auth, role("HR", "ADMIN", "EA", "COORDINATOR"), controller.getManagers);
 
-router.get("/manager/:employeeId", auth, role("HR", "ADMIN"), controller.getManager);
+router.get("/manager/:employeeId", auth, role("HR", "ADMIN", "EA", "COORDINATOR"), controller.getManager);
 
 router.put(
   "/manager/:employeeId",
@@ -46,9 +46,9 @@ router.post(
   controller.createEmployee
 );
 
-router.get("/employees", auth, role("HR", "ADMIN"), controller.getEmployees);
+router.get("/employees", auth, role("HR", "ADMIN", "EA", "COORDINATOR"), controller.getEmployees);
 
-router.get("/employee/:employeeId", auth, role("HR", "ADMIN"), controller.getEmployee);
+router.get("/employee/:employeeId", auth, role("HR", "ADMIN", "EA", "COORDINATOR"), controller.getEmployee);
 
 router.put(
   "/employee/:employeeId",
