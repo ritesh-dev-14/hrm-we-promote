@@ -30,7 +30,7 @@ const {
 router.post(
   "/",
   auth,
-  role("COORDINATOR"),
+  role("COORDINATOR", "EA"),
   validate(createAssignmentSchema),
   controller.createAssignment
 );
@@ -53,7 +53,7 @@ router.post(
 router.get(
   "/my-tasks",
   auth,
-  role("COORDINATOR"),
+  role("COORDINATOR", "EA"),
   controller.getMyTasks
 );
 
@@ -74,7 +74,7 @@ router.get(
 router.get(
   "/my-assignments",
   auth,
-  role("COORDINATOR"),
+  role("COORDINATOR", "EA"),
   controller.getAssignmentsByCoordinator
 );
 
@@ -92,7 +92,7 @@ router.get(
 router.post(
   "/:assignmentId/follow-up",
   auth,
-  role("COORDINATOR"),
+  role("COORDINATOR", "EA"),
   validate(sendFollowUpMessageSchema),
   controller.sendFollowUpMessage
 );
@@ -127,7 +127,7 @@ router.get(
 router.get(
   "/users/list",
   auth,
-  role("COORDINATOR"),
+  role("COORDINATOR", "EA"),
   controller.getAllUsers
 );
 
@@ -159,7 +159,7 @@ router.patch(
 router.get(
   "/",
   auth,
-  role("COORDINATOR", "ADMIN"),
+  role("COORDINATOR", "EA", "ADMIN"),
   controller.listAllAssignments
 );
 
@@ -170,7 +170,7 @@ router.get(
 router.patch(
   "/:assignmentId/review",
   auth,
-  role("COORDINATOR"),
+  role("COORDINATOR", "EA"),
   validate(reviewSubmissionSchema),
   controller.approveOrRejectSubmission
 );
