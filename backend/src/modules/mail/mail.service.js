@@ -56,6 +56,10 @@ const payslipSentTemplate = require(
   "./templates/payslipSent.template"
 );
 
+const todayUploadNotificationTemplate = require(
+  "./templates/todayUploadNotification.template"
+);
+
 const coordinatorTaskOverdueTemplate = require(
   "./templates/coordinatorTaskOverdue.template"
 );
@@ -401,6 +405,36 @@ exports.sendApprovalMailToEmployee =
       html,
     });
   };
+
+//
+// 🔥 TODAY UPLOAD NOTIFICATION
+//
+exports.sendTodayUploadNotification = async ({
+  email,
+  userName,
+  projectName,
+  uploadDate,
+  clientName,
+  totalUploads,
+  items,
+  applicationUrl,
+}) => {
+  const html = todayUploadNotificationTemplate({
+    userName,
+    projectName,
+    uploadDate,
+    clientName,
+    totalUploads,
+    items,
+    applicationUrl,
+  });
+
+  await sendMail({
+    to: email,
+    subject: `📌 Today’s Upload for ${projectName}`,
+    html,
+  });
+};
 
 //
 // 🔥 REJECTED

@@ -1,6 +1,90 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const mailService = require("../mail/mail.service");
+const { incrementUnread } = require("../../services/sidebarUnread.service");
+
+// All roles that should receive upload notifications
+const NOTIFIABLE_ROLES = ["EMPLOYEE", "MANAGER", "ADMIN", "HR", "COORDINATOR", "EA"];
+
+const isTodayInIST = (date) => {
+  const d = new Date(date);
+  const today = new Date();
+  const opts = { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" };
+  return d.toLocaleDateString("en-IN", opts) === today.toLocaleDateString("en-IN", opts);
+};
+
+/**
+ * Notify ALL users about a today's upload sourced from the Content Calendar.
+ */
+const notifyAllUsersAboutMonthlySheetDay = async (project, day) => {
+  const allUsers = await prisma.user.findMany({
+    where: { role: { in: NOTIFIABLE_ROLES } },
+    select: { id: true, name: true, email: true, role: true },
+  });
+
+  const uploadDateFormatted = new Date(day.date).toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const items = [];
+  if (day.contentUploadLinks && day.contentUploadLinks.length > 0) items.push({ dataType: "Content Uploads" });
+  if (day.videoUploadLinks && day.videoUploadLinks.length > 0) items.push({ dataType: "Video Uploads" });
+
+  const itemSummary = items.map((i) => i.dataType).join(", ");
+  const notificationTitle = "📌 Today's Upload Alert";
+  const notificationMessage = `Today's upload for "${project.projectName}" (Client: ${project.clientName || "N/A"}) is now available on the Content Calendar.${itemSummary ? ` Items: ${itemSummary}` : ""} Please review.`;
+
+  for (const targetUser of allUsers) {
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: targetUser.id,
+          title: notificationTitle,
+          message: notificationMessage,
+          type: "TODAY_UPLOAD",
+          level: "INFO",
+          entityId: day.id,
+        },
+      });
+    } catch (err) {}
+
+    incrementUnread(targetUser.id, "projects").catch(() => {});
+
+    if (global.io) {
+      global.io.to(`user-${targetUser.id}`).emit("today-upload-popup", {
+        type: "TODAY_UPLOAD",
+        title: notificationTitle,
+        message: notificationMessage,
+        uploadId: day.id,
+        projectName: project.projectName,
+        clientName: project.clientName,
+        totalUploads: 1,
+        uploadDate: day.date,
+        items,
+        timestamp: new Date(),
+      });
+    }
+
+    if (targetUser.email) {
+      mailService
+        .sendTodayUploadNotification({
+          email: targetUser.email,
+          userName: targetUser.name,
+          projectName: project.projectName,
+          uploadDate: uploadDateFormatted,
+          clientName: project.clientName,
+          totalUploads: 1,
+          items,
+          applicationUrl: process.env.APP_URL || "http://localhost:5173",
+        })
+        .catch(() => {});
+    }
+  }
+};
 
 const FREQUENCY_DEPARTMENTS = [
   "SEO",
@@ -133,6 +217,14 @@ exports.createProjectMonthlySheet = async (user, projectId, body) => {
       days: true,
     },
   });
+
+  // Notify if any of the created days fall on today (IST)
+  const todayDays = sheet.days.filter((d) => isTodayInIST(d.date));
+  for (const d of todayDays) {
+    notifyAllUsersAboutMonthlySheetDay(project, d).catch((err) =>
+      console.error("[MonthlySheet] Notification error:", err.message)
+    );
+  }
 
   return formatSheet(sheet);
 };
@@ -307,6 +399,21 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
       days: true,
     },
   });
+
+  // Notify if any of the days that were included in the request payload fall on today
+  if (body.days && Array.isArray(body.days)) {
+    const inputDates = body.days.map(d => new Date(d.date).toISOString().split("T")[0]);
+    const updatedTodayDays = updatedSheet.days.filter(d => {
+      const dKey = new Date(d.date).toISOString().split("T")[0];
+      return inputDates.includes(dKey) && isTodayInIST(d.date);
+    });
+    
+    for (const d of updatedTodayDays) {
+      notifyAllUsersAboutMonthlySheetDay(project, d).catch((err) =>
+        console.error("[MonthlySheet] Notification error:", err.message)
+      );
+    }
+  }
 
   return formatSheet(updatedSheet);
 };
