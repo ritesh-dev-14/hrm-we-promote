@@ -67,3 +67,22 @@ exports.updateProjectMonthlySheet = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.updateUploadStatus = async (req, res, next) => {
+  try {
+    const data = await service.updateUploadStatus(
+      req.user,
+      req.params.projectId,
+      req.params.sheetId,
+      req.params.dayId,
+      req.body
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

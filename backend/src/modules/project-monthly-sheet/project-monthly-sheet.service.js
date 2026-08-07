@@ -105,6 +105,8 @@ const formatDay = (day) => ({
   videoUploadLinks: day.videoUploadLinks || [],
   script: day.script,
   description: day.description,
+  uploadStatus: day.uploadStatus || "PENDING",
+  uploadRejectReason: day.uploadRejectReason,
   createdAt: day.createdAt,
 });
 
@@ -416,4 +418,43 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
   }
 
   return formatSheet(updatedSheet);
+};
+
+exports.updateUploadStatus = async (user, projectId, sheetId, dayId, body) => {
+  // Allow MANAGER or HR to update
+  if (!["MANAGER", "HR"].includes(user.role)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  // Verify project access
+  const { project, assignedManager } = await verifyProjectAccess(user, projectId);
+  
+  if (user.role === "MANAGER" && !assignedManager) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const sheetDay = await prisma.projectMonthlySheetDay.findFirst({
+    where: {
+      id: dayId,
+      sheetId,
+      sheet: { projectId },
+    },
+  });
+
+  if (!sheetDay) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Monthly sheet day not found.",
+    });
+  }
+
+  const updatedDay = await prisma.projectMonthlySheetDay.update({
+    where: { id: dayId },
+    data: {
+      uploadStatus: body.uploadStatus,
+      uploadRejectReason: body.uploadStatus === "REJECTED" ? body.uploadRejectReason : null,
+    },
+  });
+
+  return formatDay(updatedDay);
 };

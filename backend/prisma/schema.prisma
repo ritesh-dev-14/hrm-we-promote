@@ -471,6 +471,8 @@ model ProjectMonthlySheetDay {
   videoUploadLinks String[]         @default([])
   script         String?
   description    String?
+  uploadStatus   UploadStatus       @default(PENDING)
+  uploadRejectReason String?
   createdAt      DateTime           @default(now())
 
   sheet ProjectMonthlySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
@@ -628,6 +630,12 @@ enum AssignmentStatus {
   COMPLETED
   PENDING
   UNABLE_TO_SUBMIT
+}
+
+enum UploadStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum NotificationLevel {

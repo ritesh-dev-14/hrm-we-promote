@@ -36,3 +36,12 @@ exports.updateProjectMonthlySheetSchema = Joi.object({
   moodBoardLink: Joi.string().uri(),
   days: Joi.array().items(monthlySheetDaySchema).min(1),
 }).unknown(false);
+
+exports.updateUploadStatusSchema = Joi.object({
+  uploadStatus: Joi.string().valid("PENDING", "APPROVED", "REJECTED").required(),
+  uploadRejectReason: Joi.string().allow("", null).when("uploadStatus", {
+    is: "REJECTED",
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+}).unknown(false);

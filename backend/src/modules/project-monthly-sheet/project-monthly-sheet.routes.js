@@ -8,6 +8,7 @@ const controller = require("./project-monthly-sheet.controller");
 const {
   createProjectMonthlySheetSchema,
   updateProjectMonthlySheetSchema,
+  updateUploadStatusSchema,
 } = require("./project-monthly-sheet.validation");
 
 router.post(
@@ -38,6 +39,14 @@ router.patch(
   role("MANAGER"),
   validate(updateProjectMonthlySheetSchema),
   controller.updateProjectMonthlySheet
+);
+
+router.patch(
+  "/:sheetId/days/:dayId/upload-status",
+  auth,
+  role("MANAGER", "HR"),
+  validate(updateUploadStatusSchema),
+  controller.updateUploadStatus
 );
 
 module.exports = router;
