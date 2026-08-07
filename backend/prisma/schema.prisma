@@ -56,6 +56,7 @@ model User {
   uploadedPayslips        Payslip[]                 @relation("UploadedPayslips")
   projectDailyReports     ProjectDailyReport[]      @relation("EmployeeDailyReports")
   seoReports              SeoReport[]               @relation("ManagerSeoReports")
+  uploads                 Upload[]
 }
 
 model Attendance {
@@ -756,6 +757,36 @@ model ProjectDailyReport {
 
   @@index([projectId])
   @@index([employeeId])
+}
+
+model Upload {
+  id            String       @id @default(uuid())
+  projectName   String
+  uploadDate    DateTime
+  clientName    String
+  totalUploads  Int          @default(0)
+  createdById   String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  createdBy     User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  items         UploadItem[]
+
+  @@index([createdById])
+  @@index([uploadDate])
+}
+
+model UploadItem {
+  id            String   @id @default(uuid())
+  uploadId      String
+  dataType      String
+  platform      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  upload        Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([uploadId])
 }
 
 enum ProjectStatus {

@@ -109,6 +109,11 @@ app.use(
 );
 
 app.use(
+  "/api/uploads",
+  require("./modules/uploads/uploads.routes")
+);
+
+app.use(
   "/api/seo-reports",
   require("./modules/seo-report/seo-report.routes")
 );
