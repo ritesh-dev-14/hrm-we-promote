@@ -21,14 +21,14 @@ router.post(
 router.get(
   "/",
   auth,
-  role("ADMIN", "HR", "EA", "MANAGER"),
+  role("ADMIN", "HR", "EA", "MANAGER", "EMPLOYEE"),
   controller.getProjectMonthlySheets
 );
 
 router.get(
   "/:sheetId",
   auth,
-  role("ADMIN", "HR", "EA", "MANAGER"),
+  role("ADMIN", "HR", "EA", "MANAGER", "EMPLOYEE"),
   controller.getProjectMonthlySheetById
 );
 
