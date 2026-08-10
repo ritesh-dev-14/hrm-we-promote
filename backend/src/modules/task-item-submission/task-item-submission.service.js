@@ -1571,12 +1571,14 @@ exports.verifySubmission =
       );
     }
 
+    const resolvedAssignmentId = assignment.id;
+
     //
     // ✅ VERIFY
     //
     await prisma.taskItemSubmission.update({
       where: {
-        assignmentId,
+        assignmentId: resolvedAssignmentId,
       },
 
       data: {
@@ -1590,7 +1592,7 @@ exports.verifySubmission =
     //
     await prisma.taskItemAssignment.update({
       where: {
-        id: assignmentId,
+        id: resolvedAssignmentId,
       },
 
       data: {
