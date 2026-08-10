@@ -1,5 +1,6 @@
 const { Server } = require("socket.io");
 const { PrismaClient } = require("@prisma/client");
+const { corsOptions } = require("./cors");
 
 const prisma = new PrismaClient();
 
@@ -7,17 +8,10 @@ const prisma = new PrismaClient();
 // 🔥 SETUP SOCKET.IO FOR REAL-TIME NOTIFICATIONS
 //
 const setupSocketIO = (server) => {
-  const allowedOrigins = [
-    process.env.FRONTEND_URL,
-    "http://localhost:5173",
-    "https://hrm.wepromoteindia.com"
-  ].filter(Boolean);
-
   const io = new Server(server, {
     cors: {
-      origin: allowedOrigins,
+      ...corsOptions,
       methods: ["GET", "POST"],
-      credentials: true,
     },
   });
 

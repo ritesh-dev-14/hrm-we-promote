@@ -2,21 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const errorMiddleware = require("./middlewares/error.middleware");
 const attendanceRoutes = require("./modules/attendance/attendance.routes");
+const { corsOptions } = require("./config/cors");
 require("dotenv").config();
 
 const app = express();
-
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "http://localhost:5173",
-  "https://hrm.wepromoteindia.com",
-  "https://hrm-frontend-iota-topaz.vercel.app"
-].filter(Boolean);
-
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 
 app.get("/", (req, res) => {
