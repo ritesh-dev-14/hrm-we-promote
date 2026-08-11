@@ -346,10 +346,18 @@ exports.getMyTasks = async (user, filters = {}) => {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
+  const takeParam =
+    filters.take ||
+    filters.limit ||
+    filters.pageSize ||
+    (filters.all === "true" || filters.all === true ? 10000 : 10);
+  const skipParam =
+    filters.skip ||
+    (filters.page ? (parseInt(filters.page) - 1) * parseInt(takeParam) : 0);
+  const take = parseInt(takeParam);
+  const skip = parseInt(skipParam);
   const {
     status,
-    skip = 0,
-    take = 10,
     sortBy = "assignedTime",
     sortOrder = "desc",
   } = filters;
@@ -419,10 +427,18 @@ exports.getAssignmentsByCoordinator = async (
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
+  const takeParam =
+    filters.take ||
+    filters.limit ||
+    filters.pageSize ||
+    (filters.all === "true" || filters.all === true ? 10000 : 10);
+  const skipParam =
+    filters.skip ||
+    (filters.page ? (parseInt(filters.page) - 1) * parseInt(takeParam) : 0);
+  const take = parseInt(takeParam);
+  const skip = parseInt(skipParam);
   const {
     status,
-    skip = 0,
-    take = 10,
     sortBy = "assignedTime",
     sortOrder = "desc",
   } = filters;
@@ -485,10 +501,18 @@ exports.getAssignmentsByAssignedTo = async (
   userId,
   filters = {}
 ) => {
+  const takeParam =
+    filters.take ||
+    filters.limit ||
+    filters.pageSize ||
+    (filters.all === "true" || filters.all === true ? 10000 : 10);
+  const skipParam =
+    filters.skip ||
+    (filters.page ? (parseInt(filters.page) - 1) * parseInt(takeParam) : 0);
+  const take = parseInt(takeParam);
+  const skip = parseInt(skipParam);
   const {
     status,
-    skip = 0,
-    take = 10,
     sortBy = "assignedTime",
     sortOrder = "desc",
   } = filters;
@@ -548,10 +572,18 @@ exports.getAssignmentsByAssignedTo = async (
 // 🔥 GET TASKS CREATED BY CURRENT USER
 //
 exports.getMyCreatedTasks = async (user, filters = {}) => {
+  const takeParam =
+    filters.take ||
+    filters.limit ||
+    filters.pageSize ||
+    (filters.all === "true" || filters.all === true ? 10000 : 10);
+  const skipParam =
+    filters.skip ||
+    (filters.page ? (parseInt(filters.page) - 1) * parseInt(takeParam) : 0);
+  const take = parseInt(takeParam);
+  const skip = parseInt(skipParam);
   const {
     status,
-    skip = 0,
-    take = 10,
     sortBy = "assignedTime",
     sortOrder = "desc",
   } = filters;
