@@ -109,6 +109,11 @@ app.use(
   require("./modules/seo-report/seo-report.routes")
 );
 
+app.use(
+  "/api/marketing-reports",
+  require("./modules/marketing-report/marketing-report.routes")
+);
+
 // Error handling middleware
 
 app.use(errorMiddleware);

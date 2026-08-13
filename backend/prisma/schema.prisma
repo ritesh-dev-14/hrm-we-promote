@@ -57,6 +57,7 @@ model User {
   projectDailyReports     ProjectDailyReport[]      @relation("EmployeeDailyReports")
   seoReports              SeoReport[]               @relation("ManagerSeoReports")
   uploads                 Upload[]
+  marketingReports        MarketingReport[]          @relation("ManagerMarketingReports")
 }
 
 model Attendance {
@@ -418,6 +419,7 @@ model Project {
   status        ProjectStatus      @default(ONGOING)
   dailyReports  ProjectDailyReport[]
   seoReports    SeoReport[]
+  marketingReports MarketingReport[]
 }
 
 model ProjectAssignment {
@@ -824,3 +826,29 @@ model SeoReport {
   @@index([checkDate])
 }
 
+model MarketingReport {
+  id                    String    @id @default(uuid())
+  projectId             String
+  managerId             String
+  clientName            String?
+  videoLink             String?
+  areaName              String?
+  isAdRunning           Boolean?
+  campaignStartDate     DateTime?
+  campaignEndDate       DateTime?
+  todayReachObtained    Int?
+  todayAmountSpend      Float?
+  reasonNotRunning      String?
+  typeOfAds             String?
+  leadObtained          Int?
+  date                  DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  manager  User    @relation("ManagerMarketingReports", fields: [managerId], references: [id])
+
+  @@index([projectId])
+  @@index([managerId])
+  @@index([date])
+}
