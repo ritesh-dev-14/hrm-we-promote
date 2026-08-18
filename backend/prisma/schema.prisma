@@ -834,8 +834,6 @@ model MarketingReport {
   videoLink             String?
   areaName              String?
   isAdRunning           Boolean?
-  campaignStartDate     DateTime?
-  campaignEndDate       DateTime?
   todayReachObtained    Int?
   todayAmountSpend      Float?
   reasonNotRunning      String?

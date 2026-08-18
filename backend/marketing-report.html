@@ -446,22 +446,6 @@
     </div>
 
     <div class="divider"></div>
-    <div class="section-label">📅 Campaign Duration</div>
-    <div class="form-grid">
-
-      <div class="form-group">
-        <label class="form-label">Campaign Start Date <span class="optional">optional</span></label>
-        <input id="f-campaignStartDate" class="form-input" type="date" />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Campaign End Date <span class="optional">optional</span></label>
-        <input id="f-campaignEndDate" class="form-input" type="date" />
-      </div>
-
-    </div>
-
-    <div class="divider"></div>
     <div class="section-label">💰 Today's Performance</div>
     <div class="form-grid">
 
@@ -647,8 +631,6 @@ function getFormData() {
     videoLink:          document.getElementById("f-videoLink").value.trim()           || null,
     areaName:           document.getElementById("f-areaName").value.trim()            || null,
     isAdRunning:        adRunningValue,
-    campaignStartDate:  document.getElementById("f-campaignStartDate").value          || null,
-    campaignEndDate:    document.getElementById("f-campaignEndDate").value            || null,
     todayReachObtained: document.getElementById("f-todayReachObtained").value !== "" ? Number(document.getElementById("f-todayReachObtained").value) : null,
     todayAmountSpend:   document.getElementById("f-todayAmountSpend").value   !== "" ? Number(document.getElementById("f-todayAmountSpend").value)   : null,
     reasonNotRunning:   document.getElementById("f-reasonNotRunning").value.trim()    || null,
@@ -661,8 +643,6 @@ function fillForm(r) {
   document.getElementById("f-clientName").value         = r.clientName         || "";
   document.getElementById("f-videoLink").value          = r.videoLink          || "";
   document.getElementById("f-areaName").value           = r.areaName           || "";
-  document.getElementById("f-campaignStartDate").value  = r.campaignStartDate  ? r.campaignStartDate.split("T")[0] : "";
-  document.getElementById("f-campaignEndDate").value    = r.campaignEndDate    ? r.campaignEndDate.split("T")[0]   : "";
   document.getElementById("f-todayReachObtained").value = r.todayReachObtained ?? "";
   document.getElementById("f-todayAmountSpend").value   = r.todayAmountSpend   ?? "";
   document.getElementById("f-reasonNotRunning").value   = r.reasonNotRunning   || "";

@@ -10,8 +10,6 @@ const formatReport = (report) => ({
   videoLink: report.videoLink,
   areaName: report.areaName,
   isAdRunning: report.isAdRunning,
-  campaignStartDate: report.campaignStartDate,
-  campaignEndDate: report.campaignEndDate,
   todayReachObtained: report.todayReachObtained,
   todayAmountSpend: report.todayAmountSpend,
   reasonNotRunning: report.reasonNotRunning,
@@ -88,8 +86,6 @@ exports.createMarketingReport = async (user, body) => {
       videoLink: body.videoLink || null,
       areaName: body.areaName || null,
       isAdRunning,
-      campaignStartDate: body.campaignStartDate ? new Date(body.campaignStartDate) : null,
-      campaignEndDate: body.campaignEndDate ? new Date(body.campaignEndDate) : null,
       todayReachObtained: body.todayReachObtained != null && body.todayReachObtained !== "" ? parseInt(body.todayReachObtained, 10) : null,
       todayAmountSpend: body.todayAmountSpend != null && body.todayAmountSpend !== "" ? parseFloat(body.todayAmountSpend) : null,
       reasonNotRunning: body.reasonNotRunning || null,
@@ -226,8 +222,6 @@ exports.updateMarketingReport = async (user, reportId, body) => {
   if (body.isAdRunning !== undefined && body.isAdRunning !== null && body.isAdRunning !== "") {
     data.isAdRunning = body.isAdRunning === true || body.isAdRunning === "true" || body.isAdRunning === "yes";
   }
-  if (body.campaignStartDate !== undefined) data.campaignStartDate = body.campaignStartDate ? new Date(body.campaignStartDate) : null;
-  if (body.campaignEndDate !== undefined) data.campaignEndDate = body.campaignEndDate ? new Date(body.campaignEndDate) : null;
   if (body.todayReachObtained !== undefined) data.todayReachObtained = body.todayReachObtained != null && body.todayReachObtained !== "" ? parseInt(body.todayReachObtained, 10) : null;
   if (body.todayAmountSpend !== undefined) data.todayAmountSpend = body.todayAmountSpend != null && body.todayAmountSpend !== "" ? parseFloat(body.todayAmountSpend) : null;
   if (body.reasonNotRunning !== undefined) data.reasonNotRunning = body.reasonNotRunning || null;
