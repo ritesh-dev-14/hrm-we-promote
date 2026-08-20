@@ -2,6 +2,7 @@ const app = require("./src/app");
 const http = require("http");
 const { setupSocketIO } = require("./src/config/socket.config");
 const { setupEscalationJobs } = require("./src/jobs/escalationJobs");
+const { initializeDailyMessagingJob } = require("./src/jobs/dailyClientMessagesJob");
 const mailService = require("./src/modules/mail/mail.service");
 
 const PORT = process.env.PORT || 8000;
@@ -15,6 +16,13 @@ global.io = io;
 
 // Setup all escalation jobs
 setupEscalationJobs(io);
+
+// Setup daily WhatsApp messaging job
+try {
+  initializeDailyMessagingJob();
+} catch (error) {
+  console.error("Failed to initialize daily messaging job:", error);
+}
 
 server.listen(PORT, async () => {
   console.log(`\n🚀 Server running on port ${PORT}`);

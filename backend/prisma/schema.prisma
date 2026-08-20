@@ -58,6 +58,7 @@ model User {
   seoReports              SeoReport[]               @relation("ManagerSeoReports")
   uploads                 Upload[]
   marketingReports        MarketingReport[]          @relation("ManagerMarketingReports")
+  whatsappMessages        WhatsappMessage[]          @relation("ManagerWhatsappMessages")
 }
 
 model Attendance {
@@ -420,6 +421,7 @@ model Project {
   dailyReports  ProjectDailyReport[]
   seoReports    SeoReport[]
   marketingReports MarketingReport[]
+  whatsappMessages WhatsappMessage[] @relation("ProjectWhatsappMessages")
 }
 
 model ProjectAssignment {
@@ -809,6 +811,7 @@ model SeoReport {
   id                 String   @id @default(uuid())
   projectId          String
   managerId          String
+  clientContactNumber String?
   keywords           String[]
   rankingNo          Int
   checkDate          DateTime
@@ -831,6 +834,7 @@ model MarketingReport {
   projectId             String
   managerId             String
   clientName            String?
+  clientContactNumber   String?
   videoLink             String?
   areaName              String?
   isAdRunning           Boolean?
@@ -849,4 +853,53 @@ model MarketingReport {
   @@index([projectId])
   @@index([managerId])
   @@index([date])
+}
+
+model WhatsappTemplate {
+  id                String    @id @default(uuid())
+  name              String    @unique
+  departmentType    String    // e.g., "SOCIAL_MEDIA", "SEO", "WEB_DEV"
+  templateContent   String    // Template with placeholders like {clientName}, {uploadLink}, etc.
+  variables         String[]  // Array of variable names used in template
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  messages          WhatsappMessage[] @relation("TemplateMessages")
+
+  @@index([departmentType])
+  @@index([isActive])
+}
+
+model WhatsappMessage {
+  id                  String    @id @default(uuid())
+  projectId           String
+  managerId           String
+  templateId          String?   // Reference to WhatsappTemplate used
+  clientPhoneNumber   String    // WhatsApp phone number in E.164 format (+91...)
+  messageContent      String    // Full rendered message text
+  status              WhatsappMessageStatus @default(PENDING)
+  sentAt              DateTime?
+  deliveredAt         DateTime?
+  failureReason       String?   // Error message if status is FAILED
+  messageId           String?   // Meta WhatsApp message ID for tracking
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  project             Project   @relation("ProjectWhatsappMessages", fields: [projectId], references: [id], onDelete: Cascade)
+  manager             User      @relation("ManagerWhatsappMessages", fields: [managerId], references: [id], onDelete: Cascade)
+  template            WhatsappTemplate? @relation("TemplateMessages", fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([managerId])
+  @@index([status])
+  @@index([sentAt])
+  @@index([createdAt])
+}
+
+enum WhatsappMessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
 }

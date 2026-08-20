@@ -114,6 +114,16 @@ app.use(
   require("./modules/marketing-report/marketing-report.routes")
 );
 
+app.use(
+  "/api/whatsapp-messages",
+  require("./modules/whatsapp-message/whatsapp-message.routes")
+);
+
+app.use(
+  "/api/daily-report",
+  require("./modules/daily-report/daily-report.routes")
+);
+
 // Error handling middleware
 
 app.use(errorMiddleware);

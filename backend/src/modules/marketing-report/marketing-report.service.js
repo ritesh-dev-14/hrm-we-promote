@@ -83,6 +83,7 @@ exports.createMarketingReport = async (user, body) => {
       projectId: body.projectId,
       managerId: user.id,
       clientName: body.clientName || null,
+      clientContactNumber: body.clientContactNumber || null,
       videoLink: body.videoLink || null,
       areaName: body.areaName || null,
       isAdRunning,
@@ -217,6 +218,7 @@ exports.updateMarketingReport = async (user, reportId, body) => {
   // Build update payload — only update fields that were explicitly provided
   const data = {};
   if (body.clientName !== undefined) data.clientName = body.clientName || null;
+  if (body.clientContactNumber !== undefined) data.clientContactNumber = body.clientContactNumber || null;
   if (body.videoLink !== undefined) data.videoLink = body.videoLink || null;
   if (body.areaName !== undefined) data.areaName = body.areaName || null;
   if (body.isAdRunning !== undefined && body.isAdRunning !== null && body.isAdRunning !== "") {

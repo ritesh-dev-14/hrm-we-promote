@@ -132,6 +132,7 @@ exports.createSeoReport = async (user, body, file) => {
     data: {
       projectId: body.projectId,
       managerId: user.id,
+      clientContactNumber: body.clientContactNumber || null,
       keywords,
       rankingNo: parseInt(body.rankingNo, 10),
       checkDate: new Date(body.checkDate),
