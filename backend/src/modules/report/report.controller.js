@@ -27,3 +27,14 @@ exports.getEmployeeProjectStats = async (req, res, next) => {
     next(error);
   }
 };
+
+// ── Projects Overview (Social Media / Meta Ads / SEO) ──────────────────────
+exports.getProjectsOverview = async (req, res, next) => {
+  try {
+    const { startDate, endDate, type } = req.query;
+    const data = await reportService.getProjectsOverview({ startDate, endDate, type });
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};

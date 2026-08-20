@@ -222,3 +222,168 @@ exports.getEmployeeProjectStats = async (employeeId) => {
 
   return report;
 };
+
+// ── getProjectsOverview ──────────────────────────────────────────────────────
+// Returns aggregated data for Social Media, Meta Ads (marketing), and SEO
+// filtered by optional date range.
+exports.getProjectsOverview = async ({ startDate, endDate, type }) => {
+  // Build date range
+  let dateFilter = {};
+  if (startDate || endDate) {
+    dateFilter = {
+      gte: startDate ? new Date(startDate) : undefined,
+      lte: endDate   ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined,
+    };
+  }
+
+  const result = {};
+
+  // ── Social Media ────────────────────────────────────────────────────────────
+  if (!type || type === 'social-media') {
+    const smSheets = await prisma.projectMonthlySheet.findMany({
+      where: {
+        project: {
+          department: { name: { contains: 'Social Media', mode: 'insensitive' } },
+        },
+        ...(startDate || endDate ? {
+          createdAt: dateFilter,
+        } : {}),
+      },
+      include: {
+        project: {
+          select: { id: true, projectName: true, clientName: true, phone: true },
+        },
+        days: {
+          where: Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+          select: {
+            id: true,
+            date: true,
+            reelType: true,
+            postType: true,
+            uploadStatus: true,
+          },
+        },
+      },
+    });
+
+    // Group by project
+    const projectMap = {};
+    for (const sheet of smSheets) {
+      const pid = sheet.project.id;
+      if (!projectMap[pid]) {
+        projectMap[pid] = {
+          projectId: pid,
+          projectName: sheet.project.projectName,
+          clientName: sheet.project.clientName,
+          phone: sheet.project.phone,
+          reelsPlanned: 0,
+          reelsPosted: 0,
+          postsPlanned: 0,
+          postsPosted: 0,
+        };
+      }
+      const p = projectMap[pid];
+      p.reelsPlanned  += sheet.totalReels          || 0;
+      p.postsPlanned  += sheet.totalPosts           || 0;
+      p.reelsPosted   += sheet.totalReelsUploaded   || 0;
+      p.postsPosted   += sheet.totalPostsUploaded   || 0;
+    }
+
+    result.socialMedia = Object.values(projectMap);
+  }
+
+  // ── Meta Ads ─────────────────────────────────────────────────────────────────
+  if (!type || type === 'meta-ads') {
+    const marketingReports = await prisma.marketingReport.findMany({
+      where: Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {},
+      include: {
+        project: {
+          select: { id: true, projectName: true, clientName: true },
+        },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    // Group by project
+    const adMap = {};
+    for (const r of marketingReports) {
+      const pid = r.projectId;
+      if (!adMap[pid]) {
+        adMap[pid] = {
+          projectId: pid,
+          projectName: r.project?.projectName,
+          clientName:  r.clientName || r.project?.clientName,
+          totalReach:  0,
+          totalSpend:  0,
+          totalLeads:  0,
+          reportCount: 0,
+          reports:     [],
+        };
+      }
+      adMap[pid].totalReach  += r.todayReachObtained  || 0;
+      adMap[pid].totalSpend  += r.todayAmountSpend     || 0;
+      adMap[pid].totalLeads  += r.leadObtained         || 0;
+      adMap[pid].reportCount += 1;
+      adMap[pid].reports.push({
+        id:           r.id,
+        date:         r.date,
+        reach:        r.todayReachObtained,
+        spend:        r.todayAmountSpend,
+        leads:        r.leadObtained,
+        isAdRunning:  r.isAdRunning,
+        typeOfAds:    r.typeOfAds,
+        areaName:     r.areaName,
+      });
+    }
+
+    result.metaAds = Object.values(adMap);
+  }
+
+  // ── SEO ───────────────────────────────────────────────────────────────────────
+  if (!type || type === 'seo') {
+    const seoReports = await prisma.seoReport.findMany({
+      where: Object.keys(dateFilter).length > 0 ? { checkDate: dateFilter } : {},
+      include: {
+        project: {
+          select: { id: true, projectName: true, clientName: true },
+        },
+        manager: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { checkDate: 'desc' },
+    });
+
+    // Group by project — latest report first
+    const seoMap = {};
+    for (const r of seoReports) {
+      const pid = r.projectId;
+      if (!seoMap[pid]) {
+        seoMap[pid] = {
+          projectId:   pid,
+          projectName: r.project?.projectName,
+          clientName:  r.project?.clientName,
+          latestReport: null,
+          reports:     [],
+        };
+      }
+      const entry = {
+        id:          r.id,
+        keywords:    r.keywords,
+        rankingNo:   r.rankingNo,
+        checkDate:   r.checkDate,
+        remarks:     r.remarks,
+        screenshotUrl: r.screenshotUrl,
+        managerName: r.manager?.name,
+        createdAt:   r.createdAt,
+      };
+      if (!seoMap[pid].latestReport) seoMap[pid].latestReport = entry;
+      seoMap[pid].reports.push(entry);
+    }
+
+    result.seo = Object.values(seoMap);
+  }
+
+  return result;
+};
+

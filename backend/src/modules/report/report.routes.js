@@ -27,4 +27,8 @@ router.get(
   reportController.getEmployeeProjectStats
 );
 
+
+// Projects Overview — Admin + HR only
+router.get('/projects-overview', protect, restrictTo('ADMIN', 'HR'), reportController.getProjectsOverview);
+
 module.exports = router;
