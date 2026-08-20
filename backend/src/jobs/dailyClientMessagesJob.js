@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const whatsappService = require('../services/whatsappService');
 const messageTemplateService = require('../services/messageTemplateService');
 const messageLoggingService = require('../services/messageLoggingService');
+const dailyReportService = require('../modules/daily-report/daily-report.service');
 
 /**
  * Daily client messaging job
@@ -31,9 +32,7 @@ exports.initializeDailyMessagingJob = () => {
 
     // For IST (UTC+5:30), we need to calculate the equivalent UTC time
     // 11:15 AM IST = 5:45 AM UTC
-    // But it's easier to use the TZ parameter with node-cron
-
-    jobInstance = cron.schedule('15 11 * * *', async () => {
+    jobInstance = cron.schedule('55 12 * * *', async () => {
       console.log('🚀 ⏰ Starting daily client report dispatch at', new Date().toISOString());
       try {
         await runDailyMessagingJob();
@@ -46,7 +45,7 @@ exports.initializeDailyMessagingJob = () => {
       timezone: 'Asia/Kolkata', // IST timezone
     });
 
-    console.log('✅ Daily client messaging job initialized (runs at 11:15 AM IST)');
+    console.log('✅ Daily client messaging job initialized (runs at 12:55 PM IST)');
     return jobInstance;
   } catch (error) {
     console.error('Failed to initialize daily messaging job:', error);
@@ -88,6 +87,9 @@ async function runDailyMessagingJob() {
   };
 
   try {
+    const prisma = require('../config/prisma');
+    const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+    const fallbackManagerId = adminUser?.id;
     const today = new Date();
 
     // ── Fetch today's full daily report ──────────────────────────────────
@@ -98,7 +100,7 @@ async function runDailyMessagingJob() {
     );
 
     // ── Helper: send + log one message ───────────────────────────────────
-    async function dispatch({ phone, message, projectId, label }) {
+    async function dispatch({ phone, message, projectId, managerId, label }) {
       const formatted = whatsappService.formatPhoneNumber(phone);
       if (!formatted) {
         console.warn(`⚠️  Invalid phone for ${label}: "${phone}" — skipping`);
@@ -113,7 +115,7 @@ async function runDailyMessagingJob() {
 
       await messageLoggingService.logMessage({
         projectId: projectId || null,
-        managerId: null,
+        managerId: managerId || fallbackManagerId,
         clientPhoneNumber: formatted,
         messageContent: message,
         status: result.success ? 'SENT' : 'FAILED',
@@ -145,7 +147,7 @@ async function runDailyMessagingJob() {
         date:        today,
       });
 
-      await dispatch({ phone, message, projectId: proj.projectId, label: `SEO/${proj.projectName}` });
+      await dispatch({ phone, message, projectId: proj.projectId, managerId: proj.report?.managerId || proj.assignments?.[0]?.managerId, label: `SEO/${proj.projectName}` });
     }
 
     // ── 2. Marketing reports ─────────────────────────────────────────────
@@ -161,7 +163,7 @@ async function runDailyMessagingJob() {
         date:        today,
       });
 
-      await dispatch({ phone, message, projectId: proj.projectId, label: `Marketing/${proj.projectName}` });
+      await dispatch({ phone, message, projectId: proj.projectId, managerId: proj.report?.managerId || proj.assignments?.[0]?.managerId, label: `Marketing/${proj.projectName}` });
     }
 
     // ── 3. Social Media projects (use project.phone) ─────────────────────
@@ -178,7 +180,7 @@ async function runDailyMessagingJob() {
         date:            today,
       });
 
-      await dispatch({ phone, message, projectId: proj.projectId, label: `SMM/${proj.projectName}` });
+      await dispatch({ phone, message, projectId: proj.projectId, managerId: proj.assignments?.[0]?.managerId, label: `SMM/${proj.projectName}` });
     }
 
   } catch (error) {

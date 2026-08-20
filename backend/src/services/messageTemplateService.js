@@ -400,9 +400,6 @@ exports.buildSeoReportMessage = ({ projectName, clientName, report, date }) => {
     if (report.remarks) {
       msg += `📝 *Remarks:* ${report.remarks}\n`;
     }
-    if (report.screenshotUrl) {
-      msg += `📸 *Screenshot:* ${report.screenshotUrl}\n`;
-    }
   } else {
     msg += `📭 No SEO report submitted for today.\n`;
   }
