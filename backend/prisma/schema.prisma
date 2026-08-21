@@ -397,6 +397,7 @@ model Project {
   twitterEmail  String?
   twitterPassword String?
   logo          String?
+  reasons       Json?              @default("[]")
   // Web Development Department specific fields
   domainName    String?
   domainPassword String?

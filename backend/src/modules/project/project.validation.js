@@ -8,6 +8,11 @@ const frequencyValues = [
   "yearly",
 ];
 
+const reasonItemSchema = Joi.object({
+  reason: Joi.string().allow("", null),
+  date: Joi.date().allow(null),
+}).unknown(true);
+
 exports.createProjectSchema = Joi.object({
   projectName: Joi.string().min(3).max(200).required(),
   description: Joi.string().allow("", null),
@@ -35,6 +40,7 @@ exports.createProjectSchema = Joi.object({
   twitterEmail: Joi.string().email(),
   twitterPassword: Joi.string().min(1).max(200),
   logo: Joi.string().uri(),
+  reasons: Joi.array().items(reasonItemSchema).allow(null),
   assignTo: Joi.array().items(Joi.string().required()).min(1).required(),
   // Web Development Department specific fields
   domainName: Joi.string().min(1).max(500).allow(null, ""),
@@ -79,6 +85,7 @@ exports.updateProjectSchema = Joi.object({
   twitterEmail: Joi.string().email().allow(null),
   twitterPassword: Joi.string().min(1).max(200).allow(null),
   logo: Joi.string().uri().allow(null),
+  reasons: Joi.array().items(reasonItemSchema).allow(null),
   assignTo: Joi.array().items(Joi.string().required()).min(1),
   // Web Development Department specific fields
   domainName: Joi.string().min(1).max(500).allow(null, ""),

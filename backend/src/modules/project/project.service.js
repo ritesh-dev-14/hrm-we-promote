@@ -260,6 +260,7 @@ exports.createProject = async (user, body) => {
       twitterEmail: body.twitterEmail || null,
       twitterPassword: body.twitterPassword || null,
       logo: body.logo || null,
+      reasons: body.reasons || [],
       // Web Development Department specific fields
       domainName: body.domainName || null,
       domainPassword: body.domainPassword || null,
@@ -465,6 +466,7 @@ exports.updateProject = async (user, projectId, body) => {
       "twitterEmail",
       "twitterPassword",
       "logo",
+      "reasons",
       "projectStartDate",
       // Web Development Department specific fields
       "domainName",
@@ -675,6 +677,7 @@ exports.updateProject = async (user, projectId, body) => {
   if (body.twitterPassword !== undefined)
     data.twitterPassword = body.twitterPassword || null;
   if (body.logo !== undefined) data.logo = body.logo || null;
+  if (body.reasons !== undefined) data.reasons = body.reasons || [];
   if (body.projectStartDate !== undefined)
     data.projectStartDate = body.projectStartDate
       ? new Date(body.projectStartDate)
@@ -718,6 +721,7 @@ exports.updateProject = async (user, projectId, body) => {
     data.twitterEmail = null;
     data.twitterPassword = null;
     data.logo = null;
+    data.reasons = [];
     data.projectStartDate = null;
   }
 
