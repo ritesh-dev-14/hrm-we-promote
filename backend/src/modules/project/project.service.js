@@ -64,6 +64,7 @@ const formatProject = (project) => {
     twitterEmail: project.twitterEmail,
     twitterPassword: project.twitterPassword,
     logo: project.logo,
+    reasons: project.reasons || [],
     projectStartDate: project.projectStartDate,
     // Web Development Department specific fields
     domainName: project.domainName,
