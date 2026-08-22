@@ -32,7 +32,7 @@ exports.initializeDailyMessagingJob = () => {
 
     // For IST (UTC+5:30), we need to calculate the equivalent UTC time
     // 4:03 PM IST = scheduled for 16:03
-    jobInstance = cron.schedule('03 16 * * *', async () => {
+      jobInstance = cron.schedule('18 16 * * *', async () => {
       console.log('🚀 ⏰ Starting daily client report dispatch at', new Date().toISOString());
       try {
         await runDailyMessagingJob();
@@ -45,7 +45,7 @@ exports.initializeDailyMessagingJob = () => {
       timezone: 'Asia/Kolkata', // IST timezone
     });
 
-    console.log('✅ Daily client messaging job initialized (runs at 4:03 PM IST)');
+      console.log('✅ Daily client messaging job initialized (runs at 4:18 PM IST)');
     return jobInstance;
   } catch (error) {
     console.error('Failed to initialize daily messaging job:', error);
@@ -102,11 +102,23 @@ async function runDailyMessagingJob() {
     // ── Group all reports by phone number ────────────────────────────────
     const messagesByPhone = {};
 
+    const getMessageGroup = (phone, managerId) => {
+      if (!messagesByPhone[phone]) {
+        messagesByPhone[phone] = {
+          messages: [],
+          managerId,
+          projectIds: [],
+          reports: { seo: [], marketing: [], socialMedia: [] },
+        };
+      }
+      return messagesByPhone[phone];
+    };
+
     // ── 1. SEO reports ───────────────────────────────────────────────────
     console.log(`\n🌐 Processing SEO reports (${dailyReport.seo.length})...`);
     for (const proj of dailyReport.seo) {
       // Skip if no report data exists
-      if (!proj.report) {
+      if (!proj.report?.hasReport) {
         console.log(`⏭️  Skipping ${proj.projectName} - No SEO report data`);
         jobStats.skipped++;
         continue;
@@ -134,15 +146,10 @@ async function runDailyMessagingJob() {
       }
 
       // Group by phone number
-      if (!messagesByPhone[phone]) {
-        messagesByPhone[phone] = {
-          messages: [],
-          managerId: proj.report?.managerId || proj.assignments?.[0]?.managerId,
-          projectIds: [],
-        };
-      }
-      messagesByPhone[phone].messages.push(message);
-      messagesByPhone[phone].projectIds.push(proj.projectId);
+      const group = getMessageGroup(phone, proj.report?.managerId || proj.assignments?.[0]?.managerId);
+      group.messages.push(message);
+      group.projectIds.push(proj.projectId);
+      group.reports.seo.push({ project: proj, report: proj.report });
       console.log(`✅ Added SEO report to queue for ${phone}`);
     }
 
@@ -150,7 +157,7 @@ async function runDailyMessagingJob() {
     console.log(`\n📣 Processing Marketing reports (${dailyReport.marketing.length})...`);
     for (const proj of dailyReport.marketing) {
       // Skip if no report data exists
-      if (!proj.report) {
+      if (!proj.report?.hasReport) {
         console.log(`⏭️  Skipping ${proj.projectName} - No marketing report data`);
         jobStats.skipped++;
         continue;
@@ -178,15 +185,10 @@ async function runDailyMessagingJob() {
       }
 
       // Group by phone number
-      if (!messagesByPhone[phone]) {
-        messagesByPhone[phone] = {
-          messages: [],
-          managerId: proj.report?.managerId || proj.assignments?.[0]?.managerId,
-          projectIds: [],
-        };
-      }
-      messagesByPhone[phone].messages.push(message);
-      messagesByPhone[phone].projectIds.push(proj.projectId);
+      const group = getMessageGroup(phone, proj.report?.managerId || proj.assignments?.[0]?.managerId);
+      group.messages.push(message);
+      group.projectIds.push(proj.projectId);
+      group.reports.marketing.push({ project: proj, report: proj.report });
       console.log(`✅ Added Marketing report to queue for ${phone}`);
     }
 
@@ -223,15 +225,10 @@ async function runDailyMessagingJob() {
       }
 
       // Group by phone number
-      if (!messagesByPhone[phone]) {
-        messagesByPhone[phone] = {
-          messages: [],
-          managerId: proj.assignments?.[0]?.managerId,
-          projectIds: [],
-        };
-      }
-      messagesByPhone[phone].messages.push(message);
-      messagesByPhone[phone].projectIds.push(proj.projectId);
+      const group = getMessageGroup(phone, proj.assignments?.[0]?.managerId);
+      group.messages.push(message);
+      group.projectIds.push(proj.projectId);
+      group.reports.socialMedia.push({ project: proj });
       console.log(`✅ Added Social Media report to queue for ${phone}`);
     }
 
@@ -381,6 +378,37 @@ function buildConsolidatedClientMessage(data, today) {
       seoInfo.focus = 'Improving and maintaining search visibility';
       seoInfo.status = 'On Track';
     }
+  }
+
+  // Use raw database values so metrics are not lost while parsing display text.
+  const marketingReport = data.reports?.marketing?.[0]?.report;
+  if (marketingReport) {
+    hasAds = true;
+    adsInfo.platform = marketingReport.typeOfAds || 'Meta Ads';
+    adsInfo.area = marketingReport.areaName || '';
+    adsInfo.status = marketingReport.isAdRunning === false ? 'Paused' : 'Running';
+    adsInfo.spend = marketingReport.todayAmountSpend != null
+      ? `₹${Number(marketingReport.todayAmountSpend).toFixed(2)}`
+      : '';
+    adsInfo.reach = marketingReport.todayReachObtained != null
+      ? Number(marketingReport.todayReachObtained).toLocaleString('en-IN')
+      : '';
+    adsInfo.leads = marketingReport.leadObtained != null
+      ? Number(marketingReport.leadObtained).toLocaleString('en-IN')
+      : '';
+  }
+
+  const seoReport = data.reports?.seo?.[0]?.report;
+  if (seoReport) {
+    hasSEO = true;
+    seoInfo.keyword = Array.isArray(seoReport.keywords)
+      ? seoReport.keywords.join(', ')
+      : '';
+    seoInfo.ranking = seoReport.rankingNo != null ? `#${seoReport.rankingNo}` : '';
+    seoInfo.lastChecked = seoReport.checkDate
+      ? new Date(seoReport.checkDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+      : dateStr;
+    seoInfo.focus = 'Improving and maintaining search visibility';
   }
 
   // BUILD SOCIAL MEDIA SECTION
