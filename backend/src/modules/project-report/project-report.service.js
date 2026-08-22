@@ -47,6 +47,11 @@ exports.createReport = async (user, body) => {
       projectId: body.projectId,
       employeeId: user.id,
       content: body.content,
+      lastWorking: body.lastWorking || null,
+      lastDiscussion: body.lastDiscussion || null,
+      nextStep: body.nextStep || null,
+      blockers: body.blockers || null,
+      taskProgress: body.taskProgress != null && body.taskProgress !== "" ? parseInt(body.taskProgress, 10) : null,
       date: body.date ? new Date(body.date) : new Date(),
     },
     include: {
