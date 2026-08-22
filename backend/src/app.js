@@ -110,6 +110,11 @@ app.use(
 );
 
 app.use(
+  "/api/seo-tasks",
+  require("./modules/seo-task/seo-task.routes")
+);
+
+app.use(
   "/api/marketing-reports",
   require("./modules/marketing-report/marketing-report.routes")
 );
