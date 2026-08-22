@@ -7,6 +7,7 @@ const formatReport = (report) => ({
   projectId: report.projectId,
   managerId: report.managerId,
   clientName: report.clientName,
+  clientContactNumber: report.clientContactNumber,
   videoLink: report.videoLink,
   areaName: report.areaName,
   isAdRunning: report.isAdRunning,
