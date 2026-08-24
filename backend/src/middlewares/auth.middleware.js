@@ -17,23 +17,21 @@ module.exports = async (req, res, next) => {
       throw new Error("Invalid token payload");
     }
 
-    if (!decoded.id && decoded.employeeId) {
-      const user = await prisma.user.findUnique({
-        where: { employeeId: decoded.employeeId },
-      });
+    const user = decoded.id
+      ? await prisma.user.findUnique({ where: { id: decoded.id } })
+      : decoded.employeeId
+        ? await prisma.user.findUnique({ where: { employeeId: decoded.employeeId } })
+        : null;
 
-      if (!user) {
-        return next(new ApiError(401, ERRORS.AUTH.UNAUTHORIZED));
-      }
-
-      req.user = {
-        id: user.id,
-        employeeId: user.employeeId,
-        role: user.role,
-      };
-    } else {
-      req.user = decoded;
+    if (!user) {
+      return next(new ApiError(401, ERRORS.AUTH.UNAUTHORIZED));
     }
+
+    req.user = {
+      id: user.id,
+      employeeId: user.employeeId,
+      role: user.role,
+    };
 
     next();
   } catch (err) {

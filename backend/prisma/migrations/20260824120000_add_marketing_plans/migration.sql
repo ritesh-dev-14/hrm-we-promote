@@ -1,0 +1,2 @@
+-- Reserved migration name from incomplete Marketing Plan work.
+-- No MarketingPlan model exists in the current Prisma schema.

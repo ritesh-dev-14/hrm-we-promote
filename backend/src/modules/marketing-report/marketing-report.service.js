@@ -16,6 +16,10 @@ const formatReport = (report) => ({
   reasonNotRunning: report.reasonNotRunning,
   typeOfAds: report.typeOfAds,
   leadObtained: report.leadObtained,
+  decidedDailyBudget: report.decidedDailyBudget,
+  leadSentToClient: report.leadSentToClient,
+  startDate: report.startDate,
+  campaignStartDate: report.campaignStartDate,
   date: report.date,
   createdAt: report.createdAt,
   updatedAt: report.updatedAt,
@@ -79,6 +83,15 @@ exports.createMarketingReport = async (user, body) => {
     isAdRunning = body.isAdRunning === true || body.isAdRunning === "true" || body.isAdRunning === "yes";
   }
 
+  let leadSentToClient = null;
+  if (body.leadSentToClient !== undefined && body.leadSentToClient !== null && body.leadSentToClient !== "") {
+    const value = String(body.leadSentToClient).trim().toLowerCase();
+    if (!["true", "false", "yes", "no"].includes(value)) {
+      throw new ApiError(400, { code: ERRORS.VALIDATION.INVALID_INPUT.code, message: "leadSentToClient must be yes or no." });
+    }
+    leadSentToClient = value === "true" || value === "yes";
+  }
+
   const report = await prisma.marketingReport.create({
     data: {
       projectId: body.projectId,
@@ -93,6 +106,10 @@ exports.createMarketingReport = async (user, body) => {
       reasonNotRunning: body.reasonNotRunning || null,
       typeOfAds: body.typeOfAds || null,
       leadObtained: body.leadObtained != null && body.leadObtained !== "" ? parseInt(body.leadObtained, 10) : null,
+      decidedDailyBudget: body.decidedDailyBudget != null && body.decidedDailyBudget !== "" ? parseFloat(body.decidedDailyBudget) : null,
+      leadSentToClient,
+      startDate: body.startDate ? new Date(body.startDate) : null,
+      campaignStartDate: body.campaignStartDate ? new Date(body.campaignStartDate) : null,
       date: body.date ? new Date(body.date) : new Date(),
     },
     include: {
@@ -230,6 +247,20 @@ exports.updateMarketingReport = async (user, reportId, body) => {
   if (body.reasonNotRunning !== undefined) data.reasonNotRunning = body.reasonNotRunning || null;
   if (body.typeOfAds !== undefined) data.typeOfAds = body.typeOfAds || null;
   if (body.leadObtained !== undefined) data.leadObtained = body.leadObtained != null && body.leadObtained !== "" ? parseInt(body.leadObtained, 10) : null;
+  if (body.decidedDailyBudget !== undefined) data.decidedDailyBudget = body.decidedDailyBudget != null && body.decidedDailyBudget !== "" ? parseFloat(body.decidedDailyBudget) : null;
+  if (body.leadSentToClient !== undefined) {
+    if (body.leadSentToClient === null || body.leadSentToClient === "") {
+      data.leadSentToClient = null;
+    } else {
+      const value = String(body.leadSentToClient).trim().toLowerCase();
+      if (!["true", "false", "yes", "no"].includes(value)) {
+        throw new ApiError(400, { code: ERRORS.VALIDATION.INVALID_INPUT.code, message: "leadSentToClient must be yes or no." });
+      }
+      data.leadSentToClient = value === "true" || value === "yes";
+    }
+  }
+  if (body.startDate !== undefined) data.startDate = body.startDate ? new Date(body.startDate) : null;
+  if (body.campaignStartDate !== undefined) data.campaignStartDate = body.campaignStartDate ? new Date(body.campaignStartDate) : null;
   if (body.date !== undefined) data.date = body.date ? new Date(body.date) : null;
 
   const updated = await prisma.marketingReport.update({

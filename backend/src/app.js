@@ -120,6 +120,11 @@ app.use(
 );
 
 app.use(
+  "/api/marketing-monthly-reports",
+  require("./modules/marketing-monthly-report/marketing-monthly-report.routes")
+);
+
+app.use(
   "/api/whatsapp-messages",
   require("./modules/whatsapp-message/whatsapp-message.routes")
 );

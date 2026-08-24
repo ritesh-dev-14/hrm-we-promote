@@ -59,6 +59,8 @@ model User {
   seoTasks                SeoTask[]                 @relation("ManagerSeoTasks")
   uploads                 Upload[]
   marketingReports        MarketingReport[]          @relation("ManagerMarketingReports")
+  marketingMonthlyReports MarketingMonthlyReport[]  @relation("ManagerMarketingMonthlyReports")
+  marketingMonthlyRemarks MarketingMonthlyReportRemark[] @relation("ManagerMarketingMonthlyRemarks")
   whatsappMessages        WhatsappMessage[]          @relation("ManagerWhatsappMessages")
 }
 
@@ -424,6 +426,7 @@ model Project {
   dailyReports  ProjectDailyReport[]
   seoReports    SeoReport[]
   marketingReports MarketingReport[]
+  marketingMonthlyReportRows MarketingMonthlyReportRow[]
   whatsappMessages WhatsappMessage[] @relation("ProjectWhatsappMessages")
 }
 
@@ -871,6 +874,10 @@ model MarketingReport {
   reasonNotRunning      String?
   typeOfAds             String?
   leadObtained          Int?
+  decidedDailyBudget    Float?
+  leadSentToClient      Boolean?
+  startDate             DateTime?
+  campaignStartDate     DateTime?
   date                  DateTime  @default(now())
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -881,6 +888,62 @@ model MarketingReport {
   @@index([projectId])
   @@index([managerId])
   @@index([date])
+}
+
+model MarketingMonthlyReport {
+  id        String   @id @default(uuid())
+  managerId String
+  month     Int
+  year      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  manager User                           @relation("ManagerMarketingMonthlyReports", fields: [managerId], references: [id])
+  rows    MarketingMonthlyReportRow[]
+  remarks MarketingMonthlyReportRemark[]
+
+  @@unique([month, year])
+  @@index([managerId])
+}
+
+model MarketingMonthlyReportRow {
+  id               String   @id @default(uuid())
+  reportId         String
+  projectId        String
+  clientName       String
+  currentlyRunning  Boolean
+  awarenessEnabled  Boolean
+  awarenessArea    String?
+  awarenessFunds   Float?
+  leadAdsEnabled   Boolean
+  leadsFund        Float?
+  leadArea         String?
+  requiredLeads    Int?
+  adsStartingDate  DateTime?
+  monthlyBudget    Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  report  MarketingMonthlyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  project Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([projectId])
+}
+
+model MarketingMonthlyReportRemark {
+  id        String   @id @default(uuid())
+  reportId  String
+  managerId String
+  remark    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  report  MarketingMonthlyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  manager User                   @relation("ManagerMarketingMonthlyRemarks", fields: [managerId], references: [id])
+
+  @@index([reportId])
+  @@index([managerId])
 }
 
 model WhatsappTemplate {
