@@ -1,4 +1,14 @@
 const service = require("./employee.service");
+const logoutStatusService = require("./logout-status.service");
+
+exports.getLogoutStatus = async (req, res, next) => {
+  try {
+    const data = await logoutStatusService.getLogoutStatus(req.user);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
 
 exports.getTasks = async (req, res, next) => {
   try {

@@ -7,20 +7,6 @@ const ERRORS = require("../../utils/errors");
 const { sendTaskItemAssignedToEmployeeMail } = require("../mail/mail.service");
 const { incrementUnread } = require("../../services/sidebarUnread.service");
 
-
-//
-// 🔥 CREATE TASK ITEM WITH ASSIGNMENT
-//
-// Manager/HR creates a task item from their task and assigns to specific employee
-//
-// Fields:
-// - title: String (required)
-// - employeeId: String (required) - which employee to assign to
-// - dueDate: DateTime (required)
-// - priority: Priority enum - LOW, MEDIUM, HIGH (required)
-// - description: String (optional)
-// - status: TaskItemStatus - DRAFT or IN_PROGRESS (default: DRAFT)
-//
 exports.createTaskItem = async (
   user,
   taskId,

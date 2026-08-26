@@ -131,7 +131,7 @@ const formatSheet = (sheet) => ({
   updatedAt: sheet.updatedAt,
 });
 
-const verifyProjectAccess = async (user, projectId) => {
+const verifyProjectAccess = async (user, projectId, allowUnsupported = false) => {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
@@ -147,7 +147,8 @@ const verifyProjectAccess = async (user, projectId) => {
     });
   }
 
-  if (!FREQUENCY_DEPARTMENTS.includes(project.department.name)) {
+  const supportsMonthlySheets = FREQUENCY_DEPARTMENTS.includes(project.department.name);
+  if (!supportsMonthlySheets && !allowUnsupported) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
       message: "Monthly sheets are only supported for SEO and Social Media projects.",
@@ -232,10 +233,14 @@ exports.createProjectMonthlySheet = async (user, projectId, body) => {
 };
 
 exports.getProjectMonthlySheets = async (user, projectId) => {
-  const { project, assignedManager } = await verifyProjectAccess(user, projectId);
+  const { project, assignedManager } = await verifyProjectAccess(user, projectId, true);
 
   if (user.role === "MANAGER" && !assignedManager) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  if (!FREQUENCY_DEPARTMENTS.includes(project.department.name)) {
+    return [];
   }
 
   const sheets = await prisma.projectMonthlySheet.findMany({

@@ -1,11 +1,5 @@
 const Joi = require("joi");
 
-//
-// 🔥 CREATE TASK ITEM WITH ASSIGNMENT
-//
-// When manager/HR creates a task item from a task
-// and assigns it to a specific employee
-//
 exports.createTaskItemSchema = Joi.object({
   title: Joi.string()
     .min(2)

@@ -1,8 +1,12 @@
 class ApiError extends Error {
   constructor(statusCode, error) {
-    super(error.message);
+    const normalizedError = typeof error === "string"
+      ? { message: error }
+      : error || {};
+
+    super(normalizedError.message || "Request failed");
     this.statusCode = statusCode;
-    this.code = error.code;
+    this.code = normalizedError.code;
     this.isOperational = true;
   }
 }

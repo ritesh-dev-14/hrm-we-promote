@@ -7,580 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                      String                    @id @default(uuid())
-  employeeId              String                    @unique
-  name                    String
-  email                   String                    @unique
-  password                String
-  role                    Role
-  position                String?
-  managerId               String?
-  probationPeriod         Boolean                   @default(true)
-  createdById             String?
-  createdAt               DateTime                  @default(now())
-  departmentId            String?
-  attendances             Attendance[]
-  employeeCoverages       EmployeeTaskCoverage[]    @relation("EmployeeCoverage")
-  managerCoverages        EmployeeTaskCoverage[]    @relation("ManagerCoverage")
-  reviewedLeaves          Leave[]                   @relation("LeaveReviewer")
-  leaves                  Leave[]
-  leaveBalance            LeaveBalance[]
-  notifications           Notification[]
-  createdTasks            Task[]                    @relation("CreatedTasks")
-  projectAssignments      ProjectAssignment[]       @relation("ProjectAssignmentManager")
-  createdProjects              Project[]                 @relation("CreatedProjects")
-  createdProjectMonthlySheets  ProjectMonthlySheet[]     @relation("CreatedProjectMonthlySheets")
-  createdShootWorkspaces       ShootWorkspace[]          @relation("UserCreatedShootWorkspaces")
-  createdShootTasks            ShootTask[]               @relation("UserCreatedShootTasks")
-  submittedShootSubTasks       ShootSubTask[]            @relation("UserSubmittedShootSubTasks")
-  reviewedShootSubTasks        ShootSubTask[]            @relation("UserReviewedShootSubTasks")
-  shootWorkspaceMemberships    ShootWorkspaceMember[]    @relation("UserShootWorkspaceMembers")
-  sentFollowUps                CoordinatorFollowUp[]
-  assignments                  TaskAssignment[]
-  employeeEscalations     TaskEscalation[]          @relation("EmployeeEscalation")
-  managerEscalations      TaskEscalation[]          @relation("ManagerEscalation")
-  taskItemAssignments     TaskItemAssignment[]
-  coordinatorAssignments  CoordinatorAssignment[]   @relation("CreatedCoordinatorAssignments")
-  assignedCoordinatorTasks CoordinatorAssignment[]  @relation("AssignedToUser")
-  createdBy               User?                     @relation("Hierarchy", fields: [createdById], references: [id])
-  children                User[]                    @relation("Hierarchy")
-  department              Department?               @relation(fields: [departmentId], references: [id])
-  manager                 User?                     @relation("UserManager", fields: [managerId], references: [id])
-  subordinates            User[]                    @relation("UserManager")
-  userDepartments         UserDepartment[]          @relation("UserDepartments")
-  employeeManagers        UserManager[]             @relation("EmployeeManagers")
-  managerEmployees        UserManager[]             @relation("ManagerEmployees")
-  sidebarUnreads          SidebarUnread[]
-  payslips                Payslip[]                 @relation("EmployeePayslips")
-  uploadedPayslips        Payslip[]                 @relation("UploadedPayslips")
-  projectDailyReports     ProjectDailyReport[]      @relation("EmployeeDailyReports")
-  seoReports              SeoReport[]               @relation("ManagerSeoReports")
-  seoTasks                SeoTask[]                 @relation("ManagerSeoTasks")
-  uploads                 Upload[]
-  marketingReports        MarketingReport[]          @relation("ManagerMarketingReports")
-  marketingMonthlyReports MarketingMonthlyReport[]  @relation("ManagerMarketingMonthlyReports")
-  marketingMonthlyRemarks MarketingMonthlyReportRemark[] @relation("ManagerMarketingMonthlyRemarks")
-  whatsappMessages        WhatsappMessage[]          @relation("ManagerWhatsappMessages")
-}
-
-model Attendance {
-  id         String           @id @default(uuid())
-  userId     String
-  date       DateTime
-  startTime  DateTime?
-  endTime    DateTime?
-  totalHours Float?
-  breakHours Float?
-  status     AttendanceStatus
-  createdAt  DateTime         @default(now())
-  user       User             @relation(fields: [userId], references: [id])
-  breaks     Break[]
-
-  @@unique([userId, date])
-}
-
-model Break {
-  id           String     @id @default(uuid())
-  attendanceId String
-  startTime    DateTime
-  endTime      DateTime?
-  createdAt    DateTime   @default(now())
-  attendance   Attendance @relation(fields: [attendanceId], references: [id])
-}
-
-model Task {
-  id          String           @id @default(uuid())
-  description String?
-  status      TaskStatus       @default(DRAFT)
-  createdAt   DateTime         @default(now())
-  createdById String
-  progress    Int              @default(0)
-  endDate     DateTime
-  projectName String
-  startDate   DateTime
-  projectId   String?          // Optional link to a Project record (used by Web Dev dept)
-  createdBy   User             @relation("CreatedTasks", fields: [createdById], references: [id])
-  project     Project?         @relation("TaskProject", fields: [projectId], references: [id], onDelete: SetNull)
-  assignments TaskAssignment[]
-  coordinatorAssignments CoordinatorAssignment[] @relation("CoordinatorAssignments")
-  items       TaskItem[]
-
-  @@index([createdById])
-  @@index([startDate])
-  @@index([endDate])
-  @@index([projectId])
-}
-
-model TaskAssignment {
-  id              String           @id @default(uuid())
-  taskId          String
-  userId          String
-  status          AssignmentStatus @default(ASSIGNED)
-  createdAt       DateTime         @default(now())
-  reminderSent    Boolean          @default(false)
-  submittedAt     DateTime?
-  acceptedAt      DateTime?
-  completedAt     DateTime?
-  progress        Int              @default(0)
-  rejectedAt      DateTime?
-  rejectionReason String?
-  startedAt       DateTime?
-  verifiedAt      DateTime?
-  workDate        DateTime
-  task            Task             @relation(fields: [taskId], references: [id])
-  employee        User             @relation(fields: [userId], references: [id])
-  submission      TaskSubmission?
-
-  @@unique([taskId, userId])
-  @@index([workDate])
-  @@index([userId, workDate])
-  @@index([userId])
-  @@index([status])
-}
-
-model TaskSubmission {
-  id                String         @id @default(uuid())
-  assignmentId      String         @unique
-  completedCount    Int
-  pendingCount      Int
-  driveLink         String
-  submittedAt       DateTime       @default(now())
-  remarks           String?
-  verifiedByManager Boolean        @default(false)
-  assignment        TaskAssignment @relation(fields: [assignmentId], references: [id])
-}
-
-model Notification {
-  id        String             @id @default(uuid())
-  userId    String
-  message   String
-  type      NotificationType
-  isRead    Boolean            @default(false)
-  createdAt DateTime           @default(now())
-  entityId  String?
-  level     NotificationLevel?
-  readAt    DateTime?
-  title     String
-  user      User               @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([isRead])
-}
-
-model Leave {
-  id         String      @id @default(uuid())
-  userId     String
-  startDate  DateTime
-  endDate    DateTime
-  reason     String
-  status     LeaveStatus @default(PENDING)
-  reviewedBy String?
-  reviewNote String?
-  createdAt  DateTime    @default(now())
-  days       Int
-  type       LeaveType
-  reviewer   User?       @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-}
-
-model LeaveBalance {
-  id         String   @id @default(uuid())
-  userId     String
-  casual     Int      @default(6)
-  sick       Int      @default(6)
-  usedCasual Int      @default(0)
-  usedSick   Int      @default(0)
-  year       Int
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, year])
-}
-
-model TaskEscalation {
-  id               String           @id @default(uuid())
-  managerId        String
-  escalationDate   DateTime         @map("date")
-  createdAt        DateTime         @default(now())
-  adminEscalatedAt DateTime?
-  adminMailSent    Boolean          @default(false)
-  employeeId       String
-  finalEscalatedAt DateTime?
-  hrEscalatedAt    DateTime?
-  hrMailSent       Boolean          @default(false)
-  managerMailSent  Boolean          @default(false)
-  popupSent        Boolean          @default(false)
-  reminder1SentAt  DateTime?
-  reminder2SentAt  DateTime?
-  reminder3SentAt  DateTime?
-  resolvedAt       DateTime?
-  status           EscalationStatus @default(PENDING)
-  type             EscalationType   @default(NEXT_DAY_MISSING)
-  employee         User             @relation("EmployeeEscalation", fields: [employeeId], references: [id])
-  manager          User             @relation("ManagerEscalation", fields: [managerId], references: [id])
-
-  @@unique([employeeId, escalationDate, type])
-  @@index([managerId])
-  @@index([status])
-  @@index([escalationDate])
-}
-
-model TaskItem {
-  id          String               @id @default(uuid())
-  taskId      String
-  title       String
-  description String?
-  order       Int?
-  status      TaskItemStatus       @default(DRAFT)
-  createdAt   DateTime             @default(now())
-  progress    Int                  @default(0)
-  dueDate     DateTime
-  priority    Priority             @default(MEDIUM)
-  referenceLink String?
-  rawDataLink   String?
-  task        Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  assignments TaskItemAssignment[]
-
-  @@index([taskId])
-}
-
-model TaskItemSubmission {
-  id                String             @id @default(uuid())
-  assignmentId      String             @unique
-  driveLink         String?
-  remarks           String?
-  submittedAt       DateTime           @default(now())
-  verifiedByManager Boolean            @default(false)
-  unableToSubmitReason String?
-  assignment        TaskItemAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-}
-
-model TaskItemAssignment {
-  id              String              @id @default(uuid())
-  taskItemId      String
-  userId          String
-  status          AssignmentStatus    @default(ASSIGNED)
-  submittedAt     DateTime?
-  createdAt       DateTime            @default(now())
-  acceptedAt      DateTime?
-  completedAt     DateTime?
-  progress        Int                 @default(0)
-  rejectedAt      DateTime?
-  rejectionReason String?
-  startedAt       DateTime?
-  verifiedAt      DateTime?
-  taskItem        TaskItem            @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
-  employee        User                @relation(fields: [userId], references: [id])
-  submission      TaskItemSubmission?
-
-  @@unique([taskItemId, userId])
-  @@index([userId])
-}
-
-model ShootWorkspace {
-  id          String                 @id @default(uuid())
-  name        String
-  description String?
-  createdById String
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-
-  createdBy User                   @relation("UserCreatedShootWorkspaces", fields: [createdById], references: [id])
-  members   ShootWorkspaceMember[]
-  tasks     ShootTask[]
-
-  @@index([createdById])
-}
-
-model ShootWorkspaceMember {
-  workspaceId String
-  userId      String
-  assignedAt  DateTime @default(now())
-
-  workspace ShootWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User           @relation("UserShootWorkspaceMembers", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([workspaceId, userId])
-  @@index([userId])
-}
-
-model ShootTask {
-  id          String    @id @default(uuid())
-  workspaceId String
-  title       String
-  description String?
-  noOfPics    Int       @default(0)
-  noOfReels   Int       @default(0)
-  date        String?
-  arrivalTime String?
-  location    String?
-  setupType   SetupType?
-  createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  workspace ShootWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User           @relation("UserCreatedShootTasks", fields: [createdById], references: [id])
-  subtasks  ShootSubTask[]
-
-  @@index([workspaceId])
-  @@index([createdById])
-}
-
-model ShootSubTask {
-  id                     String           @id @default(uuid())
-  taskId                 String
-  dayId                  String?
-  title                  String
-  description            String?
-  type                   ShootSubTaskType
-  referenceLinks         String[]
-  videoType              VideoType
-  setupType              SetupType?        @default(PREMIUM)
-  submissionLinks        String[]           @default([])
-  unableToSubmitReason   String?
-  submittedById          String?
-  submittedAt            DateTime?
-  status                 ShootSubTaskStatus @default(DRAFT)
-  reviewReason           String?
-  reviewedById           String?
-  reviewedAt             DateTime?
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
-
-  task ShootTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  day ProjectMonthlySheetDay? @relation(fields: [dayId], references: [id], onDelete: SetNull)
-  submittedBy User? @relation("UserSubmittedShootSubTasks", fields: [submittedById], references: [id])
-  reviewedBy  User? @relation("UserReviewedShootSubTasks", fields: [reviewedById], references: [id])
-
-  @@index([taskId])
-  @@index([dayId])
-  @@index([submittedById])
-  @@index([reviewedById])
-}
-
-model Department {
-  id              String            @id @default(uuid())
-  name            String            @unique
-  createdAt       DateTime          @default(now())
-  users           User[]
-  projects        Project[]
-  userDepartments UserDepartment[]  @relation("DepartmentUsers")
-}
-
-model Project {
-  id            String             @id @default(uuid())
-  projectName   String
-  description   String?
-  departmentId  String
-  startDate     DateTime
-  endDate       DateTime
-  renewalDate   DateTime?
-  frequency     String?
-  clientName    String?
-  location      String?
-  phone         String?
-  fbEmail       String?
-  fbPassword    String?
-  instaEmail    String?
-  instaPassword String?
-  projectStartDate DateTime?
-  reference     String[]           @default([])
-  taste         String[]           @default([])
-  instaUsername String?
-  facebookUsername String?
-  linkedinEmail String?
-  linkedinPassword String?
-  youtubeEmail  String?
-  youtubePassword String?
-  twitterEmail  String?
-  twitterPassword String?
-  logo          String?
-  reasons       Json?              @default("[]")
-  // Web Development Department specific fields
-  domainName    String?
-  domainPassword String?
-  clientEmail   String?
-  clientEmailPassword String?
-  requirements  String?            // Rich text + URLs for Web Dev project requirements
-  // SEO Department specific fields
-  seoEmail      String?
-  seoPassword   String?
-  seoName       String?
-  seoContact    String?
-  createdById   String?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-
-  department    Department         @relation(fields: [departmentId], references: [id])
-  createdBy     User?              @relation("CreatedProjects", fields: [createdById], references: [id])
-  assignments   ProjectAssignment[]
-  monthlySheets ProjectMonthlySheet[]
-  tasks         Task[]             @relation("TaskProject")
-  seoTasks      SeoTask[]
-  status        ProjectStatus      @default(ONGOING)
-  dailyReports  ProjectDailyReport[]
-  seoReports    SeoReport[]
-  marketingReports MarketingReport[]
-  marketingMonthlyReportRows MarketingMonthlyReportRow[]
-  whatsappMessages WhatsappMessage[] @relation("ProjectWhatsappMessages")
-}
-
-model ProjectAssignment {
-  id         String   @id @default(uuid())
-  projectId  String
-  managerId  String
-  assignedAt DateTime @default(now())
-
-  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  manager    User     @relation("ProjectAssignmentManager", fields: [managerId], references: [id])
-
-  @@unique([projectId, managerId])
-  @@index([managerId])
-  @@index([projectId])
-}
-
-model ProjectMonthlySheet {
-  id                 String                      @id @default(uuid())
-  projectId          String
-  month              Int
-  year               Int
-  totalReels         Int
-  totalPosts         Int
-  totalReelsUploaded Int
-  totalPostsUploaded Int
-  moodBoardLink      String
-  createdById        String
-  createdAt          DateTime                    @default(now())
-  updatedAt          DateTime                    @updatedAt
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy User @relation("CreatedProjectMonthlySheets", fields: [createdById], references: [id])
-  days ProjectMonthlySheetDay[]
-
-  @@unique([projectId, month, year])
-  @@index([projectId])
-  @@index([createdById])
-}
-
-model ProjectMonthlySheetDay {
-  id             String             @id @default(uuid())
-  sheetId        String
-  date           DateTime
-  reelType       MediaSource?
-  postType       MediaSource?
-  videoType      VideoType?
-  title          String?
-  referenceLinks String[]           @default([])
-  submissionLinks String[]          @default([])
-  contentUploadLinks String[]       @default([])
-  videoUploadLinks String[]         @default([])
-  script         String?
-  description    String?
-  uploadStatus   UploadStatus       @default(PENDING)
-  uploadRejectReason String?
-  createdAt      DateTime           @default(now())
-
-  sheet ProjectMonthlySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
-  shootSubTasks ShootSubTask[]
-
-  @@index([sheetId])
-  @@unique([sheetId, date])
-}
-
-model UserDepartment {
-  userId       String
-  departmentId String
-  assignedAt   DateTime @default(now())
-
-  user         User       @relation("UserDepartments", fields: [userId], references: [id], onDelete: Cascade)
-  department   Department @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: Cascade)
-
-  @@id([userId, departmentId])
-}
-
-model UserManager {
-  employeeId String
-  managerId  String
-  assignedAt DateTime @default(now())
-
-  employee   User @relation("EmployeeManagers", fields: [employeeId], references: [id], onDelete: Cascade)
-  manager    User @relation("ManagerEmployees", fields: [managerId], references: [id], onDelete: Cascade)
-
-  @@id([employeeId, managerId])
-}
-
-model EmployeeTaskCoverage {
-  id         String    @id @default(uuid())
-  employeeId String
-  managerId  String
-  date       DateTime
-  taskCount  Int       @default(0)
-  checkedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  employee   User      @relation("EmployeeCoverage", fields: [employeeId], references: [id])
-  manager    User      @relation("ManagerCoverage", fields: [managerId], references: [id])
-
-  @@unique([employeeId, date])
-  @@index([managerId])
-  @@index([date])
-}
-
-model CoordinatorAssignment {
-  id               String           @id @default(uuid())
-  taskId           String
-  assignedToId     String
-  createdById      String
-  assignedBy       String           // Text field - coordinator's name entered manually
-  assignedTime     DateTime         @default(now())
-  completionDate   DateTime
-  reason           String?          // Only for incomplete tasks
-  employeeNumber   String
-  employeeEmail    String
-  status           AssignmentStatus @default(ASSIGNED)
-  submittedAt      DateTime?
-  completedAt      DateTime?
-  rejectedAt       DateTime?
-  rejectionReason  String?
-  startedAt        DateTime?
-  overdueAlertSentAt DateTime?      // Tracks last overdue alert email timestamp
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  
-  task             Task             @relation("CoordinatorAssignments", fields: [taskId], references: [id], onDelete: Cascade)
-  assignedTo       User             @relation("AssignedToUser", fields: [assignedToId], references: [id])
-  createdBy        User             @relation("CreatedCoordinatorAssignments", fields: [createdById], references: [id])
-  followUpMessages CoordinatorFollowUp[]
-
-  @@unique([taskId, assignedToId])
-  @@index([createdById])
-  @@index([assignedToId])
-  @@index([status])
-  @@index([assignedTime])
-}
-
-
-model CoordinatorFollowUp {
-  id           String                 @id @default(uuid())
-  assignmentId String
-  senderId     String
-  message      String
-  messageType  FollowUpMessageType    @default(FOLLOW_UP)
-  senderRole   Role
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
-
-  assignment   CoordinatorAssignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  sender       User                   @relation(fields: [senderId], references: [id])
-
-  @@index([assignmentId])
-  @@index([senderId])
-}
-
 enum FollowUpMessageType {
   INITIAL
   FOLLOW_UP
@@ -726,17 +152,253 @@ enum EscalationType {
   FUTURE_4_DAYS_MISSING
 }
 
-model SidebarUnread {
+enum ProjectStatus {
+  ONGOING
+  SUBMITTED
+  VERIFIED
+}
+
+enum WhatsappMessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+model Attendance {
+  id         String           @id @default(uuid())
+  userId     String
+  date       DateTime
+  startTime  DateTime?
+  endTime    DateTime?
+  totalHours Float?
+  breakHours Float?
+  status     AttendanceStatus
+  createdAt  DateTime         @default(now())
+  user       User             @relation(fields: [userId], references: [id])
+  breaks     Break[]
+
+  @@unique([userId, date])
+}
+
+model Break {
+  id           String     @id @default(uuid())
+  attendanceId String
+  startTime    DateTime
+  endTime      DateTime?
+  createdAt    DateTime   @default(now())
+  attendance   Attendance @relation(fields: [attendanceId], references: [id])
+}
+
+model CoordinatorAssignment {
+  id               String           @id @default(uuid())
+  taskId           String
+  assignedToId     String
+  createdById      String
+  assignedBy       String           // Text field - coordinator's name entered manually
+  assignedTime     DateTime         @default(now())
+  completionDate   DateTime
+  reason           String?          // Only for incomplete tasks
+  employeeNumber   String
+  employeeEmail    String
+  status           AssignmentStatus @default(ASSIGNED)
+  submittedAt      DateTime?
+  completedAt      DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  startedAt        DateTime?
+  overdueAlertSentAt DateTime?      // Tracks last overdue alert email timestamp
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  task             Task             @relation("CoordinatorAssignments", fields: [taskId], references: [id], onDelete: Cascade)
+  assignedTo       User             @relation("AssignedToUser", fields: [assignedToId], references: [id])
+  createdBy        User             @relation("CreatedCoordinatorAssignments", fields: [createdById], references: [id])
+  followUpMessages CoordinatorFollowUp[]
+
+  @@unique([taskId, assignedToId])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([assignedTime])
+}
+
+model CoordinatorFollowUp {
+  id           String                 @id @default(uuid())
+  assignmentId String
+  senderId     String
+  message      String
+  messageType  FollowUpMessageType    @default(FOLLOW_UP)
+  senderRole   Role
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  assignment   CoordinatorAssignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  sender       User                   @relation(fields: [senderId], references: [id])
+
+  @@index([assignmentId])
+  @@index([senderId])
+}
+
+model Department {
+  id              String            @id @default(uuid())
+  name            String            @unique
+  createdAt       DateTime          @default(now())
+  users           User[]
+  projects        Project[]
+  userDepartments UserDepartment[]  @relation("DepartmentUsers")
+}
+
+model EmployeeTaskCoverage {
+  id         String    @id @default(uuid())
+  employeeId String
+  managerId  String
+  date       DateTime
+  taskCount  Int       @default(0)
+  checkedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  employee   User      @relation("EmployeeCoverage", fields: [employeeId], references: [id])
+  manager    User      @relation("ManagerCoverage", fields: [managerId], references: [id])
+
+  @@unique([employeeId, date])
+  @@index([managerId])
+  @@index([date])
+}
+
+model Leave {
+  id         String      @id @default(uuid())
+  userId     String
+  startDate  DateTime
+  endDate    DateTime
+  reason     String
+  status     LeaveStatus @default(PENDING)
+  reviewedBy String?
+  reviewNote String?
+  createdAt  DateTime    @default(now())
+  days       Int
+  type       LeaveType
+  reviewer   User?       @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model LeaveBalance {
+  id         String   @id @default(uuid())
+  userId     String
+  casual     Int      @default(6)
+  sick       Int      @default(6)
+  usedCasual Int      @default(0)
+  usedSick   Int      @default(0)
+  year       Int
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year])
+}
+
+model MarketingMonthlyReport {
   id        String   @id @default(uuid())
-  userId    String
-  menuId    String
-  count     Int      @default(0)
+  managerId String
+  month     Int
+  year      Int
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manager User                           @relation("ManagerMarketingMonthlyReports", fields: [managerId], references: [id])
+  rows    MarketingMonthlyReportRow[]
+  remarks MarketingMonthlyReportRemark[]
 
-  @@unique([userId, menuId])
+  @@unique([month, year])
+  @@index([managerId])
+}
+
+model MarketingMonthlyReportRemark {
+  id        String   @id @default(uuid())
+  reportId  String
+  managerId String
+  remark    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  report  MarketingMonthlyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  manager User                   @relation("ManagerMarketingMonthlyRemarks", fields: [managerId], references: [id])
+
+  @@index([reportId])
+  @@index([managerId])
+}
+
+model MarketingMonthlyReportRow {
+  id               String   @id @default(uuid())
+  reportId         String
+  projectId        String
+  clientName       String
+  currentlyRunning  Boolean
+  awarenessEnabled  Boolean
+  awarenessArea    String?
+  awarenessFunds   Float?
+  leadAdsEnabled   Boolean
+  leadsFund        Float?
+  leadArea         String?
+  requiredLeads    Int?
+  adsStartingDate  DateTime?
+  monthlyBudget    Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  report  MarketingMonthlyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  project Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([projectId])
+}
+
+model MarketingReport {
+  id                    String    @id @default(uuid())
+  projectId             String
+  managerId             String
+  clientName            String?
+  clientContactNumber   String?
+  videoLink             String?
+  areaName              String?
+  isAdRunning           Boolean?
+  todayReachObtained    Int?
+  todayAmountSpend      Float?
+  reasonNotRunning      String?
+  typeOfAds             String?
+  leadObtained          Int?
+  decidedDailyBudget    Float?
+  leadSentToClient      Boolean?
+  startDate             DateTime?
+  campaignStartDate     DateTime?
+  date                  DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  manager  User    @relation("ManagerMarketingReports", fields: [managerId], references: [id])
+
+  @@index([projectId])
+  @@index([managerId])
+  @@index([date])
+}
+
+model Notification {
+  id        String             @id @default(uuid())
+  userId    String
+  message   String
+  type      NotificationType
+  isRead    Boolean            @default(false)
+  createdAt DateTime           @default(now())
+  entityId  String?
+  level     NotificationLevel?
+  readAt    DateTime?
+  title     String
+  user      User               @relation(fields: [userId], references: [id])
+
   @@index([userId])
+  @@index([isRead])
 }
 
 model Payslip {
@@ -761,6 +423,78 @@ model Payslip {
   @@index([month, year])
 }
 
+model Project {
+  id            String             @id @default(uuid())
+  projectName   String
+  description   String?
+  departmentId  String
+  startDate     DateTime
+  endDate       DateTime
+  renewalDate   DateTime?
+  frequency     String?
+  clientName    String?
+  location      String?
+  phone         String?
+  fbEmail       String?
+  fbPassword    String?
+  instaEmail    String?
+  instaPassword String?
+  projectStartDate DateTime?
+  reference     String[]           @default([])
+  taste         String[]           @default([])
+  instaUsername String?
+  facebookUsername String?
+  linkedinEmail String?
+  linkedinPassword String?
+  youtubeEmail  String?
+  youtubePassword String?
+  twitterEmail  String?
+  twitterPassword String?
+  logo          String?
+  reasons       Json?              @default("[]")
+  // Web Development Department specific fields
+  domainName    String?
+  domainPassword String?
+  clientEmail   String?
+  clientEmailPassword String?
+  requirements  String?            // Rich text + URLs for Web Dev project requirements
+  // SEO Department specific fields
+  seoEmail      String?
+  seoPassword   String?
+  seoName       String?
+  seoContact    String?
+  createdById   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  department    Department         @relation(fields: [departmentId], references: [id])
+  createdBy     User?              @relation("CreatedProjects", fields: [createdById], references: [id])
+  assignments   ProjectAssignment[]
+  monthlySheets ProjectMonthlySheet[]
+  tasks         Task[]             @relation("TaskProject")
+  seoTasks      SeoTask[]
+  status        ProjectStatus      @default(ONGOING)
+  dailyReports  ProjectDailyReport[]
+  seoReports    SeoReport[]
+  marketingReports MarketingReport[]
+  marketingMonthlyReportRows MarketingMonthlyReportRow[]
+  whatsappMessages WhatsappMessage[] @relation("ProjectWhatsappMessages")
+}
+
+model ProjectAssignment {
+  id         String   @id @default(uuid())
+  projectId  String
+  managerId  String
+  assignedAt DateTime @default(now())
+
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  manager    User     @relation("ProjectAssignmentManager", fields: [managerId], references: [id])
+
+  @@unique([projectId, managerId])
+  @@index([managerId])
+  @@index([projectId])
+}
+
 model ProjectDailyReport {
   id                  String   @id @default(uuid())
   projectId           String
@@ -782,40 +516,52 @@ model ProjectDailyReport {
   @@index([employeeId])
 }
 
-model Upload {
-  id            String       @id @default(uuid())
-  projectName   String
-  uploadDate    DateTime
-  clientName    String
-  totalUploads  Int          @default(0)
-  createdById   String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+model ProjectMonthlySheet {
+  id                 String                      @id @default(uuid())
+  projectId          String
+  month              Int
+  year               Int
+  totalReels         Int
+  totalPosts         Int
+  totalReelsUploaded Int
+  totalPostsUploaded Int
+  moodBoardLink      String
+  createdById        String
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
 
-  createdBy     User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  items         UploadItem[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User @relation("CreatedProjectMonthlySheets", fields: [createdById], references: [id])
+  days ProjectMonthlySheetDay[]
 
+  @@unique([projectId, month, year])
+  @@index([projectId])
   @@index([createdById])
-  @@index([uploadDate])
 }
 
-model UploadItem {
-  id            String   @id @default(uuid())
-  uploadId      String
-  dataType      String
-  platform      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model ProjectMonthlySheetDay {
+  id             String             @id @default(uuid())
+  sheetId        String
+  date           DateTime
+  reelType       MediaSource?
+  postType       MediaSource?
+  videoType      VideoType?
+  title          String?
+  referenceLinks String[]           @default([])
+  submissionLinks String[]          @default([])
+  contentUploadLinks String[]       @default([])
+  videoUploadLinks String[]         @default([])
+  script         String?
+  description    String?
+  uploadStatus   UploadStatus       @default(PENDING)
+  uploadRejectReason String?
+  createdAt      DateTime           @default(now())
 
-  upload        Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  sheet ProjectMonthlySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  shootSubTasks ShootSubTask[]
 
-  @@index([uploadId])
-}
-
-enum ProjectStatus {
-  ONGOING
-  SUBMITTED
-  VERIFIED
+  @@index([sheetId])
+  @@unique([sheetId, date])
 }
 
 model SeoReport {
@@ -860,106 +606,350 @@ model SeoTask {
   @@index([createdAt])
 }
 
-model MarketingReport {
-  id                    String    @id @default(uuid())
-  projectId             String
-  managerId             String
-  clientName            String?
-  clientContactNumber   String?
-  videoLink             String?
-  areaName              String?
-  isAdRunning           Boolean?
-  todayReachObtained    Int?
-  todayAmountSpend      Float?
-  reasonNotRunning      String?
-  typeOfAds             String?
-  leadObtained          Int?
-  decidedDailyBudget    Float?
-  leadSentToClient      Boolean?
-  startDate             DateTime?
-  campaignStartDate     DateTime?
-  date                  DateTime  @default(now())
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+model ShootSubTask {
+  id                     String           @id @default(uuid())
+  taskId                 String
+  dayId                  String?
+  title                  String
+  description            String?
+  type                   ShootSubTaskType
+  referenceLinks         String[]
+  videoType              VideoType
+  setupType              SetupType?        @default(PREMIUM)
+  submissionLinks        String[]           @default([])
+  unableToSubmitReason   String?
+  submittedById          String?
+  submittedAt            DateTime?
+  status                 ShootSubTaskStatus @default(DRAFT)
+  reviewReason           String?
+  reviewedById           String?
+  reviewedAt             DateTime?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 
-  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  manager  User    @relation("ManagerMarketingReports", fields: [managerId], references: [id])
+  task ShootTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  day ProjectMonthlySheetDay? @relation(fields: [dayId], references: [id], onDelete: SetNull)
+  submittedBy User? @relation("UserSubmittedShootSubTasks", fields: [submittedById], references: [id])
+  reviewedBy  User? @relation("UserReviewedShootSubTasks", fields: [reviewedById], references: [id])
 
-  @@index([projectId])
-  @@index([managerId])
-  @@index([date])
+  @@index([taskId])
+  @@index([dayId])
+  @@index([submittedById])
+  @@index([reviewedById])
 }
 
-model MarketingMonthlyReport {
+model ShootTask {
+  id          String    @id @default(uuid())
+  workspaceId String
+  title       String
+  description String?
+  noOfPics    Int       @default(0)
+  noOfReels   Int       @default(0)
+  date        String?
+  arrivalTime String?
+  location    String?
+  setupType   SetupType?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace ShootWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User           @relation("UserCreatedShootTasks", fields: [createdById], references: [id])
+  subtasks  ShootSubTask[]
+
+  @@index([workspaceId])
+  @@index([createdById])
+}
+
+model ShootWorkspace {
+  id          String                 @id @default(uuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  createdBy User                   @relation("UserCreatedShootWorkspaces", fields: [createdById], references: [id])
+  members   ShootWorkspaceMember[]
+  tasks     ShootTask[]
+
+  @@index([createdById])
+}
+
+model ShootWorkspaceMember {
+  workspaceId String
+  userId      String
+  assignedAt  DateTime @default(now())
+
+  workspace ShootWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User           @relation("UserShootWorkspaceMembers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+  @@index([userId])
+}
+
+model SidebarUnread {
   id        String   @id @default(uuid())
-  managerId String
-  month     Int
-  year      Int
-  createdAt DateTime @default(now())
+  userId    String
+  menuId    String
+  count     Int      @default(0)
   updatedAt DateTime @updatedAt
 
-  manager User                           @relation("ManagerMarketingMonthlyReports", fields: [managerId], references: [id])
-  rows    MarketingMonthlyReportRow[]
-  remarks MarketingMonthlyReportRemark[]
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([month, year])
-  @@index([managerId])
+  @@unique([userId, menuId])
+  @@index([userId])
 }
 
-model MarketingMonthlyReportRow {
-  id               String   @id @default(uuid())
-  reportId         String
-  projectId        String
-  clientName       String
-  currentlyRunning  Boolean
-  awarenessEnabled  Boolean
-  awarenessArea    String?
-  awarenessFunds   Float?
-  leadAdsEnabled   Boolean
-  leadsFund        Float?
-  leadArea         String?
-  requiredLeads    Int?
-  adsStartingDate  DateTime?
-  monthlyBudget    Float?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+model Task {
+  id          String           @id @default(uuid())
+  description String?
+  status      TaskStatus       @default(DRAFT)
+  createdAt   DateTime         @default(now())
+  createdById String
+  progress    Int              @default(0)
+  endDate     DateTime
+  projectName String
+  startDate   DateTime
+  projectId   String?          // Optional link to a Project record (used by Web Dev dept)
+  createdBy   User             @relation("CreatedTasks", fields: [createdById], references: [id])
+  project     Project?         @relation("TaskProject", fields: [projectId], references: [id], onDelete: SetNull)
+  assignments TaskAssignment[]
+  coordinatorAssignments CoordinatorAssignment[] @relation("CoordinatorAssignments")
+  items       TaskItem[]
 
-  report  MarketingMonthlyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  project Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([reportId])
+  @@index([createdById])
+  @@index([startDate])
+  @@index([endDate])
   @@index([projectId])
 }
 
-model MarketingMonthlyReportRemark {
-  id        String   @id @default(uuid())
-  reportId  String
-  managerId String
-  remark    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model TaskAssignment {
+  id              String           @id @default(uuid())
+  taskId          String
+  userId          String
+  status          AssignmentStatus @default(ASSIGNED)
+  createdAt       DateTime         @default(now())
+  reminderSent    Boolean          @default(false)
+  submittedAt     DateTime?
+  acceptedAt      DateTime?
+  completedAt     DateTime?
+  progress        Int              @default(0)
+  rejectedAt      DateTime?
+  rejectionReason String?
+  startedAt       DateTime?
+  verifiedAt      DateTime?
+  workDate        DateTime
+  task            Task             @relation(fields: [taskId], references: [id])
+  employee        User             @relation(fields: [userId], references: [id])
+  submission      TaskSubmission?
 
-  report  MarketingMonthlyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  manager User                   @relation("ManagerMarketingMonthlyRemarks", fields: [managerId], references: [id])
-
-  @@index([reportId])
-  @@index([managerId])
+  @@unique([taskId, userId])
+  @@index([workDate])
+  @@index([userId, workDate])
+  @@index([userId])
+  @@index([status])
 }
 
-model WhatsappTemplate {
-  id                String    @id @default(uuid())
-  name              String    @unique
-  departmentType    String    // e.g., "SOCIAL_MEDIA", "SEO", "WEB_DEV"
-  templateContent   String    // Template with placeholders like {clientName}, {uploadLink}, etc.
-  variables         String[]  // Array of variable names used in template
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+model TaskEscalation {
+  id               String           @id @default(uuid())
+  managerId        String
+  escalationDate   DateTime         @map("date")
+  createdAt        DateTime         @default(now())
+  adminEscalatedAt DateTime?
+  adminMailSent    Boolean          @default(false)
+  employeeId       String
+  finalEscalatedAt DateTime?
+  hrEscalatedAt    DateTime?
+  hrMailSent       Boolean          @default(false)
+  managerMailSent  Boolean          @default(false)
+  popupSent        Boolean          @default(false)
+  reminder1SentAt  DateTime?
+  reminder2SentAt  DateTime?
+  reminder3SentAt  DateTime?
+  resolvedAt       DateTime?
+  status           EscalationStatus @default(PENDING)
+  type             EscalationType   @default(NEXT_DAY_MISSING)
+  employee         User             @relation("EmployeeEscalation", fields: [employeeId], references: [id])
+  manager          User             @relation("ManagerEscalation", fields: [managerId], references: [id])
 
-  messages          WhatsappMessage[] @relation("TemplateMessages")
+  @@unique([employeeId, escalationDate, type])
+  @@index([managerId])
+  @@index([status])
+  @@index([escalationDate])
+}
 
-  @@index([departmentType])
-  @@index([isActive])
+model TaskItem {
+  id          String               @id @default(uuid())
+  taskId      String
+  title       String
+  description String?
+  order       Int?
+  status      TaskItemStatus       @default(DRAFT)
+  createdAt   DateTime             @default(now())
+  progress    Int                  @default(0)
+  dueDate     DateTime
+  priority    Priority             @default(MEDIUM)
+  referenceLink String?
+  rawDataLink   String?
+  task        Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  assignments TaskItemAssignment[]
+
+  @@index([taskId])
+}
+
+model TaskItemAssignment {
+  id              String              @id @default(uuid())
+  taskItemId      String
+  userId          String
+  status          AssignmentStatus    @default(ASSIGNED)
+  submittedAt     DateTime?
+  createdAt       DateTime            @default(now())
+  acceptedAt      DateTime?
+  completedAt     DateTime?
+  progress        Int                 @default(0)
+  rejectedAt      DateTime?
+  rejectionReason String?
+  startedAt       DateTime?
+  verifiedAt      DateTime?
+  taskItem        TaskItem            @relation(fields: [taskItemId], references: [id], onDelete: Cascade)
+  employee        User                @relation(fields: [userId], references: [id])
+  submission      TaskItemSubmission?
+
+  @@unique([taskItemId, userId])
+  @@index([userId])
+}
+
+model TaskItemSubmission {
+  id                String             @id @default(uuid())
+  assignmentId      String             @unique
+  driveLink         String?
+  remarks           String?
+  submittedAt       DateTime           @default(now())
+  verifiedByManager Boolean            @default(false)
+  unableToSubmitReason String?
+  assignment        TaskItemAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+}
+
+model TaskSubmission {
+  id                String         @id @default(uuid())
+  assignmentId      String         @unique
+  completedCount    Int
+  pendingCount      Int
+  driveLink         String
+  submittedAt       DateTime       @default(now())
+  remarks           String?
+  verifiedByManager Boolean        @default(false)
+  assignment        TaskAssignment @relation(fields: [assignmentId], references: [id])
+}
+
+model Upload {
+  id            String       @id @default(uuid())
+  projectName   String
+  uploadDate    DateTime
+  clientName    String
+  totalUploads  Int          @default(0)
+  createdById   String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  createdBy     User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  items         UploadItem[]
+
+  @@index([createdById])
+  @@index([uploadDate])
+}
+
+model UploadItem {
+  id            String   @id @default(uuid())
+  uploadId      String
+  dataType      String
+  platform      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  upload        Upload   @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([uploadId])
+}
+
+model User {
+  id                      String                    @id @default(uuid())
+  employeeId              String                    @unique
+  name                    String
+  email                   String                    @unique
+  password                String
+  role                    Role
+  position                String?
+  managerId               String?
+  probationPeriod         Boolean                   @default(true)
+  createdById             String?
+  createdAt               DateTime                  @default(now())
+  departmentId            String?
+  attendances             Attendance[]
+  employeeCoverages       EmployeeTaskCoverage[]    @relation("EmployeeCoverage")
+  managerCoverages        EmployeeTaskCoverage[]    @relation("ManagerCoverage")
+  reviewedLeaves          Leave[]                   @relation("LeaveReviewer")
+  leaves                  Leave[]
+  leaveBalance            LeaveBalance[]
+  notifications           Notification[]
+  createdTasks            Task[]                    @relation("CreatedTasks")
+  projectAssignments      ProjectAssignment[]       @relation("ProjectAssignmentManager")
+  createdProjects              Project[]                 @relation("CreatedProjects")
+  createdProjectMonthlySheets  ProjectMonthlySheet[]     @relation("CreatedProjectMonthlySheets")
+  createdShootWorkspaces       ShootWorkspace[]          @relation("UserCreatedShootWorkspaces")
+  createdShootTasks            ShootTask[]               @relation("UserCreatedShootTasks")
+  submittedShootSubTasks       ShootSubTask[]            @relation("UserSubmittedShootSubTasks")
+  reviewedShootSubTasks        ShootSubTask[]            @relation("UserReviewedShootSubTasks")
+  shootWorkspaceMemberships    ShootWorkspaceMember[]    @relation("UserShootWorkspaceMembers")
+  sentFollowUps                CoordinatorFollowUp[]
+  assignments                  TaskAssignment[]
+  employeeEscalations     TaskEscalation[]          @relation("EmployeeEscalation")
+  managerEscalations      TaskEscalation[]          @relation("ManagerEscalation")
+  taskItemAssignments     TaskItemAssignment[]
+  coordinatorAssignments  CoordinatorAssignment[]   @relation("CreatedCoordinatorAssignments")
+  assignedCoordinatorTasks CoordinatorAssignment[]  @relation("AssignedToUser")
+  createdBy               User?                     @relation("Hierarchy", fields: [createdById], references: [id])
+  children                User[]                    @relation("Hierarchy")
+  department              Department?               @relation(fields: [departmentId], references: [id])
+  manager                 User?                     @relation("UserManager", fields: [managerId], references: [id])
+  subordinates            User[]                    @relation("UserManager")
+  userDepartments         UserDepartment[]          @relation("UserDepartments")
+  employeeManagers        UserManager[]             @relation("EmployeeManagers")
+  managerEmployees        UserManager[]             @relation("ManagerEmployees")
+  sidebarUnreads          SidebarUnread[]
+  payslips                Payslip[]                 @relation("EmployeePayslips")
+  uploadedPayslips        Payslip[]                 @relation("UploadedPayslips")
+  projectDailyReports     ProjectDailyReport[]      @relation("EmployeeDailyReports")
+  seoReports              SeoReport[]               @relation("ManagerSeoReports")
+  seoTasks                SeoTask[]                 @relation("ManagerSeoTasks")
+  uploads                 Upload[]
+  marketingReports        MarketingReport[]          @relation("ManagerMarketingReports")
+  marketingMonthlyReports MarketingMonthlyReport[]  @relation("ManagerMarketingMonthlyReports")
+  marketingMonthlyRemarks MarketingMonthlyReportRemark[] @relation("ManagerMarketingMonthlyRemarks")
+  whatsappMessages        WhatsappMessage[]          @relation("ManagerWhatsappMessages")
+}
+
+model UserDepartment {
+  userId       String
+  departmentId String
+  assignedAt   DateTime @default(now())
+
+  user         User       @relation("UserDepartments", fields: [userId], references: [id], onDelete: Cascade)
+  department   Department @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, departmentId])
+}
+
+model UserManager {
+  employeeId String
+  managerId  String
+  assignedAt DateTime @default(now())
+
+  employee   User @relation("EmployeeManagers", fields: [employeeId], references: [id], onDelete: Cascade)
+  manager    User @relation("ManagerEmployees", fields: [managerId], references: [id], onDelete: Cascade)
+
+  @@id([employeeId, managerId])
 }
 
 model WhatsappMessage {
@@ -988,9 +978,18 @@ model WhatsappMessage {
   @@index([createdAt])
 }
 
-enum WhatsappMessageStatus {
-  PENDING
-  SENT
-  DELIVERED
-  FAILED
+model WhatsappTemplate {
+  id                String    @id @default(uuid())
+  name              String    @unique
+  departmentType    String    // e.g., "SOCIAL_MEDIA", "SEO", "WEB_DEV"
+  templateContent   String    // Template with placeholders like {clientName}, {uploadLink}, etc.
+  variables         String[]  // Array of variable names used in template
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  messages          WhatsappMessage[] @relation("TemplateMessages")
+
+  @@index([departmentType])
+  @@index([isActive])
 }

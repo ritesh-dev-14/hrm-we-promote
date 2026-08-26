@@ -11,19 +11,6 @@ const sendBestEffortMail = async (operation, context) => {
   }
 };
 
-//
-// 🔥 CREATE COORDINATOR ASSIGNMENT (With Inline Task Creation)
-//
-// Coordinator can create and assign a task in ONE call
-// These are separate urgent tasks managed only by coordinator
-// Fields:
-// - task: String (required) - Task name/title
-// - assignedToId: String (required) - User ID of the person receiving the task
-// - assignedBy: String (required) - Text field, coordinator's name (e.g., "harsh", "nishay")
-// - completionDate: DateTime (required) - Deadline for completion
-// - employeeNumber: String (required) - Employee ID/number of the assigned-to person
-// - employeeEmail: String (required) - Email of the assigned-to person
-//
 exports.createAssignment = async (user, body) => {
   //
   // ✅ ONLY COORDINATOR CAN CREATE ASSIGNMENTS
@@ -189,17 +176,7 @@ exports.createAssignment = async (user, body) => {
   };
 };
 
-//
-// 🔥 CREATE COORDINATOR TASK (By Any User - Employee/HR/Manager)
-//
-// Any user can create a task/requirement that goes to a coordinator
-// Fields:
-// - taskName: String (required) - Task/requirement name
-// - description: String (required) - Task description
-// - startDate: DateTime (required) - Start date
-// - endDate: DateTime (required) - Till date (deadline)
-// - assignedToCoordinatorId: String (required) - Coordinator ID to assign to
-//
+
 exports.createCoordinatorTask = async (user, body) => {
   //
   // ✅ VERIFY USER IS AUTHENTICATED (Any role can create)
@@ -702,12 +679,7 @@ exports.getAssignmentById = async (user, assignmentId) => {
   };
 };
 
-//
-// 🔥 UPDATE ASSIGNMENT STATUS
-//
-// Statuses: ASSIGNED, IN_PROGRESS, SUBMITTED, COMPLETED, UNABLE_TO_SUBMIT, REJECTED
-// Reason field is required only when status is not COMPLETED
-//
+
 exports.updateAssignmentStatus = async (
   user,
   assignmentId,
@@ -1276,13 +1248,7 @@ exports.approveOrRejectSubmission = async (user, assignmentId, body) => {
   };
 };
 
-//
-// 🔥 CHECK OVERDUE ASSIGNMENTS & ALERT COORDINATORS
-//
-// Finds all assignments past their completionDate with status ASSIGNED or IN_PROGRESS.
-// Sends a "missed target" email to the coordinator who created each assignment.
-// Avoids repeat emails within 24 hours.
-//
+
 exports.checkOverdueAssignments = async () => {
   const now = new Date();
 

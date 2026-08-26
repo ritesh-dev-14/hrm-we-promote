@@ -6,6 +6,8 @@ const validate = require("../../middlewares/validate.middleware");
 const controller = require("./employee.controller");
 const { applyLeaveSchema } = require("./employee.validation");
 
+router.get("/logout-status", auth, controller.getLogoutStatus);
+
 // 🔹 Get Assigned Tasks
 router.get("/tasks", auth, controller.getTasks);
 

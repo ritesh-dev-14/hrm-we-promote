@@ -75,28 +75,6 @@ router.get(
 
 router.delete("/employee/:employeeId", auth, role("HR", "ADMIN"), controller.deleteEmployee);
 
-// 🔥 LEAVE MANAGEMENT
-
-// router.get("/leaves", auth, role("HR"), controller.getAllLeaves);
-
-// ✅ FIRST
-// router.get(
-//   "/leave/employee/:employeeId",
-//   auth,
-//   role("HR"),
-//   controller.getEmployeeLeaveSummary
-// );
-
-// ✅ THEN
-// router.put(
-//   "/leave/:id",
-//   auth,
-//   role("HR"),
-//   controller.updateLeaveStatus
-// );
-
-
-
 
 // 🔹 Get all leave requests
 router.get(

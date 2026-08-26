@@ -1,39 +1,3 @@
-// const express = require("express");
-
-// const router = express.Router();
-
-// const auth = require("../../middlewares/auth.middleware.js");
-
-// const role = require("../../middlewares/role.middleware.js");
-
-// const validate =
-// require("../../middlewares/validate.middleware.js");
-
-// const controller =
-// require("./task-item-submission.controller.js.js");
-
-// const {
-//   submitSchema
-// } = require("./task-item-submission.validation.js");
-
-// router.post(
-//   "/:assignmentId",
-//   auth,
-//   role("EMPLOYEE"),
-//   validate(submitSchema),
-//   controller.submitTaskItem
-// );
-
-// router.post(
-//   "/verify/:submissionId",
-//   auth,
-//   role("MANAGER"),
-//   controller.verifySubmission
-// );
-
-// module.exports = router;
-
-
 const express = require("express");
 
 const router = express.Router();
@@ -109,19 +73,6 @@ router.patch(
   controller.verifySubmission
 );
 
-// router.patch(
-//   "/:assignmentId/reject",
-
-//   auth,
-
-//   role(
-//     "ADMIN",
-//     "HR",
-//     "MANAGER"
-//   ),
-
-//   controller.rejectSubmission
-// );
 
 router.patch(
   "/:assignmentId/reject",
@@ -139,18 +90,6 @@ router.patch(
   controller.rejectSubmission
 );
 
-//
-// 🔥 UPDATE ITEM PROGRESS
-//
-// router.patch(
-//   "/:assignmentId/progress",
-
-//   auth,
-
-//   role("EMPLOYEE"),
-
-//   controller.updateItemProgress
-// );
 
 router.patch(
   "/:assignmentId/progress",
@@ -194,4 +133,4 @@ router.post(
   controller.resubmitTaskItem
 );
 
-module.exports = router;
+module.exports = router;

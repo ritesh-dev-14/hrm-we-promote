@@ -2,11 +2,6 @@ const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
 
-// const getToday = () => {
-//   const now = new Date();
-//   return new Date(now.setHours(0, 0, 0, 0));
-// };
-
 const getToday = () => {
   const now = new Date();
 
@@ -17,38 +12,6 @@ const getToday = () => {
   istDate.setHours(0, 0, 0, 0);
   return istDate;
 };
-
-// 🔹 START WORK
-// exports.startWork = async (userId) => {
-//   const today = getToday();
-
-//   let attendance = await prisma.attendance.findUnique({
-//     where: { userId_date: { userId, date: today } },
-//   });
-
-//   if (attendance?.startTime) {
-//     throw new ApiError(400, ERRORS.ATTENDANCE.ALREADY_STARTED);
-//   }
-
-//   if (!attendance) {
-//     return prisma.attendance.create({
-//       data: {
-//         userId,
-//         date: today,
-//         startTime: new Date(),
-//         status: "PRESENT",
-//       },
-//     });
-//   }
-
-//   return prisma.attendance.update({
-//     where: { id: attendance.id },
-//     data: {
-//       startTime: new Date(),
-//       status: "PRESENT",
-//     },
-//   });
-// };
 
 exports.startWork = async (userId) => {
   const today = getToday();
@@ -142,32 +105,6 @@ exports.stopWork = async (userId) => {
   });
 };
 
-// 🔹 START BREAK
-// exports.startBreak = async (userId) => {
-//   const today = getToday();
-
-//   const attendance = await prisma.attendance.findUnique({
-//     where: { userId_date: { userId, date: today } },
-//     include: { breaks: true },
-//   });
-
-//   if (!attendance || !attendance.startTime) {
-//     throw new ApiError(400, ERRORS.ATTENDANCE.NOT_STARTED);
-//   }
-
-//   const activeBreak = attendance.breaks.find((b) => !b.endTime);
-
-//   if (activeBreak) {
-//     throw new ApiError(400, ERRORS.ATTENDANCE.BREAK_ACTIVE);
-//   }
-
-//   return prisma.break.create({
-//     data: {
-//       attendanceId: attendance.id,
-//       startTime: new Date(),
-//     },
-//   });
-// };
 
 exports.startBreak = async (userId) => {
   const today = getToday();
@@ -199,32 +136,7 @@ exports.startBreak = async (userId) => {
   });
 };
 
-// 🔹 END BREAK
-// exports.endBreak = async (userId) => {
-//   const today = getToday();
 
-//   const attendance = await prisma.attendance.findUnique({
-//     where: { userId_date: { userId, date: today } },
-//     include: { breaks: true },
-//   });
-
-//   if (!attendance) {
-//     throw new ApiError(400, ERRORS.ATTENDANCE.NOT_STARTED);
-//   }
-
-//   const activeBreak = attendance.breaks.find((b) => !b.endTime);
-
-//   if (!activeBreak) {
-//     throw new ApiError(400, ERRORS.ATTENDANCE.NO_ACTIVE_BREAK);
-//   }
-
-//   return prisma.break.update({
-//     where: { id: activeBreak.id },
-//     data: {
-//       endTime: new Date(),
-//     },
-//   });
-// };
 
 exports.endBreak = async (userId) => {
   const today = getToday();
@@ -301,32 +213,6 @@ exports.getAttendanceHistory = async (userId, query) => {
   return records;
 };
 
-// 🔹 GET ATTENDANCE SUMMARY
-// exports.getAttendanceSummary = async (userId) => {
-//   const records = await prisma.attendance.findMany({
-//     where: { userId },
-//   });
-
-//   let present = 0;
-//   let halfDay = 0;
-//   let absent = 0;
-//   let holiday = 0;
-
-//   records.forEach((r) => {
-//     if (r.status === "PRESENT") present++;
-//     else if (r.status === "HALF_DAY") halfDay++;
-//     else if (r.status === "ABSENT") absent++;
-//     else if (r.status === "HOLIDAY") holiday++;
-//   });
-
-//   return {
-//     totalDays: records.length,
-//     present,
-//     halfDay,
-//     absent,
-//     holiday,
-//   };
-// };
 
 exports.getAttendanceSummary = async (userId) => {
   const records = await prisma.attendance.findMany({
@@ -439,33 +325,6 @@ exports.getEmployeeAttendance = async (employeeId, query) => {
     records,
   };
 };
-
-
-// Hr Dashboard attandance
-// exports.getAttendanceDashboard = async () => {
-//   const today = getToday();
-
-//   const records = await prisma.attendance.findMany({
-//     where: { date: today },
-//   });
-
-//   let present = 0;
-//   let halfDay = 0;
-//   let absent = 0;
-
-//   records.forEach((r) => {
-//     if (r.status === "PRESENT") present++;
-//     else if (r.status === "HALF_DAY") halfDay++;
-//     else if (r.status === "ABSENT") absent++;
-//   });
-
-//   return {
-//     totalEmployees: records.length,
-//     present,
-//     halfDay,
-//     absent,
-//   };
-// };
 
 exports.getAttendanceDashboard = async () => {
   // 🔹 total employees
