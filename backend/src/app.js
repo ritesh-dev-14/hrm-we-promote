@@ -125,6 +125,11 @@ app.use(
 );
 
 app.use(
+  "/api/meta-ads-tasks",
+  require("./modules/meta-ads-task/meta-ads-task.routes")
+);
+
+app.use(
   "/api/whatsapp-messages",
   require("./modules/whatsapp-message/whatsapp-message.routes")
 );

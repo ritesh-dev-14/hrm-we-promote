@@ -57,6 +57,16 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum MetaAdsObjective {
+  LEAD
+  AWARENESS
+}
+
+enum MetaAdsFundsAddedBy {
+  CLIENT
+  HARSH_SIR
+}
+
 enum AssignmentStatus {
   ASSIGNED
   IN_PROGRESS
@@ -382,6 +392,27 @@ model MarketingReport {
   @@index([projectId])
   @@index([managerId])
   @@index([date])
+}
+
+model MetaAdsTask {
+  id          String               @id @default(uuid())
+  clientName  String
+  monthlyBudget Float
+  objective   MetaAdsObjective
+  area        String
+  fundsAddedBy MetaAdsFundsAddedBy
+  status      TaskStatus           @default(DRAFT)
+  createdById String
+  assignedToId String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  createdBy User  @relation("CreatedMetaAdsTasks", fields: [createdById], references: [id])
+  assignedTo User? @relation("AssignedMetaAdsTasks", fields: [assignedToId], references: [id])
+
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
 }
 
 model Notification {
@@ -927,6 +958,8 @@ model User {
   marketingReports        MarketingReport[]          @relation("ManagerMarketingReports")
   marketingMonthlyReports MarketingMonthlyReport[]  @relation("ManagerMarketingMonthlyReports")
   marketingMonthlyRemarks MarketingMonthlyReportRemark[] @relation("ManagerMarketingMonthlyRemarks")
+  createdMetaAdsTasks     MetaAdsTask[]             @relation("CreatedMetaAdsTasks")
+  assignedMetaAdsTasks    MetaAdsTask[]             @relation("AssignedMetaAdsTasks")
   whatsappMessages        WhatsappMessage[]          @relation("ManagerWhatsappMessages")
 }
 

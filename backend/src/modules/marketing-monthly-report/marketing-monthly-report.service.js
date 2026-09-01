@@ -86,12 +86,12 @@ const assertRole = (user, roles) => {
 };
 
 exports.getMarketingProjects = async (user) => {
-  assertRole(user, ["ADMIN", "HR", "EA", "MANAGER"]);
+  assertRole(user, ["MANAGER"]);
   return getProjects();
 };
 
 exports.createMarketingMonthlyReport = async (user, body) => {
-  assertRole(user, ["ADMIN", "HR", "EA", "MANAGER"]);
+  assertRole(user, ["MANAGER"]);
   const { month, year } = validatePeriod(body.month, body.year);
   const rows = await normalizeRows(body.rows);
   const existing = await prisma.marketingMonthlyReport.findUnique({ where: { month_year: { month, year } } });
@@ -103,19 +103,16 @@ exports.createMarketingMonthlyReport = async (user, body) => {
 };
 
 exports.getMarketingMonthlyReport = async (user, month, year) => {
-  assertRole(user, ["ADMIN", "HR", "EA", "MANAGER"]);
+  assertRole(user, ["MANAGER"]);
   const period = validatePeriod(month, year);
   const report = await prisma.marketingMonthlyReport.findUnique({ where: { month_year: period }, include: includeReport });
   return report ? format(report) : null;
 };
 
 exports.updateMarketingMonthlyReport = async (user, reportId, body) => {
-  assertRole(user, ["ADMIN", "HR", "EA", "MANAGER"]);
+  assertRole(user, ["MANAGER"]);
   const existing = await prisma.marketingMonthlyReport.findUnique({ where: { id: reportId } });
   if (!existing) fail(404, "Marketing monthly report not found.");
-  if (user.role === "MANAGER" && existing.managerId !== user.id) {
-    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
-  }
   const rows = await normalizeRows(body.rows);
   const report = await prisma.$transaction(async (tx) => {
     await tx.marketingMonthlyReportRow.deleteMany({ where: { reportId } });
@@ -125,21 +122,17 @@ exports.updateMarketingMonthlyReport = async (user, reportId, body) => {
 };
 
 exports.addRemark = async (user, reportId, body) => {
-  assertRole(user, ["ADMIN", "HR", "EA", "MANAGER"]);
+  assertRole(user, ["MANAGER"]);
   if (!body.remark || !String(body.remark).trim()) fail(400, "remark is required.");
   const report = await prisma.marketingMonthlyReport.findUnique({ where: { id: reportId } });
   if (!report) fail(404, "Marketing monthly report not found.");
-  if (user.role === "MANAGER" && report.managerId !== user.id) {
-    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
-  }
   return prisma.marketingMonthlyReportRemark.create({ data: { reportId, managerId: user.id, remark: String(body.remark).trim() }, include: { manager: { select: managerSelect } } });
 };
 
 exports.deleteRemark = async (user, remarkId) => {
-  assertRole(user, ["ADMIN", "HR", "EA", "MANAGER"]);
+  assertRole(user, ["MANAGER"]);
   const remark = await prisma.marketingMonthlyReportRemark.findUnique({ where: { id: remarkId }, include: { report: true } });
   if (!remark) fail(404, "Remark not found.");
-  if (user.role === "MANAGER" && remark.managerId !== user.id) throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   await prisma.marketingMonthlyReportRemark.delete({ where: { id: remarkId } });
   return { id: remarkId, deleted: true };
 };
