@@ -1,5 +1,75 @@
 const prisma = require("../../config/prisma");
 
+const normalizeDateRange = (startDate, endDate) => {
+  if (!startDate && !endDate) return {};
+
+  return {
+    gte: startDate ? new Date(startDate) : undefined,
+    lte: endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined,
+  };
+};
+
+const buildSocialMediaDataSummary = async (sheets, dateFilter = {}) => {
+  const projectMap = {};
+
+  for (const sheet of sheets) {
+    const pid = sheet.project?.id || sheet.projectId;
+    const projectName = sheet.project?.projectName || "Unknown Project";
+    
+    if (!pid) continue;
+
+    if (!projectMap[pid]) {
+      // Count VERIFIED edit tasks for this project
+      const verifiedEditTasksCount = await prisma.taskItemAssignment.count({
+        where: {
+          status: "VERIFIED",
+          taskItem: {
+            task: { projectName: projectName }
+          },
+          ...(Object.keys(dateFilter).length > 0 ? { verifiedAt: dateFilter } : {})
+        }
+      });
+
+      projectMap[pid] = {
+        projectId: pid,
+        projectName: projectName,
+        clientName: sheet.project?.clientName || "Unknown Client",
+        phone: sheet.project?.phone || null,
+        totalPlanned: 0,
+        totalPosted: 0,
+        totalLeftToPost: 0,
+        totalEdited: verifiedEditTasksCount, // Start with verified edit tasks
+        totalLeftToEdit: 0,
+        totalApproved: 0,
+      };
+    }
+
+    const projectSummary = projectMap[pid];
+    const plannedCount = (sheet.totalReels || 0) + (sheet.totalPosts || 0);
+    const postedCount = (sheet.totalReelsUploaded || 0) + (sheet.totalPostsUploaded || 0);
+    const editedCount = sheet.days.reduce((count, day) => {
+      const submissionLinks = Array.isArray(day.submissionLinks) ? day.submissionLinks.filter(Boolean) : [];
+      const contentLinks = Array.isArray(day.contentUploadLinks) ? day.contentUploadLinks.filter(Boolean) : [];
+      const videoLinks = Array.isArray(day.videoUploadLinks) ? day.videoUploadLinks.filter(Boolean) : [];
+      const hasAnyWork = submissionLinks.length > 0 || contentLinks.length > 0 || videoLinks.length > 0 || day.uploadStatus === "APPROVED";
+      return count + (hasAnyWork ? 1 : 0);
+    }, 0);
+
+    projectSummary.totalPlanned += plannedCount;
+    projectSummary.totalPosted += postedCount;
+    projectSummary.totalEdited += editedCount;
+    projectSummary.totalApproved += sheet.days.filter((day) => day.uploadStatus === "APPROVED").length;
+  }
+
+  return Object.values(projectMap).map((project) => ({
+    ...project,
+    totalLeftToPost: Math.max(0, project.totalPlanned - project.totalPosted),
+    totalLeftToEdit: Math.max(0, project.totalPlanned - project.totalEdited),
+    postedProgress: project.totalPlanned > 0 ? Math.round((project.totalPosted / project.totalPlanned) * 100) : 0,
+    editProgress: project.totalPlanned > 0 ? Math.round((project.totalEdited / project.totalPlanned) * 100) : 0,
+  }));
+};
+
 exports.getEmployeeStats = async (userId) => {
   const assignments = await prisma.taskItemAssignment.findMany({
     where: { userId },
@@ -226,20 +296,57 @@ exports.getEmployeeProjectStats = async (employeeId) => {
 // ── getProjectsOverview ──────────────────────────────────────────────────────
 // Returns aggregated data for Social Media, Meta Ads (marketing), and SEO
 // filtered by optional date range.
+exports.getSocialMediaProjectDataSummary = async ({ projectId, startDate, endDate } = {}) => {
+  const dateFilter = normalizeDateRange(startDate, endDate);
+
+  const sheets = await prisma.projectMonthlySheet.findMany({
+    where: {
+      ...(projectId ? { projectId } : {
+        project: {
+          department: { name: { contains: "Social Media", mode: "insensitive" } },
+        },
+      }),
+      ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          projectName: true,
+          clientName: true,
+          phone: true,
+        },
+      },
+      days: {
+        where: Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+        select: {
+          id: true,
+          date: true,
+          uploadStatus: true,
+          submissionLinks: true,
+          contentUploadLinks: true,
+          videoUploadLinks: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const result = await buildSocialMediaDataSummary(sheets, dateFilter);
+  return projectId ? result[0] || null : result;
+};
+
 exports.getProjectsOverview = async ({ startDate, endDate, type }) => {
   // Build date range
   let dateFilter = {};
   if (startDate || endDate) {
-    dateFilter = {
-      gte: startDate ? new Date(startDate) : undefined,
-      lte: endDate   ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined,
-    };
+    dateFilter = normalizeDateRange(startDate, endDate);
   }
 
   const result = {};
 
   // ── Social Media ────────────────────────────────────────────────────────────
-  if (!type || type === 'social-media') {
+  if (!type || type === 'social-media' || type === 'social-media-data') {
     const smSheets = await prisma.projectMonthlySheet.findMany({
       where: {
         project: {
@@ -261,6 +368,9 @@ exports.getProjectsOverview = async ({ startDate, endDate, type }) => {
             reelType: true,
             postType: true,
             uploadStatus: true,
+            submissionLinks: true,
+            contentUploadLinks: true,
+            videoUploadLinks: true,
           },
         },
       },
@@ -290,6 +400,10 @@ exports.getProjectsOverview = async ({ startDate, endDate, type }) => {
     }
 
     result.socialMedia = Object.values(projectMap);
+
+    if (type === 'social-media-data') {
+      result.socialMediaData = await buildSocialMediaDataSummary(smSheets, dateFilter);
+    }
   }
 
   // ── Meta Ads ─────────────────────────────────────────────────────────────────

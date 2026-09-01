@@ -38,3 +38,14 @@ exports.getProjectsOverview = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getSocialMediaProjectDataSummary = async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const { startDate, endDate } = req.query;
+    const data = await reportService.getSocialMediaProjectDataSummary({ projectId, startDate, endDate });
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};

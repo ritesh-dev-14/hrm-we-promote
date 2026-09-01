@@ -682,6 +682,48 @@ exports.verifySubmission =
       assignment.taskItemId
     );
 
+    // 🔥 AUTO-UPDATE MONTHLY SHEET
+    try {
+      const task = assignment.taskItem.task;
+      const projectName = task.projectName;
+      
+      if (projectName) {
+        const project = await prisma.project.findFirst({
+          where: { projectName }
+        });
+        
+        if (project) {
+          const now = new Date();
+          const currentMonth = now.getMonth() + 1;
+          const currentYear = now.getFullYear();
+          
+          const monthlySheet = await prisma.projectMonthlySheet.findFirst({
+            where: {
+              projectId: project.id,
+              month: currentMonth,
+              year: currentYear
+            }
+          });
+          
+          if (monthlySheet) {
+            const isReel = assignment.taskItem.title.toLowerCase().includes('reel') || 
+                           (assignment.taskItem.theme && assignment.taskItem.theme.toLowerCase().includes('reel'));
+                           
+            await prisma.projectMonthlySheet.update({
+              where: { id: monthlySheet.id },
+              data: {
+                totalReelsUploaded: isReel ? monthlySheet.totalReelsUploaded + 1 : monthlySheet.totalReelsUploaded,
+                totalPostsUploaded: !isReel ? monthlySheet.totalPostsUploaded + 1 : monthlySheet.totalPostsUploaded,
+              }
+            });
+            console.log(`[MonthlySheet] Auto-incremented stats for project: ${projectName}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[MonthlySheet] Failed to auto-update stats:", err.message);
+    }
+
     // 🔥 Send approval email to employee (fire-and-forget)
     prisma.user.findUnique({ where: { id: assignment.userId } })
       .then((emp) => {

@@ -29,6 +29,21 @@ router.get(
 
 
 // Projects Overview — Admin + HR only
-router.get('/projects-overview', protect, restrictTo('ADMIN', 'HR'), reportController.getProjectsOverview);
+router.get('/projects-overview', protect, restrictTo('ADMIN', 'HR', 'MANAGER'), reportController.getProjectsOverview);
+
+// Social Media data summary for a single project or all projects
+router.get(
+  '/social-media-data-summary',
+  protect,
+  restrictTo('ADMIN', 'HR', 'MANAGER', 'COORDINATOR'),
+  reportController.getSocialMediaProjectDataSummary
+);
+
+router.get(
+  '/social-media-data-summary/:projectId',
+  protect,
+  restrictTo('ADMIN', 'HR', 'MANAGER', 'COORDINATOR'),
+  reportController.getSocialMediaProjectDataSummary
+);
 
 module.exports = router;
