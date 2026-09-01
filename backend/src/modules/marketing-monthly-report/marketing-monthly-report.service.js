@@ -86,7 +86,7 @@ const assertRole = (user, roles) => {
 };
 
 exports.getMarketingProjects = async (user) => {
-  assertRole(user, ["MANAGER"]);
+  assertRole(user, ["ADMIN", "HR", "EA", "MANAGER"]);
   return getProjects();
 };
 
@@ -103,7 +103,7 @@ exports.createMarketingMonthlyReport = async (user, body) => {
 };
 
 exports.getMarketingMonthlyReport = async (user, month, year) => {
-  assertRole(user, ["MANAGER"]);
+  assertRole(user, ["ADMIN", "HR", "EA", "MANAGER"]);
   const period = validatePeriod(month, year);
   const report = await prisma.marketingMonthlyReport.findUnique({ where: { month_year: period }, include: includeReport });
   return report ? format(report) : null;
