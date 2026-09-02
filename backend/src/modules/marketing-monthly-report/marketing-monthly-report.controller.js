@@ -10,6 +10,9 @@ exports.create = async (req, res, next) => {
 };
 exports.get = handle((req) => service.getMarketingMonthlyReport(req.user, req.query.month, req.query.year));
 exports.update = handle((req) => service.updateMarketingMonthlyReport(req.user, req.params.id, req.body));
+exports.deleteReport = handle((req) => service.deleteMarketingMonthlyReport(req.user, req.params.id));
+exports.updateRow = handle((req) => service.updateMarketingMonthlyReportRow(req.user, req.params.id, req.params.rowId, req.body));
+exports.deleteRow = handle((req) => service.deleteMarketingMonthlyReportRow(req.user, req.params.id, req.params.rowId));
 exports.addRemark = async (req, res, next) => {
   try { res.status(201).json({ success: true, data: await service.addRemark(req.user, req.params.id, req.body) }); } catch (err) { next(err); }
 };

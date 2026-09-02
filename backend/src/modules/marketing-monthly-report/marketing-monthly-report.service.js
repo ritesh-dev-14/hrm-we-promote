@@ -121,6 +121,54 @@ exports.updateMarketingMonthlyReport = async (user, reportId, body) => {
   return format(report);
 };
 
+exports.deleteMarketingMonthlyReport = async (user, reportId) => {
+  assertRole(user, ["MANAGER"]);
+  const existing = await prisma.marketingMonthlyReport.findUnique({ where: { id: reportId } });
+  if (!existing) fail(404, "Marketing monthly report not found.");
+  await prisma.marketingMonthlyReport.delete({ where: { id: reportId } });
+  return { id: reportId, deleted: true };
+};
+
+exports.updateMarketingMonthlyReportRow = async (user, reportId, rowId, body) => {
+  assertRole(user, ["MANAGER"]);
+
+  const report = await prisma.marketingMonthlyReport.findUnique({
+    where: { id: reportId },
+    include: { rows: true },
+  });
+
+  if (!report) fail(404, "Marketing monthly report not found.");
+
+  const existingRow = report.rows.find((row) => row.id === rowId);
+  if (!existingRow) fail(404, "Marketing row not found.");
+
+  const normalized = await normalizeRows([{ ...existingRow, ...body }]);
+  const updated = await prisma.marketingMonthlyReportRow.update({
+    where: { id: rowId },
+    data: normalized[0],
+    include: { project: { select: { id: true, projectName: true, clientName: true } } },
+  });
+
+  return { ...updated, project: updated.project };
+};
+
+exports.deleteMarketingMonthlyReportRow = async (user, reportId, rowId) => {
+  assertRole(user, ["MANAGER"]);
+
+  const report = await prisma.marketingMonthlyReport.findUnique({
+    where: { id: reportId },
+    include: { rows: true },
+  });
+
+  if (!report) fail(404, "Marketing monthly report not found.");
+
+  const existingRow = report.rows.find((row) => row.id === rowId);
+  if (!existingRow) fail(404, "Marketing row not found.");
+
+  await prisma.marketingMonthlyReportRow.delete({ where: { id: rowId } });
+  return { id: rowId, deleted: true };
+};
+
 exports.addRemark = async (user, reportId, body) => {
   assertRole(user, ["MANAGER"]);
   if (!body.remark || !String(body.remark).trim()) fail(400, "remark is required.");
