@@ -8,7 +8,13 @@ require("dotenv").config();
 const app = express();
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buffer) => {
+    if (req.originalUrl === "/webhooks/whatsapp") {
+      req.rawBody = Buffer.from(buffer);
+    }
+  },
+}));
 
 app.get("/", (req, res) => {
   res.send("API Running...");
@@ -132,6 +138,11 @@ app.use(
 app.use(
   "/api/whatsapp-messages",
   require("./modules/whatsapp-message/whatsapp-message.routes")
+);
+
+app.use(
+  "/webhooks/whatsapp",
+  require("./modules/whatsapp-webhook/whatsapp-webhook.routes")
 );
 
 app.use(

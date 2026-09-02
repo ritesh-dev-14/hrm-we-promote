@@ -152,6 +152,34 @@ exports.updateMessageStatus = async (
 };
 
 /**
+ * Update a message using the Meta WhatsApp message ID from a webhook event.
+ */
+exports.updateMessageStatusByMetaId = async (
+  metaMessageId,
+  status,
+  failureReason = null
+) => {
+  if (!metaMessageId || !status) return null;
+
+  const message = await prisma.whatsappMessage.findFirst({
+    where: { messageId: metaMessageId },
+    select: { id: true },
+  });
+
+  if (!message) {
+    console.warn(`WhatsApp webhook status ignored for unknown Meta message ID: ${metaMessageId}`);
+    return null;
+  }
+
+  return exports.updateMessageStatus(
+    message.id,
+    status,
+    metaMessageId,
+    failureReason
+  );
+};
+
+/**
  * Get messages with filters - role-based access control
  * @param {object} filters - {projectId?, dateFrom?, dateTo?, status?, managerId?, userId?, userRole?}
  * @param {number} limit - Number of records to return

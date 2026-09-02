@@ -172,6 +172,7 @@ enum WhatsappMessageStatus {
   PENDING
   SENT
   DELIVERED
+  READ
   FAILED
 }
 
