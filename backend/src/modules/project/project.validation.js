@@ -14,7 +14,7 @@ const reasonItemSchema = Joi.object({
 }).unknown(true);
 
 exports.createProjectSchema = Joi.object({
-  projectName: Joi.string().min(3).max(200).required(),
+  projectName: Joi.string().min(3).max(200),
   description: Joi.string().allow("", null),
   departmentId: Joi.string().uuid().required(),
   startDate: Joi.date().required(),
@@ -22,6 +22,11 @@ exports.createProjectSchema = Joi.object({
   renewalDate: Joi.date(),
   frequency: Joi.string().valid(...frequencyValues),
   clientName: Joi.string().min(1).max(200),
+  monthlyBudget: Joi.number().positive(),
+  objective: Joi.string().trim().valid("LEAD", "AWARENESS", "BOTH"),
+  area: Joi.string().trim().min(1).max(200),
+  fundsAddedBy: Joi.string().trim().valid("CLIENT", "HARSH", "HARSH_SIR"),
+  isRunning: Joi.boolean(),
   location: Joi.string().min(1).max(200),
   phone: Joi.string().min(1).max(50),
   fbEmail: Joi.string().email(),
@@ -41,7 +46,8 @@ exports.createProjectSchema = Joi.object({
   twitterPassword: Joi.string().min(1).max(200),
   logo: Joi.string().uri(),
   reasons: Joi.array().items(reasonItemSchema).allow(null),
-  assignTo: Joi.array().items(Joi.string().required()).min(1).required(),
+  assignTo: Joi.array().items(Joi.string().required()).min(1),
+  assignedToId: Joi.string().uuid(),
   // Web Development Department specific fields
   domainName: Joi.string().min(1).max(500).allow(null, ""),
   domainPassword: Joi.string().min(1).max(500).allow(null, ""),
@@ -59,6 +65,11 @@ exports.updateProjectSchema = Joi.object({
   projectName: Joi.string().min(3).max(200),
   description: Joi.string().allow("", null),
   departmentId: Joi.string().uuid(),
+  monthlyBudget: Joi.number().positive(),
+  objective: Joi.string().trim().valid("LEAD", "AWARENESS", "BOTH"),
+  area: Joi.string().trim().min(1).max(200),
+  fundsAddedBy: Joi.string().trim().valid("CLIENT", "HARSH", "HARSH_SIR"),
+  isRunning: Joi.boolean(),
   startDate: Joi.date(),
   endDate: Joi.date().when("startDate", {
     is: Joi.exist(),
@@ -87,6 +98,7 @@ exports.updateProjectSchema = Joi.object({
   logo: Joi.string().uri().allow(null),
   reasons: Joi.array().items(reasonItemSchema).allow(null),
   assignTo: Joi.array().items(Joi.string().required()).min(1),
+  assignedToId: Joi.string().uuid(),
   // Web Development Department specific fields
   domainName: Joi.string().min(1).max(500).allow(null, ""),
   domainPassword: Joi.string().min(1).max(500).allow(null, ""),

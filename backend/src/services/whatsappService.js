@@ -152,6 +152,105 @@ exports.sendMessage = async (phoneNumber, messageBody) => {
 };
 
 /**
+ * Send an approved Meta template message for business-initiated conversations.
+ */
+exports.sendTemplateMessage = async (
+  phoneNumber,
+  clientName,
+  customMessage
+) => {
+  const templateName = process.env.WHATSAPP_TEMPLATE_NAME;
+  const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE_CODE || 'en';
+
+  if (!templateName) {
+    return {
+      success: false,
+      error: 'WhatsApp template is not configured. Set WHATSAPP_TEMPLATE_NAME.',
+      errorCode: 'WHATSAPP_TEMPLATE_CONFIG_MISSING',
+    };
+  }
+
+  if (!phoneNumber || !clientName || !customMessage) {
+    return {
+      success: false,
+      error: 'Phone number, client name, and custom message are required',
+      errorCode: 'WHATSAPP_INVALID_TEMPLATE_INPUT',
+    };
+  }
+
+  if (!/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
+    return {
+      success: false,
+      error: 'Invalid phone number format. Expected E.164 format.',
+      errorCode: 'WHATSAPP_INVALID_PHONE',
+    };
+  }
+
+  if (!PHONE_NUMBER_ID || !ACCESS_TOKEN) {
+    return {
+      success: false,
+      error: 'WhatsApp API credentials are not configured.',
+      errorCode: 'WHATSAPP_CONFIG_MISSING',
+    };
+  }
+
+  try {
+    const response = await axios.post(
+      `${WHATSAPP_API_URL}/${PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: phoneNumber,
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: languageCode },
+          components: [{
+            type: 'body',
+            parameters: [
+              { type: 'text', text: clientName },
+              { type: 'text', text: customMessage },
+            ],
+          }],
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+
+    const messageId = response.data?.messages?.[0]?.id;
+    if (!messageId) {
+      return {
+        success: false,
+        error: 'WhatsApp API response did not contain message ID',
+        errorCode: 'WHATSAPP_RESPONSE_ERROR',
+      };
+    }
+
+    return { success: true, messageId, timestamp: new Date() };
+  } catch (error) {
+    const apiError = error.response?.data?.error;
+    console.error('WhatsApp template API error:', {
+      status: error.response?.status,
+      errorCode: apiError?.code || error.code || 'WHATSAPP_TEMPLATE_ERROR',
+      errorMessage: apiError?.message || error.message,
+    });
+
+    return {
+      success: false,
+      error: apiError?.message || 'Failed to send WhatsApp template message',
+      errorCode: apiError?.code || 'WHATSAPP_TEMPLATE_ERROR',
+      statusCode: error.response?.status,
+    };
+  }
+};
+
+/**
  * Check delivery status of a sent message
  * @param {string} messageId - Meta WhatsApp message ID
  * @returns {Promise<{status: string, timestamp: string}>}

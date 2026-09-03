@@ -4,6 +4,19 @@ const auth = require("../../middlewares/auth.middleware");
 const role = require("../../middlewares/role.middleware");
 const controller = require("./marketing-report.controller");
 
+router.post(
+	"/campaigns/:campaignId/reports",
+	auth,
+	role("MANAGER"),
+	controller.createCampaignReport
+);
+router.get(
+	"/campaigns/:campaignId/reports",
+	auth,
+	role("ADMIN", "HR", "EA", "MANAGER"),
+	controller.getCampaignReports
+);
+
 // Create marketing report (MANAGER only)
 router.post("/", auth, role("MANAGER"), controller.createMarketingReport);
 

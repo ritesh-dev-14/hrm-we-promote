@@ -25,6 +25,27 @@ exports.getMarketingReports = async (req, res, next) => {
   }
 };
 
+exports.createCampaignReport = async (req, res, next) => {
+  try {
+    const data = await service.createMarketingReport(req.user, {
+      ...req.body,
+      campaignId: req.params.campaignId,
+    });
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getCampaignReports = async (req, res, next) => {
+  try {
+    const data = await service.getCampaignReports(req.user, req.params.campaignId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getMarketingReportById = async (req, res, next) => {
   try {
     const data = await service.getMarketingReportById(req.user, req.params.id);

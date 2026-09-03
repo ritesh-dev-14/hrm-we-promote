@@ -47,6 +47,11 @@ const formatProject = (project) => {
     renewalDate: project.renewalDate,
     frequency: project.frequency,
     clientName: project.clientName,
+    monthlyBudget: project.monthlyBudget,
+    objective: project.objective,
+    area: project.area,
+    fundsAddedBy: project.fundsAddedBy,
+    isRunning: project.isRunning,
     location: project.location,
     phone: project.phone,
     fbEmail: project.fbEmail,
@@ -107,6 +112,20 @@ exports.createProject = async (user, body) => {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
+  const assignToList = Array.isArray(body.assignTo)
+    ? body.assignTo
+    : body.assignedToId
+      ? [body.assignedToId]
+      : [];
+
+  const finalProjectName = (body.projectName || body.clientName || "").trim();
+  if (!finalProjectName) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "projectName or clientName is required.",
+    });
+  }
+
   const department = await prisma.department.findUnique({
     where: { id: body.departmentId },
   });
@@ -124,6 +143,14 @@ exports.createProject = async (user, body) => {
     "Social Media Department",
   ].includes(department.name);
   const isWebDevDepartment = WEB_DEV_DEPARTMENTS.includes(department.name);
+  const isMarketingLikeDepartment = [
+    "Social Media",
+    "Social Media Department",
+    "Marketing",
+    "Marketing Department",
+    "Meta Ads",
+    "Meta Ads Department",
+  ].includes(department.name);
 
   if (isFrequencyDepartment) {
     if (!body.frequency) {
@@ -155,8 +182,8 @@ exports.createProject = async (user, body) => {
     }
   }
 
-  if (isSocialMediaDepartment) {
-    // Social Media projects may be created before credentials are collected.
+  if (isSocialMediaDepartment || isMarketingLikeDepartment) {
+    // Social Media and marketing-style projects may be created before credentials are collected.
     // The assigned manager will fill these fields later.
   } else if (
     (!isWebDevDepartment && (body.clientName || body.phone)) ||
@@ -172,24 +199,32 @@ exports.createProject = async (user, body) => {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
       message:
-        "Social Media credential fields are only allowed for Social Media projects.",
+        "Social Media credential fields are only allowed for Social Media and marketing projects.",
     });
   }
 
-  const uniqueAssignments = new Set(body.assignTo);
+  const uniqueAssignments = new Set(assignToList);
 
-  if (uniqueAssignments.size !== body.assignTo.length) {
+  if (uniqueAssignments.size !== assignToList.length) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
       message: "Duplicate manager IDs are not allowed in assignTo.",
     });
   }
 
+  if (assignToList.length === 0) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "At least one manager must be assigned.",
+    });
+  }
+
   const managers = await prisma.user.findMany({
     where: {
-      employeeId: {
-        in: body.assignTo,
-      },
+      OR: [
+        { id: { in: assignToList } },
+        { employeeId: { in: assignToList } },
+      ],
     },
   });
 
@@ -213,7 +248,7 @@ exports.createProject = async (user, body) => {
 
   user = currentUser;
 
-  if (managers.length !== body.assignTo.length) {
+  if (managers.length !== assignToList.length) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
       message: "One or more assigned managers were not found.",
@@ -233,14 +268,19 @@ exports.createProject = async (user, body) => {
 
   const project = await prisma.project.create({
     data: {
-      projectName: body.projectName,
+      projectName: finalProjectName,
       description: body.description || null,
       departmentId: body.departmentId,
       startDate: new Date(body.startDate),
       endDate: new Date(body.endDate),
       renewalDate: body.renewalDate ? new Date(body.renewalDate) : null,
       frequency: body.frequency || null,
-      clientName: body.clientName || null,
+      clientName: body.clientName || finalProjectName,
+      monthlyBudget: body.monthlyBudget != null && body.monthlyBudget !== "" ? Number(body.monthlyBudget) : null,
+      objective: body.objective || null,
+      area: body.area || null,
+      fundsAddedBy: body.fundsAddedBy || null,
+      isRunning: body.isRunning ?? false,
       location: body.location || null,
       phone: body.phone || null,
       fbEmail: body.fbEmail || null,
@@ -651,6 +691,14 @@ exports.updateProject = async (user, projectId, body) => {
     data.renewalDate = body.renewalDate ? new Date(body.renewalDate) : null;
   if (body.frequency !== undefined) data.frequency = body.frequency || null;
   if (body.clientName !== undefined) data.clientName = body.clientName || null;
+  if (body.monthlyBudget !== undefined)
+    data.monthlyBudget = body.monthlyBudget == null || body.monthlyBudget === ""
+      ? null
+      : Number(body.monthlyBudget);
+  if (body.objective !== undefined) data.objective = body.objective || null;
+  if (body.area !== undefined) data.area = body.area || null;
+  if (body.fundsAddedBy !== undefined) data.fundsAddedBy = body.fundsAddedBy || null;
+  if (body.isRunning !== undefined) data.isRunning = body.isRunning;
   if (body.location !== undefined) data.location = body.location || null;
   if (body.phone !== undefined) data.phone = body.phone || null;
   if (body.fbEmail !== undefined) data.fbEmail = body.fbEmail || null;

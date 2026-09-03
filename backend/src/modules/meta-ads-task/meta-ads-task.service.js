@@ -15,26 +15,31 @@ const formatUser = (user) =>
       }
     : null;
 
-const formatTask = (task) => ({
-  id: task.id,
-  clientName: task.clientName,
-  monthlyBudget: task.monthlyBudget,
-  objective: task.objective,
-  area: task.area,
-  fundsAddedBy: task.fundsAddedBy,
-  status: task.status,
-  createdAt: task.createdAt,
-  updatedAt: task.updatedAt,
-  createdBy: formatUser(task.createdBy),
-  assignedTo: formatUser(task.assignedTo),
-});
+const formatTask = (task) => {
+  const projectName = task.projectName || task.clientName || null;
+
+  return {
+    id: task.id,
+    projectName,
+    clientName: task.clientName || projectName || null,
+    monthlyBudget: task.monthlyBudget,
+    objective: task.objective,
+    area: task.area,
+    fundsAddedBy: task.fundsAddedBy,
+    status: task.status,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    createdBy: formatUser(task.createdBy),
+    assignedTo: formatUser(task.assignedTo),
+  };
+};
 
 const parseObjective = (value) => {
   const normalized = String(value || "").trim().toUpperCase();
-  if (!["LEAD", "AWARENESS"].includes(normalized)) {
+  if (!["LEAD", "AWARENESS", "BOTH"].includes(normalized)) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
-      message: "objective must be either LEAD or AWARENESS.",
+      message: "objective must be either LEAD, AWARENESS, or BOTH.",
     });
   }
   return normalized;
@@ -42,13 +47,64 @@ const parseObjective = (value) => {
 
 const parseFundsAddedBy = (value) => {
   const normalized = String(value || "").trim().toUpperCase();
-  if (!["CLIENT", "HARSH_SIR"].includes(normalized)) {
+  const aliases = {
+    CLIENT: "CLIENT",
+    HARSH: "HARSH",
+    HARSH_SIR: "HARSH",
+  };
+
+  const mapped = aliases[normalized] || normalized;
+  if (!["CLIENT", "HARSH"].includes(mapped)) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
-      message: "fundsAddedBy must be either CLIENT or HARSH_SIR.",
+      message: "fundsAddedBy must be either CLIENT or HARSH.",
     });
   }
-  return normalized;
+  return mapped;
+};
+
+const resolveProjectName = (body) => {
+  const projectName = body.projectName ?? body.clientName;
+
+  if (projectName === undefined || !String(projectName).trim()) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "projectName is required.",
+    });
+  }
+
+  return String(projectName).trim();
+};
+
+const validateAssignedManager = async (assignedToId, user) => {
+  if (!assignedToId) return null;
+
+  const assignedTo = await prisma.user.findUnique({
+    where: { id: assignedToId },
+  });
+
+  if (!assignedTo) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Assigned manager not found.",
+    });
+  }
+
+  if (user.role === "MANAGER" && assignedTo.id !== user.id) {
+    throw new ApiError(403, {
+      code: ERRORS.AUTH.ACCESS_DENIED.code,
+      message: "Manager can assign this task only to themselves.",
+    });
+  }
+
+  if (user.role === "HR" && assignedTo.role !== "MANAGER" && assignedTo.id !== user.id) {
+    throw new ApiError(403, {
+      code: ERRORS.AUTH.ACCESS_DENIED.code,
+      message: "HR can assign Meta Ads tasks only to a manager or themselves.",
+    });
+  }
+
+  return assignedTo;
 };
 
 const validateNumber = (value, fieldName) => {
@@ -80,12 +136,7 @@ const taskInclude = {
 exports.createMetaAdsTask = async (user, body) => {
   ensureAccess(user, allowedRoles);
 
-  if (!body.clientName || !String(body.clientName).trim()) {
-    throw new ApiError(400, {
-      code: ERRORS.VALIDATION.INVALID_INPUT.code,
-      message: "clientName is required.",
-    });
-  }
+  const projectName = resolveProjectName(body);
 
   if (!body.area || !String(body.area).trim()) {
     throw new ApiError(400, {
@@ -94,15 +145,20 @@ exports.createMetaAdsTask = async (user, body) => {
     });
   }
 
+  const assignedTo = await validateAssignedManager(body.assignedToId, user);
+  const status = assignedTo ? "ASSIGNED" : "DRAFT";
+
   const task = await prisma.metaAdsTask.create({
     data: {
-      clientName: String(body.clientName).trim(),
+      projectName,
+      clientName: projectName,
       monthlyBudget: validateNumber(body.monthlyBudget, "monthlyBudget"),
       objective: parseObjective(body.objective),
       area: String(body.area).trim(),
       fundsAddedBy: parseFundsAddedBy(body.fundsAddedBy),
-      status: "DRAFT",
+      status,
       createdById: user.id,
+      assignedToId: assignedTo ? assignedTo.id : null,
     },
     include: taskInclude,
   });
@@ -171,30 +227,7 @@ exports.assignMetaAdsTask = async (user, taskId, body) => {
     });
   }
 
-  const assignedTo = await prisma.user.findUnique({
-    where: { id: body.assignedToId },
-  });
-
-  if (!assignedTo) {
-    throw new ApiError(400, {
-      code: ERRORS.VALIDATION.INVALID_INPUT.code,
-      message: "Assigned manager not found.",
-    });
-  }
-
-  if (user.role === "MANAGER" && assignedTo.id !== user.id) {
-    throw new ApiError(403, {
-      code: ERRORS.AUTH.ACCESS_DENIED.code,
-      message: "Manager can assign this task only to themselves.",
-    });
-  }
-
-  if (user.role === "HR" && assignedTo.role !== "MANAGER" && assignedTo.id !== user.id) {
-    throw new ApiError(403, {
-      code: ERRORS.AUTH.ACCESS_DENIED.code,
-      message: "HR can assign Meta Ads tasks only to a manager or themselves.",
-    });
-  }
+  const assignedTo = await validateAssignedManager(body.assignedToId, user);
 
   const updatedTask = await prisma.metaAdsTask.update({
     where: { id: taskId },
@@ -232,11 +265,23 @@ exports.updateMetaAdsTask = async (user, taskId, body) => {
 
   const updateData = {};
 
-  if (body.clientName !== undefined) updateData.clientName = String(body.clientName).trim();
+  if (body.projectName !== undefined) {
+    updateData.projectName = String(body.projectName).trim();
+    updateData.clientName = String(body.projectName).trim();
+  }
+  if (body.clientName !== undefined) {
+    updateData.clientName = String(body.clientName).trim();
+    if (body.projectName === undefined) updateData.projectName = String(body.clientName).trim();
+  }
   if (body.monthlyBudget !== undefined) updateData.monthlyBudget = validateNumber(body.monthlyBudget, "monthlyBudget");
   if (body.objective !== undefined) updateData.objective = parseObjective(body.objective);
   if (body.area !== undefined) updateData.area = String(body.area).trim();
   if (body.fundsAddedBy !== undefined) updateData.fundsAddedBy = parseFundsAddedBy(body.fundsAddedBy);
+  if (body.assignedToId !== undefined) {
+    const assignedTo = await validateAssignedManager(body.assignedToId, user);
+    updateData.assignedToId = assignedTo ? assignedTo.id : null;
+    updateData.status = assignedTo ? "ASSIGNED" : task.status;
+  }
   if (body.status !== undefined) updateData.status = String(body.status).trim().toUpperCase();
 
   const updatedTask = await prisma.metaAdsTask.update({

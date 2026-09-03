@@ -23,11 +23,18 @@ app.get("/", (req, res) => {
 // Register routes
 app.use("/api/auth", require("./modules/auth/auth.routes"));
 app.use("/api/hr", require("./modules/hr/hr.routes"));
+app.get(
+  "/api/managers",
+  require("./middlewares/auth.middleware"),
+  require("./middlewares/role.middleware")("HR", "ADMIN", "EA", "COORDINATOR"),
+  require("./modules/hr/hr.controller").getManagers
+);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/manager/tasks", require("./modules/task/task.routes"));
 app.use("/api/employee", require("./modules/employee/employee.routes"));
 app.use("/api/manager", require("./modules/manager/manager.routes"));
 app.use("/api/projects", require("./modules/project/project.routes"));
+app.use("/api", require("./modules/campaign/campaign.routes"));
 app.use("/api/project-reports", require("./modules/project-report/project-report.routes"));
 app.use(
   "/api/projects/:projectId/monthly-sheets",
@@ -122,6 +129,10 @@ app.use(
 
 app.use(
   "/api/marketing-reports",
+  require("./modules/marketing-report/marketing-report.routes")
+);
+app.use(
+  "/api",
   require("./modules/marketing-report/marketing-report.routes")
 );
 

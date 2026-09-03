@@ -5,6 +5,7 @@ const ERRORS = require("../../utils/errors");
 const formatReport = (report) => ({
   id: report.id,
   projectId: report.projectId,
+  campaignId: report.campaignId || null,
   managerId: report.managerId,
   clientName: report.clientName,
   clientContactNumber: report.clientContactNumber,
@@ -38,7 +39,25 @@ const formatReport = (report) => ({
         department: report.project.department || null,
       }
     : null,
+  campaign: report.campaign
+    ? {
+        id: report.campaign.id,
+        name: report.campaign.name,
+      }
+    : null,
 });
+
+const reportInclude = {
+  manager: { select: { id: true, name: true, employeeId: true, role: true } },
+  campaign: { select: { id: true, name: true } },
+  project: {
+    select: {
+      id: true,
+      projectName: true,
+      department: { select: { id: true, name: true } },
+    },
+  },
+};
 
 // ─── Create ────────────────────────────────────────────────────────────────────
 exports.createMarketingReport = async (user, body) => {
@@ -49,15 +68,33 @@ exports.createMarketingReport = async (user, body) => {
     });
   }
 
-  if (!body.projectId) {
+  if (!body.projectId && !body.campaignId) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
-      message: "projectId is required.",
+      message: "projectId or campaignId is required.",
     });
   }
 
   // Verify project exists and manager is assigned
-  const project = await prisma.project.findUnique({
+  const campaign = body.campaignId
+    ? await prisma.campaign.findUnique({
+        where: { id: body.campaignId },
+        include: { project: { include: { assignments: true } } },
+      })
+    : null;
+  if (body.campaignId && !campaign) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Campaign not found.",
+    });
+  }
+  if (campaign && body.projectId && campaign.projectId !== body.projectId) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Campaign does not belong to this project.",
+    });
+  }
+  const project = campaign?.project || await prisma.project.findUnique({
     where: { id: body.projectId },
     include: { assignments: true },
   });
@@ -94,7 +131,8 @@ exports.createMarketingReport = async (user, body) => {
 
   const report = await prisma.marketingReport.create({
     data: {
-      projectId: body.projectId,
+      projectId: project.id,
+      campaignId: body.campaignId || null,
       managerId: user.id,
       clientName: body.clientName || null,
       clientContactNumber: body.clientContactNumber || null,
@@ -112,16 +150,7 @@ exports.createMarketingReport = async (user, body) => {
       campaignStartDate: body.campaignStartDate ? new Date(body.campaignStartDate) : null,
       date: body.date ? new Date(body.date) : new Date(),
     },
-    include: {
-      manager: { select: { id: true, name: true, employeeId: true, role: true } },
-      project: {
-        select: {
-          id: true,
-          projectName: true,
-          department: { select: { id: true, name: true } },
-        },
-      },
-    },
+    include: reportInclude,
   });
 
   return formatReport(report);
@@ -158,18 +187,29 @@ exports.getMarketingReports = async (user, projectId) => {
   const reports = await prisma.marketingReport.findMany({
     where: { projectId },
     orderBy: { date: "desc" },
-    include: {
-      manager: { select: { id: true, name: true, employeeId: true, role: true } },
-      project: {
-        select: {
-          id: true,
-          projectName: true,
-          department: { select: { id: true, name: true } },
-        },
-      },
-    },
+    include: reportInclude,
   });
 
+  return reports.map(formatReport);
+};
+
+exports.getCampaignReports = async (user, campaignId) => {
+  if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    include: { project: { include: { assignments: true } } },
+  });
+  if (!campaign) throw new ApiError(404, "Campaign not found.");
+  if (user.role === "MANAGER" && !campaign.project.assignments.some((a) => a.managerId === user.id)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+  const reports = await prisma.marketingReport.findMany({
+    where: { campaignId },
+    orderBy: { date: "desc" },
+    include: reportInclude,
+  });
   return reports.map(formatReport);
 };
 
@@ -183,6 +223,7 @@ exports.getMarketingReportById = async (user, reportId) => {
     where: { id: reportId },
     include: {
       manager: { select: { id: true, name: true, employeeId: true, role: true } },
+      campaign: { select: { id: true, name: true } },
       project: {
         include: {
           department: true,
@@ -266,16 +307,7 @@ exports.updateMarketingReport = async (user, reportId, body) => {
   const updated = await prisma.marketingReport.update({
     where: { id: reportId },
     data,
-    include: {
-      manager: { select: { id: true, name: true, employeeId: true, role: true } },
-      project: {
-        select: {
-          id: true,
-          projectName: true,
-          department: { select: { id: true, name: true } },
-        },
-      },
-    },
+    include: reportInclude,
   });
 
   return formatReport(updated);

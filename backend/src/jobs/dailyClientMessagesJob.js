@@ -248,7 +248,14 @@ async function runDailyMessagingJob() {
       jobStats.totalMessages++;
       console.log(`📤 Sending consolidated message to ${formatted}`);
 
-      const result = await whatsappService.sendMessage(formatted, consolidatedMessage);
+      const clientName = data.reports.socialMedia[0]?.project?.clientName ||
+        data.reports.marketing[0]?.project?.clientName ||
+        'Client';
+      const result = await whatsappService.sendTemplateMessage(
+        formatted,
+        clientName,
+        consolidatedMessage
+      );
 
       // Log the consolidated message
       await messageLoggingService.logMessage({

@@ -60,10 +60,12 @@ enum TaskStatus {
 enum MetaAdsObjective {
   LEAD
   AWARENESS
+  BOTH
 }
 
 enum MetaAdsFundsAddedBy {
   CLIENT
+  HARSH
   HARSH_SIR
 }
 
@@ -365,9 +367,24 @@ model MarketingMonthlyReportRow {
   @@index([projectId])
 }
 
+model Campaign {
+  id        String   @id @default(uuid())
+  projectId String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reports MarketingReport[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
 model MarketingReport {
   id                    String    @id @default(uuid())
   projectId             String
+  campaignId            String?
   managerId             String
   clientName            String?
   clientContactNumber   String?
@@ -387,26 +404,29 @@ model MarketingReport {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  manager  User    @relation("ManagerMarketingReports", fields: [managerId], references: [id])
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  manager  User     @relation("ManagerMarketingReports", fields: [managerId], references: [id])
 
   @@index([projectId])
+  @@index([campaignId])
   @@index([managerId])
   @@index([date])
 }
 
 model MetaAdsTask {
-  id          String               @id @default(uuid())
-  clientName  String
+  id            String               @id @default(uuid())
+  projectName   String?
+  clientName    String?
   monthlyBudget Float
-  objective   MetaAdsObjective
-  area        String
-  fundsAddedBy MetaAdsFundsAddedBy
-  status      TaskStatus           @default(DRAFT)
-  createdById String
-  assignedToId String?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  objective     MetaAdsObjective
+  area          String
+  fundsAddedBy  MetaAdsFundsAddedBy
+  status        TaskStatus           @default(DRAFT)
+  createdById   String
+  assignedToId  String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   createdBy User  @relation("CreatedMetaAdsTasks", fields: [createdById], references: [id])
   assignedTo User? @relation("AssignedMetaAdsTasks", fields: [assignedToId], references: [id])
@@ -465,6 +485,11 @@ model Project {
   renewalDate   DateTime?
   frequency     String?
   clientName    String?
+  monthlyBudget Float?
+  objective     MetaAdsObjective?
+  area          String?
+  fundsAddedBy  MetaAdsFundsAddedBy?
+  isRunning     Boolean          @default(false)
   location      String?
   phone         String?
   fbEmail       String?
@@ -511,6 +536,7 @@ model Project {
   marketingReports MarketingReport[]
   marketingMonthlyReportRows MarketingMonthlyReportRow[]
   whatsappMessages WhatsappMessage[] @relation("ProjectWhatsappMessages")
+  campaigns      Campaign[]
 }
 
 model ProjectAssignment {
