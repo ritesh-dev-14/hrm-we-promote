@@ -490,6 +490,11 @@ exports.updateProject = async (user, projectId, body) => {
 
     const allowedManagerFields = new Set([
       "clientName",
+      "monthlyBudget",
+      "objective",
+      "area",
+      "fundsAddedBy",
+      "isRunning",
       "location",
       "phone",
       "fbEmail",
@@ -556,6 +561,9 @@ exports.updateProject = async (user, projectId, body) => {
     "Social Media",
     "Social Media Department",
   ].includes(department.name);
+  const isMarketingDepartment = department.name
+    ?.toLowerCase()
+    .includes("marketing");
   const isWebDevDepartment = WEB_DEV_DEPARTMENTS.includes(department.name);
   const currentEndDate = body.endDate
     ? new Date(body.endDate)
@@ -662,7 +670,7 @@ exports.updateProject = async (user, projectId, body) => {
     }
     // 🔥 If already in Social Media, allow partial updates without requiring all fields
   } else if (
-    (!isWebDevDepartment && (body.clientName || body.phone)) ||
+    (!isWebDevDepartment && !isMarketingDepartment && (body.clientName || body.phone)) ||
     body.location ||
     body.fbEmail ||
     body.fbPassword ||
@@ -749,7 +757,7 @@ exports.updateProject = async (user, projectId, body) => {
     data.renewalDate = null;
   }
 
-  if (!isSocialMediaDepartment) {
+  if (!isSocialMediaDepartment && !isMarketingDepartment) {
     if (!isWebDevDepartment) {
       data.clientName = null;
       data.phone = null;
