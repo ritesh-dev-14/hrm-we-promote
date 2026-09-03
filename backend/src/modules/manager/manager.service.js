@@ -120,6 +120,132 @@ exports.getMyEmployees =
   };
 
 //
+// 🔒 MANAGER LOGOUT STATUS
+// Checks if the manager can log out:
+//   1. No pending EA-assigned tasks for today
+//   2. All running Marketing Dept projects have today's report submitted
+//
+const MARKETING_DEPARTMENTS = [
+  "Marketing",
+  "Marketing Department",
+];
+
+const getDayBounds = (date = new Date()) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+};
+
+exports.getManagerLogoutStatus = async (user) => {
+  const { start, end } = getDayBounds();
+
+  // ─── 1. Pending EA-assigned tasks for today ───────────────────────────────
+  const eaAssignments = await prisma.taskAssignment.findMany({
+    where: {
+      userId: user.id,
+      workDate: {
+        gte: start,
+        lt: end,
+      },
+      task: {
+        createdBy: {
+          role: "EA",
+        },
+      },
+    },
+    include: {
+      task: {
+        select: {
+          id: true,
+          projectName: true,
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const DONE_STATUSES = ["SUBMITTED", "VERIFIED", "COMPLETED"];
+  const pendingEaTasks = eaAssignments
+    .filter((a) => !DONE_STATUSES.includes(a.status))
+    .map((a) => ({
+      assignmentId: a.id,
+      taskId: a.task.id,
+      projectName: a.task.projectName,
+      status: a.status,
+      workDate: a.workDate,
+      assignedBy: a.task.createdBy,
+    }));
+
+  // ─── 2. Marketing projects assigned to this manager ──────────────────────
+  // Find all running Marketing Dept projects where manager is assigned
+  const projectAssignments = await prisma.projectAssignment.findMany({
+    where: {
+      managerId: user.id,
+      project: {
+        isRunning: true,
+        department: {
+          name: {
+            in: MARKETING_DEPARTMENTS,
+          },
+        },
+      },
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          projectName: true,
+          clientName: true,
+          isRunning: true,
+          department: {
+            select: { id: true, name: true },
+          },
+          // Check today's marketing reports for this manager
+          marketingReports: {
+            where: {
+              managerId: user.id,
+              date: {
+                gte: start,
+                lt: end,
+              },
+            },
+            select: { id: true, date: true },
+          },
+        },
+      },
+    },
+  });
+
+  const pendingMarketingReports = projectAssignments
+    .filter((pa) => pa.project.marketingReports.length === 0)
+    .map((pa) => ({
+      projectId: pa.project.id,
+      projectName: pa.project.projectName,
+      clientName: pa.project.clientName,
+      department: pa.project.department?.name,
+      isRunning: pa.project.isRunning,
+    }));
+
+  const canLogout =
+    pendingEaTasks.length === 0 && pendingMarketingReports.length === 0;
+
+  return {
+    canLogout,
+    date: start.toISOString().slice(0, 10),
+    pendingEaTasks,
+    pendingMarketingReports,
+  };
+};
+
+//
 // 🔥 GET MANAGER DASHBOARD STATS
 //
 exports.getDashboardStats = async (user) => {

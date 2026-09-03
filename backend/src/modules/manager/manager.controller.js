@@ -77,3 +77,13 @@ exports.getDashboardStats = async (
     next(err);
   }
 };
+
+// 🔒 MANAGER LOGOUT STATUS
+exports.getLogoutStatus = async (req, res, next) => {
+  try {
+    const data = await service.getManagerLogoutStatus(req.user);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
