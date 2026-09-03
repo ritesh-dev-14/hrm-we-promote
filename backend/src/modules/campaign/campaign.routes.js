@@ -3,6 +3,7 @@ const auth = require("../../middlewares/auth.middleware");
 const role = require("../../middlewares/role.middleware");
 const validate = require("../../middlewares/validate.middleware");
 const controller = require("./campaign.controller");
+const marketingReportController = require("../marketing-report/marketing-report.controller");
 const { createCampaignSchema, updateCampaignSchema } = require("./campaign.validation");
 
 const router = express.Router();
@@ -39,6 +40,20 @@ router.delete(
   auth,
   role("MANAGER"),
   controller.deleteCampaign
+);
+
+// Campaign marketing report routes
+router.post(
+  "/campaigns/:campaignId/reports",
+  auth,
+  role("MANAGER"),
+  marketingReportController.createCampaignReport
+);
+router.get(
+  "/campaigns/:campaignId/reports",
+  auth,
+  viewers,
+  marketingReportController.getCampaignReports
 );
 
 module.exports = router;
