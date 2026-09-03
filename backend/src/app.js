@@ -131,10 +131,7 @@ app.use(
   "/api/marketing-reports",
   require("./modules/marketing-report/marketing-report.routes")
 );
-app.use(
-  "/api",
-  require("./modules/marketing-report/marketing-report.routes")
-);
+
 
 app.use(
   "/api/marketing-monthly-reports",

@@ -163,6 +163,20 @@ exports.createMetaAdsTask = async (user, body) => {
     include: taskInclude,
   });
 
+  if (assignedTo && assignedTo.email) {
+    const { sendProjectAssignedToManagerMail } = require("../mail/mail.service");
+    sendProjectAssignedToManagerMail({
+      email: assignedTo.email,
+      managerName: assignedTo.name,
+      projectName: task.projectName,
+      departmentName: "Meta Ads",
+      startDate: new Date().toLocaleDateString("en-IN"),
+      endDate: "N/A",
+      hrName: user.name,
+      description: `Objective: ${task.objective}\nArea: ${task.area}\nMonthly Budget: ${task.monthlyBudget}`,
+    }).catch((err) => console.error("Failed to send Meta Ads assignment email:", err));
+  }
+
   return formatTask(task);
 };
 
@@ -237,6 +251,20 @@ exports.assignMetaAdsTask = async (user, taskId, body) => {
     },
     include: taskInclude,
   });
+
+  if (assignedTo && assignedTo.email) {
+    const { sendProjectAssignedToManagerMail } = require("../mail/mail.service");
+    sendProjectAssignedToManagerMail({
+      email: assignedTo.email,
+      managerName: assignedTo.name,
+      projectName: updatedTask.projectName,
+      departmentName: "Meta Ads",
+      startDate: new Date().toLocaleDateString("en-IN"),
+      endDate: "N/A",
+      hrName: user.name,
+      description: `Objective: ${updatedTask.objective}\nArea: ${updatedTask.area}\nMonthly Budget: ${updatedTask.monthlyBudget}`,
+    }).catch((err) => console.error("Failed to send Meta Ads assignment email:", err));
+  }
 
   return {
     success: true,

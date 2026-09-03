@@ -85,14 +85,14 @@ const hasSmtpConfig =
 
 const transporter = hasSmtpConfig
   ? nodemailer.createTransport({
-      host: process.env.BREVO_SMTP_HOST || "smtp-relay.brevo.com",
-      port: Number(process.env.BREVO_SMTP_PORT || 587),
-      secure: Number(process.env.BREVO_SMTP_PORT || 587) === 465,
-      auth: {
-        user: process.env.BREVO_SMTP_USER,
-        pass: process.env.BREVO_SMTP_KEY,
-      },
-    })
+    host: process.env.BREVO_SMTP_HOST || "smtp-relay.brevo.com",
+    port: Number(process.env.BREVO_SMTP_PORT || 587),
+    secure: Number(process.env.BREVO_SMTP_PORT || 587) === 465,
+    auth: {
+      user: process.env.BREVO_SMTP_USER,
+      pass: process.env.BREVO_SMTP_KEY,
+    },
+  })
   : null;
 
 const parseMailFrom = (value) => {
