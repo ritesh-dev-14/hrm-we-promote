@@ -172,17 +172,57 @@ exports.getManagerLogoutStatus = async (user) => {
     },
   });
 
-  const DONE_STATUSES = ["SUBMITTED", "VERIFIED", "COMPLETED"];
-  const pendingEaTasks = eaAssignments
+  // EA-created assignments use CoordinatorAssignment rather than the main
+  // TaskAssignment table. Include them in the same manager obligation list.
+  const eaCoordinatorAssignments = await prisma.coordinatorAssignment.findMany({
+    where: {
+      assignedToId: user.id,
+      completionDate: {
+        gte: start,
+        lt: end,
+      },
+      createdBy: {
+        role: "EA",
+      },
+    },
+    include: {
+      task: {
+        select: {
+          id: true,
+          projectName: true,
+        },
+      },
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  const DONE_STATUSES = ["SUBMITTED", "VERIFIED"];
+  const pendingEaTasks = [
+    ...eaAssignments.map((assignment) => ({
+      assignmentId: assignment.id,
+      taskId: assignment.task.id,
+      projectName: assignment.task.projectName,
+      status: assignment.status,
+      workDate: assignment.workDate,
+      assignedBy: assignment.task.createdBy,
+    })),
+    ...eaCoordinatorAssignments.map((assignment) => ({
+      assignmentId: assignment.id,
+      taskId: assignment.task.id,
+      projectName: assignment.task.projectName,
+      status: assignment.status,
+      workDate: assignment.completionDate,
+      assignedBy: assignment.createdBy,
+    })),
+  ]
     .filter((a) => !DONE_STATUSES.includes(a.status))
-    .map((a) => ({
-      assignmentId: a.id,
-      taskId: a.task.id,
-      projectName: a.task.projectName,
-      status: a.status,
-      workDate: a.workDate,
-      assignedBy: a.task.createdBy,
-    }));
+    .sort((a, b) => new Date(a.workDate) - new Date(b.workDate));
 
   // ─── 2. Marketing projects assigned to this manager ──────────────────────
   // Find all running Marketing Dept projects where manager is assigned
@@ -190,7 +230,6 @@ exports.getManagerLogoutStatus = async (user) => {
     where: {
       managerId: user.id,
       project: {
-        isRunning: true,
         department: {
           name: {
             in: MARKETING_DEPARTMENTS,
@@ -217,7 +256,12 @@ exports.getManagerLogoutStatus = async (user) => {
                 lt: end,
               },
             },
-            select: { id: true, date: true },
+            select: {
+              id: true,
+              date: true,
+              approvalStatus: true,
+              unableToSubmitReason: true,
+            },
           },
         },
       },
@@ -225,13 +269,19 @@ exports.getManagerLogoutStatus = async (user) => {
   });
 
   const pendingMarketingReports = projectAssignments
-    .filter((pa) => pa.project.marketingReports.length === 0)
+    .filter((pa) => {
+      const report = pa.project.marketingReports[0];
+      return !report || report.approvalStatus !== "APPROVED";
+    })
     .map((pa) => ({
       projectId: pa.project.id,
       projectName: pa.project.projectName,
       clientName: pa.project.clientName,
       department: pa.project.department?.name,
       isRunning: pa.project.isRunning,
+      reportId: pa.project.marketingReports[0]?.id || null,
+      reportStatus: pa.project.marketingReports[0]?.approvalStatus || "NOT_SUBMITTED",
+      unableToSubmitReason: pa.project.marketingReports[0]?.unableToSubmitReason || null,
     }));
 
   const canLogout =

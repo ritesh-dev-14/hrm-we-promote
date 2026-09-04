@@ -170,6 +170,12 @@ enum ProjectStatus {
   VERIFIED
 }
 
+enum MarketingReportApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum WhatsappMessageStatus {
   PENDING
   SENT
@@ -356,7 +362,6 @@ model MarketingMonthlyReportRow {
   leadArea         String?
   requiredLeads    Int?
   adsStartingDate  DateTime?
-  monthlyBudget    Float?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -394,6 +399,11 @@ model MarketingReport {
   todayReachObtained    Int?
   todayAmountSpend      Float?
   reasonNotRunning      String?
+  unableToSubmitReason  String?
+  approvalStatus        MarketingReportApprovalStatus @default(PENDING)
+  reviewedById          String?
+  reviewedAt            DateTime?
+  reviewNote            String?
   typeOfAds             String?
   leadObtained          Int?
   decidedDailyBudget    Float?
@@ -407,11 +417,13 @@ model MarketingReport {
   project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   manager  User     @relation("ManagerMarketingReports", fields: [managerId], references: [id])
+  reviewedBy User?   @relation("ReviewedMarketingReports", fields: [reviewedById], references: [id])
 
   @@index([projectId])
   @@index([campaignId])
   @@index([managerId])
   @@index([date])
+  @@index([reviewedById])
 }
 
 model MetaAdsTask {
@@ -983,6 +995,7 @@ model User {
   seoTasks                SeoTask[]                 @relation("ManagerSeoTasks")
   uploads                 Upload[]
   marketingReports        MarketingReport[]          @relation("ManagerMarketingReports")
+  reviewedMarketingReports MarketingReport[]        @relation("ReviewedMarketingReports")
   marketingMonthlyReports MarketingMonthlyReport[]  @relation("ManagerMarketingMonthlyReports")
   marketingMonthlyRemarks MarketingMonthlyReportRemark[] @relation("ManagerMarketingMonthlyRemarks")
   createdMetaAdsTasks     MetaAdsTask[]             @relation("CreatedMetaAdsTasks")

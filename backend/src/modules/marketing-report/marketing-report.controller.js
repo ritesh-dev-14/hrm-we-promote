@@ -64,6 +64,15 @@ exports.updateMarketingReport = async (req, res, next) => {
   }
 };
 
+exports.reviewMarketingReport = async (req, res, next) => {
+  try {
+    const data = await service.reviewMarketingReport(req.user, req.params.id, req.body);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.deleteMarketingReport = async (req, res, next) => {
   try {
     const data = await service.deleteMarketingReport(req.user, req.params.id);

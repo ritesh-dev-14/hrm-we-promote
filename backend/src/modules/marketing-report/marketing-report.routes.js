@@ -17,6 +17,9 @@ router.get("/:id", auth, role("ADMIN", "HR", "EA", "MANAGER"), controller.getMar
 // Update marketing report (MANAGER only — own reports)
 router.patch("/:id", auth, role("MANAGER"), controller.updateMarketingReport);
 
+// HR/Admin approve or reject today's marketing report
+router.patch("/:id/review", auth, role("HR", "ADMIN"), controller.reviewMarketingReport);
+
 // Delete marketing report (ADMIN/HR/EA only)
 router.delete("/:id", auth, role("ADMIN", "HR", "EA"), controller.deleteMarketingReport);
 

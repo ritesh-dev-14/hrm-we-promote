@@ -424,7 +424,7 @@ exports.getMyAssignedTasks =
 
     //
     // ✅ MANAGER
-    // show tasks assigned by HR
+    // show tasks assigned by HR or EA
     //
     if (
       user.role ===
@@ -432,7 +432,9 @@ exports.getMyAssignedTasks =
     ) {
       whereClause.task = {
         createdBy: {
-          role: "HR",
+          role: {
+            in: ["HR", "EA"],
+          },
         },
       };
     }
