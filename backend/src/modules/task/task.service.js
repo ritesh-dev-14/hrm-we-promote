@@ -478,8 +478,6 @@ exports.getMyAssignedTasks =
             },
 
             submission: true,
-
-            taskGroup: true,
           },
 
           orderBy: {
@@ -488,9 +486,38 @@ exports.getMyAssignedTasks =
         }
       );
 
-    return assignments.map(
+    const eaAssignments = user.role === "EMPLOYEE"
+      ? await prisma.coordinatorAssignment.findMany({
+          where: {
+            assignedToId: user.id,
+            createdBy: {
+              role: "EA",
+            },
+          },
+          include: {
+            task: {
+              include: {
+                createdBy: {
+                  select: {
+                    id: true,
+                    employeeId: true,
+                    name: true,
+                    role: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        })
+      : [];
+
+    const managerTasks = assignments.map(
       (a) => ({
         assignmentId: a.id,
+        source: "MANAGER",
 
         status: a.status,
 
@@ -518,17 +545,7 @@ exports.getMyAssignedTasks =
         rejectionReason:
           a.rejectionReason,
 
-        taskGroup:
-          a.taskGroup
-            ? {
-                id:
-                  a.taskGroup.id,
-
-                name:
-                  a.taskGroup
-                    .name,
-              }
-            : null,
+        taskGroup: null,
 
         task: {
           id: a.task.id,
@@ -573,6 +590,46 @@ exports.getMyAssignedTasks =
               .createdBy,
         },
       })
+    );
+
+    const employeeEaTasks = eaAssignments.map((a) => ({
+      assignmentId: a.id,
+      source: "EA",
+      status: a.status,
+      progress: a.status === "COMPLETED" ? 100 : 0,
+      submitted: ["SUBMITTED", "COMPLETED"].includes(a.status),
+      startedAt: a.startedAt,
+      submittedAt: a.submittedAt,
+      completedAt: a.completedAt,
+      rejectedAt: a.rejectedAt,
+      rejectionReason: a.rejectionReason || a.reason,
+      taskGroup: null,
+      task: {
+        id: a.task.id,
+        title: a.task.projectName,
+        description: a.task.description,
+        instructions: null,
+        referenceLink: null,
+        startDate: a.task.startDate,
+        endDate: a.task.endDate,
+        projectId: a.task.projectId,
+        projectName: a.task.projectName,
+        date: a.completionDate,
+        location: null,
+        setupType: null,
+        status: a.task.status,
+        totalItems: 0,
+        createdBy: a.task.createdBy,
+      },
+      completionDate: a.completionDate,
+    }));
+
+    return [...managerTasks, ...employeeEaTasks].sort(
+      (first, second) => {
+        const firstDate = first.completionDate || first.task.endDate || first.task.startDate;
+        const secondDate = second.completionDate || second.task.endDate || second.task.startDate;
+        return new Date(secondDate) - new Date(firstDate);
+      }
     );
   };
 
