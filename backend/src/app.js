@@ -132,6 +132,11 @@ app.use(
   require("./modules/marketing-report/marketing-report.routes")
 );
 
+app.use(
+  "/api/department-reports",
+  require("./modules/department-report/department-report.routes")
+);
+
 
 app.use(
   "/api/marketing-monthly-reports",
