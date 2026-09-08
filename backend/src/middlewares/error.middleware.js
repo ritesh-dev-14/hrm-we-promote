@@ -1,7 +1,7 @@
 module.exports = (err, req, res, next) => {
   console.error(err);
   try {
-    require('fs').appendFileSync('F:/We Promote Application/Hrm Backend/backend/error_log.txt', new Date().toISOString() + ' ' + req.method + ' ' + req.url + ' -> ' + JSON.stringify({ statusCode: err.statusCode, code: err.code, message: err.message, stack: err.stack }) + '\n');
+    require('fs').appendFileSync('F:/We Promote Application/Hrm Backend/backend/error_log.txt', new Date().toISOString() + ' ' + req.method + ' ' + req.url + ' -> ' + JSON.stringify({ statusCode: err.statusCode, code: err.code, message: err.message, details: err.details, stack: err.stack }) + '\n');
   } catch(e) {}
 
   if (err.isOperational) {
@@ -9,6 +9,7 @@ module.exports = (err, req, res, next) => {
       success: false,
       code: err.code,
       message: err.message,
+      ...(err.details ? { details: err.details } : {}),
     });
   }
 

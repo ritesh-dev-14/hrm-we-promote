@@ -65,6 +65,30 @@ const reportInclude = {
   },
 };
 
+const getDateBounds = (date) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+};
+
+const removeDuplicateReports = (reports) => {
+  const uniqueReports = new Map();
+
+  for (const report of reports) {
+    const day = new Date(report.date).toISOString().slice(0, 10);
+    const key = [report.projectId, report.managerId, report.campaignId || "", day].join("|");
+    const existing = uniqueReports.get(key);
+
+    if (!existing || new Date(report.createdAt) > new Date(existing.createdAt)) {
+      uniqueReports.set(key, report);
+    }
+  }
+
+  return [...uniqueReports.values()];
+};
+
 // ─── Create ────────────────────────────────────────────────────────────────────
 exports.createMarketingReport = async (user, body) => {
   if (user.role !== "MANAGER") {
@@ -128,6 +152,24 @@ exports.createMarketingReport = async (user, body) => {
     throw new ApiError(403, {
       code: ERRORS.AUTH.ACCESS_DENIED.code,
       message: "You are not assigned to this project.",
+    });
+  }
+
+  const { start, end } = getDateBounds(body.date || new Date());
+  const existingReport = await prisma.marketingReport.findFirst({
+    where: {
+      projectId: project.id,
+      campaignId: body.campaignId || null,
+      managerId: user.id,
+      date: { gte: start, lt: end },
+    },
+    select: { id: true },
+  });
+
+  if (existingReport) {
+    throw new ApiError(409, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "A marketing report has already been submitted for this project today.",
     });
   }
 
@@ -209,7 +251,7 @@ exports.getMarketingReports = async (user, projectId) => {
     include: reportInclude,
   });
 
-  return reports.map(formatReport);
+  return removeDuplicateReports(reports).map(formatReport);
 };
 
 exports.getCampaignReports = async (user, campaignId) => {
@@ -229,7 +271,7 @@ exports.getCampaignReports = async (user, campaignId) => {
     orderBy: { date: "desc" },
     include: reportInclude,
   });
-  return reports.map(formatReport);
+  return removeDuplicateReports(reports).map(formatReport);
 };
 
 // ─── Get single ────────────────────────────────────────────────────────────────

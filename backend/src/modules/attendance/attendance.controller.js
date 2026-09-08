@@ -19,7 +19,7 @@ exports.startWork = async (req, res, next) => {
 // 🔹 STOP WORK
 exports.stopWork = async (req, res, next) => {
   try {
-    const data = await attendanceService.stopWork(req.user.id);
+    const data = await attendanceService.stopWork(req.user);
 
     return res.status(200).json({
       success: true,

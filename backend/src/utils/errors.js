@@ -88,6 +88,10 @@ module.exports = {
     WORK_COMPLETED: {
       code: "ATT_007",
       message: "Work already completed for today."
+    },
+    PENDING_TASKS: {
+      code: "ATT_008",
+      message: "You cannot stop work until all assigned work is completed."
     }
   },
 

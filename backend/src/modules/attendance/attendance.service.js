@@ -1,6 +1,8 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const employeeLogoutStatusService = require("../employee/logout-status.service");
+const managerService = require("../manager/manager.service");
 
 const getToday = () => {
   const now = new Date();
@@ -11,6 +13,33 @@ const getToday = () => {
 
   istDate.setHours(0, 0, 0, 0);
   return istDate;
+};
+
+const ensureCanStopWork = async (user) => {
+  if (user.role === "EMPLOYEE") {
+    const logoutStatus = await employeeLogoutStatusService.getLogoutStatus(user);
+
+    if (!logoutStatus.canLogout) {
+      const error = new ApiError(400, ERRORS.ATTENDANCE.PENDING_TASKS);
+      error.details = {
+        pendingTasks: logoutStatus.pendingTasks,
+      };
+      throw error;
+    }
+  }
+
+  if (user.role === "MANAGER") {
+    const logoutStatus = await managerService.getManagerLogoutStatus(user);
+
+    if (!logoutStatus.canLogout) {
+      const error = new ApiError(400, ERRORS.ATTENDANCE.PENDING_TASKS);
+      error.details = {
+        pendingEaTasks: logoutStatus.pendingEaTasks,
+        pendingMarketingReports: logoutStatus.pendingMarketingReports,
+      };
+      throw error;
+    }
+  }
 };
 
 exports.startWork = async (userId) => {
@@ -48,7 +77,8 @@ exports.startWork = async (userId) => {
   });
 };
 
-exports.stopWork = async (userId) => {
+exports.stopWork = async (user) => {
+  const userId = user.id;
   const today = getToday();
 
   const attendance = await prisma.attendance.findUnique({
@@ -69,6 +99,8 @@ exports.stopWork = async (userId) => {
   if (activeBreak) {
     throw new ApiError(400, ERRORS.ATTENDANCE.BREAK_ACTIVE);
   }
+
+  await ensureCanStopWork(user);
 
   const endTime = new Date();
 
