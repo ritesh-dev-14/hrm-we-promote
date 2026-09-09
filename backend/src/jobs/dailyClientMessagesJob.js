@@ -25,14 +25,13 @@ let jobInstance = null;
  */
 exports.initializeDailyMessagingJob = () => {
   try {
-    // 11:15 AM IST = 11:15
+    // 8:00 PM IST = 20:00
     // Cron format: minute hour day-of-month month day-of-week
     // "15 11 * * *" = every day at 11:15 (in server timezone)
     // We use TZ environment variable to set timezone to IST
 
     // For IST (UTC+5:30), we need to calculate the equivalent UTC time
-    // 4:03 PM IST = scheduled for 16:03
-      jobInstance = cron.schedule('18 16 * * *', async () => {
+      jobInstance = cron.schedule('0 20 * * *', async () => {
       console.log('🚀 ⏰ Starting daily client report dispatch at', new Date().toISOString());
       try {
         await runDailyMessagingJob();
@@ -45,7 +44,7 @@ exports.initializeDailyMessagingJob = () => {
       timezone: 'Asia/Kolkata', // IST timezone
     });
 
-      console.log('✅ Daily client messaging job initialized (runs at 4:18 PM IST)');
+      console.log('✅ Daily client messaging job initialized (runs at 8:00 PM IST)');
     return jobInstance;
   } catch (error) {
     console.error('Failed to initialize daily messaging job:', error);
@@ -244,6 +243,7 @@ async function runDailyMessagingJob() {
 
       // Combine all messages into one consolidated message using professional template
       const consolidatedMessage = buildConsolidatedClientMessage(data, today);
+      const templateParameters = buildApprovedTemplateParameters(data, today);
 
       jobStats.totalMessages++;
       console.log(`📤 Sending consolidated message to ${formatted}`);
@@ -253,7 +253,7 @@ async function runDailyMessagingJob() {
         'Client';
       const result = await whatsappService.sendTemplateMessage(
         formatted,
-        clientName,
+        templateParameters,
         consolidatedMessage
       );
 
@@ -308,6 +308,42 @@ async function runDailyMessagingJob() {
   }
 
   return jobStats;
+}
+
+/**
+ * Build the 12 body parameters required by the approved Meta template.
+ */
+function buildApprovedTemplateParameters(data, today) {
+  const marketing = data.reports?.marketing?.[0]?.report || {};
+  const seo = data.reports?.seo?.[0]?.report || {};
+  const socialProject = data.reports?.socialMedia?.[0]?.project || {};
+  const marketingProject = data.reports?.marketing?.[0]?.project || {};
+  const seoProject = data.reports?.seo?.[0]?.project || {};
+  const project = socialProject.projectName ? socialProject : marketingProject.projectName ? marketingProject : seoProject;
+  const social = socialProject.contentCalendar || {};
+  const uploadLinks = [
+    ...(social.contentUploadLinks || []),
+    ...(social.videoUploadLinks || []),
+    ...(social.submissionLinks || []),
+  ];
+  const lastChecked = seo.checkDate
+    ? new Date(seo.checkDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'N/A';
+
+  return [
+    project.clientName || marketing.clientName || 'Client',
+    project.projectName || 'N/A',
+    marketing.typeOfAds || 'N/A',
+    marketing.areaName || 'N/A',
+    marketing.todayReachObtained ?? 'N/A',
+    marketing.todayAmountSpend != null ? Number(marketing.todayAmountSpend).toFixed(2) : 'N/A',
+    marketing.leadObtained ?? 'N/A',
+    seo.rankingNo != null ? `#${seo.rankingNo}` : 'N/A',
+    lastChecked,
+    social.title || 'N/A',
+    social.uploadStatus || 'N/A',
+    uploadLinks.length > 0 ? uploadLinks.join(', ') : 'N/A',
+  ].map(String);
 }
 
 /**

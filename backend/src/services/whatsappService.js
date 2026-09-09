@@ -156,7 +156,7 @@ exports.sendMessage = async (phoneNumber, messageBody) => {
  */
 exports.sendTemplateMessage = async (
   phoneNumber,
-  clientName,
+  templateParameters,
   customMessage
 ) => {
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME;
@@ -170,10 +170,10 @@ exports.sendTemplateMessage = async (
     };
   }
 
-  if (!phoneNumber || !clientName || !customMessage) {
+  if (!phoneNumber || !Array.isArray(templateParameters) || templateParameters.length !== 12 || !customMessage) {
     return {
       success: false,
-      error: 'Phone number, client name, and custom message are required',
+      error: 'Phone number, 12 template parameters, and custom message are required',
       errorCode: 'WHATSAPP_INVALID_TEMPLATE_INPUT',
     };
   }
@@ -207,10 +207,7 @@ exports.sendTemplateMessage = async (
           language: { code: languageCode },
           components: [{
             type: 'body',
-            parameters: [
-              { type: 'text', text: clientName },
-              { type: 'text', text: customMessage },
-            ],
+            parameters: templateParameters.map((text) => ({ type: 'text', text: String(text) })),
           }],
         },
       },
