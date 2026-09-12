@@ -247,42 +247,41 @@ exports.getAttendanceHistory = async (userId, query) => {
 
 
 exports.getAttendanceSummary = async (userId) => {
-  const records = await prisma.attendance.findMany({
-    where: { userId },
-  });
+  // 🔥 Single SQL aggregate — no JS-side loop over all rows
+  const result = await prisma.$queryRaw`
+    SELECT
+      COUNT(*)                                         AS "totalDays",
+      COUNT(*) FILTER (WHERE status = 'PRESENT')       AS present,
+      COUNT(*) FILTER (WHERE status = 'HALF_DAY')      AS "halfDay",
+      COUNT(*) FILTER (WHERE status = 'ABSENT')        AS absent,
+      COUNT(*) FILTER (WHERE status = 'HOLIDAY')       AS holiday,
+      COALESCE(SUM("totalHours"), 0)                   AS "totalHours"
+    FROM "Attendance"
+    WHERE "userId" = ${userId}
+  `;
 
-  let present = 0;
-  let halfDay = 0;
-  let absent = 0;
-  let holiday = 0;
-  let totalHours = 0;
-
-  records.forEach((r) => {
-    totalHours += r.totalHours || 0;
-
-    if (r.status === "PRESENT") present++;
-    else if (r.status === "HALF_DAY") halfDay++;
-    else if (r.status === "ABSENT") absent++;
-    else if (r.status === "HOLIDAY") holiday++;
-  });
+  const row = result[0];
+  const totalDays  = Number(row.totalDays);
+  const totalHours = parseFloat(Number(row.totalHours).toFixed(2));
 
   return {
-    totalDays: records.length,
-    present,
-    halfDay,
-    absent,
-    holiday,
-    totalHours: parseFloat(totalHours.toFixed(2)),
-    avgHours: parseFloat(
-      (records.length ? totalHours / records.length : 0).toFixed(2)
-    ),
+    totalDays,
+    present:   Number(row.present),
+    halfDay:   Number(row.halfDay),
+    absent:    Number(row.absent),
+    holiday:   Number(row.holiday),
+    totalHours,
+    avgHours: parseFloat((totalDays ? totalHours / totalDays : 0).toFixed(2)),
   };
 };
 
 
-// Hr Attandance
+// Hr Attendance (paginated)
 exports.getAllAttendance = async (query) => {
-  const { from, to, department, status } = query;
+  const { from, to, department, status, page = 1, limit = 50 } = query;
+
+  const take = Math.min(Number(limit), 200); // hard cap at 200 rows per page
+  const skip = (Math.max(Number(page), 1) - 1) * take;
 
   const where = {};
 
@@ -299,21 +298,37 @@ exports.getAllAttendance = async (query) => {
     where.status = status;
   }
 
-  return prisma.attendance.findMany({
-    where,
-    include: {
-      user: {
-        select: {
-          employeeId: true,
-          name: true,
-          department: true,
-          position: true,
+  // Run data + total count in parallel
+  const [records, total] = await Promise.all([
+    prisma.attendance.findMany({
+      where,
+      skip,
+      take,
+      include: {
+        user: {
+          select: {
+            employeeId: true,
+            name: true,
+            department: true,
+            position: true,
+          },
         },
+        breaks: true,
       },
-      breaks: true,
+      orderBy: { date: "desc" },
+    }),
+    prisma.attendance.count({ where }),
+  ]);
+
+  return {
+    data: records,
+    pagination: {
+      total,
+      page: Number(page),
+      limit: take,
+      totalPages: Math.ceil(total / take),
     },
-    orderBy: { date: "desc" },
-  });
+  };
 };
 
 

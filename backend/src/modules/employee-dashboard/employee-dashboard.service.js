@@ -68,48 +68,75 @@ exports.getSummary = async (user) => {
   };
 };
 
-// 🔥 GET ASSIGNED ITEMS
-exports.getAssignedItems = async (user) => {
-  return prisma.taskItemAssignment.findMany({
-    where: {
-      userId: user.id,
-    },
+// 🔥 GET ASSIGNED ITEMS (paginated)
+exports.getAssignedItems = async (user, query = {}) => {
+  const { page = 1, limit = 20 } = query;
+  const take = Math.min(Number(limit), 100);
+  const skip = (Math.max(Number(page), 1) - 1) * take;
 
-    include: {
-      taskItem: {
-        include: {
-          task: true,
+  const where = { userId: user.id };
+
+  const [items, total] = await Promise.all([
+    prisma.taskItemAssignment.findMany({
+      where,
+      skip,
+      take,
+      include: {
+        taskItem: {
+          include: {
+            task: true,
+          },
         },
+        submission: true,
       },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.taskItemAssignment.count({ where }),
+  ]);
 
-      submission: true,
+  return {
+    data: items,
+    pagination: {
+      total,
+      page: Number(page),
+      limit: take,
+      totalPages: Math.ceil(total / take),
     },
-
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  };
 };
 
-// 🔥 GET SUBMISSIONS
-exports.getSubmissions = async (user) => {
-  return prisma.taskItemSubmission.findMany({
-    where: {
-      assignment: {
-        userId: user.id,
-      },
-    },
+// 🔥 GET SUBMISSIONS (paginated)
+exports.getSubmissions = async (user, query = {}) => {
+  const { page = 1, limit = 20 } = query;
+  const take = Math.min(Number(limit), 100);
+  const skip = (Math.max(Number(page), 1) - 1) * take;
 
-    include: {
-      assignment: {
-        include: {
-          taskItem: true,
+  const where = { assignment: { userId: user.id } };
+
+  const [submissions, total] = await Promise.all([
+    prisma.taskItemSubmission.findMany({
+      where,
+      skip,
+      take,
+      include: {
+        assignment: {
+          include: {
+            taskItem: true,
+          },
         },
       },
-    },
+      orderBy: { submittedAt: "desc" },
+    }),
+    prisma.taskItemSubmission.count({ where }),
+  ]);
 
-    orderBy: {
-      submittedAt: "desc",
+  return {
+    data: submissions,
+    pagination: {
+      total,
+      page: Number(page),
+      limit: take,
+      totalPages: Math.ceil(total / take),
     },
-  });
+  };
 };

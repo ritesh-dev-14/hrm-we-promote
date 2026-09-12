@@ -110,15 +110,15 @@ exports.getAttendanceSummary = async (req, res, next) => {
   }
 };
 
-// Hr Attandance
+// Hr Attendance (paginated)
 exports.getAllAttendance = async (req, res, next) => {
   try {
-    const data = await service.getAllAttendance(req.query);
+    const result = await service.getAllAttendance(req.query);
 
     res.json({
       success: true,
       message: "All attendance fetched",
-      data,
+      ...result,
     });
   } catch (err) {
     next(err);

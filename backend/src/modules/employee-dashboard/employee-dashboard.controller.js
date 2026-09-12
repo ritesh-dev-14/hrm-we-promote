@@ -26,14 +26,14 @@ exports.getAssignedItems = async (
   next
 ) => {
   try {
-    const data =
-      await service.getAssignedItems(
-        req.user
-      );
+    const result = await service.getAssignedItems(
+      req.user,
+      req.query
+    );
 
     res.json({
       success: true,
-      data,
+      ...result,
     });
   } catch (err) {
     next(err);
@@ -47,14 +47,14 @@ exports.getSubmissions = async (
   next
 ) => {
   try {
-    const data =
-      await service.getSubmissions(
-        req.user
-      );
+    const result = await service.getSubmissions(
+      req.user,
+      req.query
+    );
 
     res.json({
       success: true,
-      data,
+      ...result,
     });
   } catch (err) {
     next(err);
