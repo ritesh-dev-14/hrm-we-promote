@@ -364,63 +364,108 @@ exports.createProject = async (user, body) => {
   return formatted;
 };
 
-exports.getProjects = async (user) => {
-  const where =
+exports.getProjects = async (user, query = {}) => {
+  const { page = 1, limit = 15, search = "", department = "", status = "" } = query;
+
+  const take = Math.min(Number(limit), 100);
+  const skip = (Math.max(Number(page), 1) - 1) * take;
+
+  const roleFilter =
     user.role === "MANAGER"
       ? { assignments: { some: { managerId: user.id } } }
       : undefined;
 
-  if (!where && !["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE"].includes(user.role)) {
+  if (!roleFilter && !["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
-  const projects = await prisma.project.findMany({
-    where,
-    include: {
-      department: true,
-      createdBy: true,
-      assignments: {
-        include: {
-          manager: true,
+  // Build where clause
+  const where = {
+    ...roleFilter,
+    ...(search ? {
+      OR: [
+        { projectName: { contains: search, mode: "insensitive" } },
+        { clientName:  { contains: search, mode: "insensitive" } },
+      ],
+    } : {}),
+    ...(department ? { department: { name: { contains: department, mode: "insensitive" } } } : {}),
+    ...(status ? { status } : {}),
+  };
+
+  const [projects, total] = await Promise.all([
+    prisma.project.findMany({
+      where,
+      skip,
+      take,
+      include: {
+        department: true,
+        createdBy: true,
+        assignments: {
+          include: { manager: true },
         },
       },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.project.count({ where }),
+  ]);
 
-  return projects.map(formatProject);
+  return {
+    data: projects.map(formatProject),
+    pagination: {
+      total,
+      page:       Number(page),
+      limit:      take,
+      totalPages: Math.ceil(total / take),
+    },
+  };
 };
 
-exports.getAssignedProjects = async (user) => {
+exports.getAssignedProjects = async (user, query = {}) => {
   if (user.role !== "MANAGER") {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
-  const projects = await prisma.project.findMany({
-    where: {
-      assignments: {
-        some: {
-          managerId: user.id,
-        },
-      },
-    },
-    include: {
-      department: true,
-      createdBy: true,
-      assignments: {
-        include: {
-          manager: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const { page = 1, limit = 15, search = "", status = "" } = query;
+  const take = Math.min(Number(limit), 100);
+  const skip = (Math.max(Number(page), 1) - 1) * take;
 
-  return projects.map(formatProject);
+  const where = {
+    assignments: { some: { managerId: user.id } },
+    ...(search ? {
+      OR: [
+        { projectName: { contains: search, mode: "insensitive" } },
+        { clientName:  { contains: search, mode: "insensitive" } },
+      ],
+    } : {}),
+    ...(status ? { status } : {}),
+  };
+
+  const [projects, total] = await Promise.all([
+    prisma.project.findMany({
+      where,
+      skip,
+      take,
+      include: {
+        department: true,
+        createdBy: true,
+        assignments: {
+          include: { manager: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.project.count({ where }),
+  ]);
+
+  return {
+    data: projects.map(formatProject),
+    pagination: {
+      total,
+      page:       Number(page),
+      limit:      take,
+      totalPages: Math.ceil(total / take),
+    },
+  };
 };
 
 exports.getProjectById = async (user, projectId) => {

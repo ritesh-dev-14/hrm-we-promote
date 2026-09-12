@@ -47,11 +47,11 @@ exports.createProject = async (req, res, next) => {
 
 exports.getProjects = async (req, res, next) => {
   try {
-    const data = await service.getProjects(req.user);
+    const result = await service.getProjects(req.user, req.query);
 
     res.json({
       success: true,
-      data,
+      ...result,
     });
   } catch (err) {
     next(err);
@@ -60,11 +60,11 @@ exports.getProjects = async (req, res, next) => {
 
 exports.getAssignedProjects = async (req, res, next) => {
   try {
-    const data = await service.getAssignedProjects(req.user);
+    const result = await service.getAssignedProjects(req.user, req.query);
 
     res.json({
       success: true,
-      data,
+      ...result,
     });
   } catch (err) {
     next(err);
