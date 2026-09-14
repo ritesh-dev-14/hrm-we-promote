@@ -14,6 +14,10 @@ exports.addWorkspaceMembersSchema = Joi.object({
   employeeIds: Joi.array().items(Joi.string().required()).min(1).required(),
 }).unknown(false);
 
+exports.assignShootTaskEmployeesSchema = Joi.object({
+  employeeIds: Joi.array().items(Joi.string().required()).min(1).required(),
+}).unknown(false);
+
 exports.createShootTaskSchema = Joi.object({
   title: Joi.string().min(2).max(200).required(),
   description: Joi.string().max(1000).allow("", null),

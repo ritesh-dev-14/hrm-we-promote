@@ -9,6 +9,61 @@ const {
 } = require("../mail/mail.service");
 const { incrementUnread } = require("../../services/sidebarUnread.service");
 
+const assignedEmployeeSelect = {
+  id: true,
+  employeeId: true,
+  name: true,
+  email: true,
+  role: true,
+};
+
+const shootTaskInclude = {
+  subtasks: true,
+  assignments: {
+    include: { user: { select: assignedEmployeeSelect } },
+  },
+};
+
+const formatShootTask = (task) => ({
+  id: task.id,
+  workspaceId: task.workspaceId,
+  title: task.title,
+  description: task.description,
+  noOfPics: task.noOfPics,
+  noOfReels: task.noOfReels,
+  date: task.date,
+  arrivalTime: task.arrivalTime,
+  location: task.location,
+  setupType: task.setupType,
+  createdById: task.createdById,
+  createdAt: task.createdAt,
+  updatedAt: task.updatedAt,
+  assignedEmployees: (task.assignments || []).map((assignment) => ({
+    assignedAt: assignment.assignedAt,
+    ...assignment.user,
+  })),
+  subtasks: (task.subtasks || []).map((subtask) => ({
+    id: subtask.id,
+    dayId: subtask.dayId,
+    title: subtask.title,
+    description: subtask.description,
+    type: subtask.type,
+    referenceLinks: subtask.referenceLinks,
+    videoType: subtask.videoType,
+    setupType: subtask.setupType,
+    submissionLinks: subtask.submissionLinks,
+    unableToSubmitReason: subtask.unableToSubmitReason,
+    submittedById: subtask.submittedById,
+    submittedAt: subtask.submittedAt,
+    status: subtask.status,
+    reviewReason: subtask.reviewReason,
+    reviewedById: subtask.reviewedById,
+    reviewedAt: subtask.reviewedAt,
+    createdAt: subtask.createdAt,
+    updatedAt: subtask.updatedAt,
+  })),
+});
+
 const getWorkspace = async (workspaceId) => {
   return prisma.shootWorkspace.findUnique({
     where: { id: workspaceId },
@@ -20,18 +75,21 @@ const getWorkspace = async (workspaceId) => {
         },
       },
       tasks: {
-        include: {
-          subtasks: true,
-        },
+        include: shootTaskInclude,
       },
     },
   });
 };
 
-const formatWorkspace = (workspace) => {
+const formatWorkspace = (workspace, viewer) => {
   let pendingSubmissionsCount = 0;
 
-  const formattedTasks = (workspace.tasks || []).map((task) => {
+  const visibleTasks = (workspace.tasks || []).filter((task) => {
+    const userRole = (viewer?.role || "").toUpperCase();
+    return userRole !== "EMPLOYEE" || task.assignments.some((assignment) => assignment.userId === viewer.id);
+  });
+
+  const formattedTasks = visibleTasks.map((task) => {
     const taskPendingCount = (task.subtasks || []).filter(
       (sub) => sub.status === "SUBMITTED" || sub.status === "UNABLE_TO_SUBMIT"
     ).length;
@@ -39,26 +97,9 @@ const formatWorkspace = (workspace) => {
     pendingSubmissionsCount += taskPendingCount;
 
     return {
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      noOfPics: task.noOfPics,
-      noOfReels: task.noOfReels,
-      date: task.date,
-      arrivalTime: task.arrivalTime,
-      location: task.location,
-      setupType: task.setupType,
-      createdById: task.createdById,
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
+      ...formatShootTask(task),
       subtaskCount: task.subtasks?.length ?? 0,
       pendingSubmissionsCount: taskPendingCount,
-      subtasks: (task.subtasks || []).map((st) => ({
-        id: st.id,
-        title: st.title,
-        status: st.status,
-        submittedAt: st.submittedAt,
-      })),
     };
   });
 
@@ -110,7 +151,9 @@ const verifyWorkspaceAccess = async (user, workspaceId) => {
   }
 
   const userRole = (user.role || "").toUpperCase();
-  const isMember = workspace.members.some((member) => member.userId === user.id);
+  const isMember = workspace.tasks.some((task) =>
+    task.assignments.some((assignment) => assignment.userId === user.id)
+  );
   const isOwner = workspace.createdById === user.id;
   const canView = ["ADMIN", "HR", "MANAGER", "COORDINATOR"].includes(userRole) || isMember || isOwner;
   if (!canView) {
@@ -118,6 +161,27 @@ const verifyWorkspaceAccess = async (user, workspaceId) => {
   }
 
   return workspace;
+};
+
+const verifyShootTaskAccess = async (user, workspaceId, taskId) => {
+  const workspace = await verifyWorkspaceAccess(user, workspaceId);
+  const task = workspace.tasks.find((candidate) => candidate.id === taskId);
+  if (!task) {
+    throw new ApiError(404, {
+      code: ERRORS.TASK.NOT_FOUND.code,
+      message: ERRORS.TASK.NOT_FOUND.message,
+    });
+  }
+
+  const userRole = (user.role || "").toUpperCase();
+  if (
+    userRole === "EMPLOYEE" &&
+    !task.assignments.some((assignment) => assignment.userId === user.id)
+  ) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  return { workspace, task };
 };
 
 exports.createShootWorkspace = async (user, body) => {
@@ -130,44 +194,43 @@ exports.createShootWorkspace = async (user, body) => {
         create: [],
       },
     },
-    include: { createdBy: true, members: { include: { user: true } }, tasks: true },
+    include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
   });
-  return formatWorkspace(workspace);
+  return formatWorkspace(workspace, user);
 };
 
 exports.getShootWorkspaces = async (user) => {
-  const taskInclude = { include: { subtasks: true } };
   const userRole = (user.role || "").toUpperCase();
 
   if (["ADMIN", "HR"].includes(userRole)) {
     const workspaces = await prisma.shootWorkspace.findMany({
-      include: { createdBy: true, members: { include: { user: true } }, tasks: taskInclude },
+      include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
       orderBy: { createdAt: "desc" },
     });
-    return workspaces.map(formatWorkspace);
+    return workspaces.map((workspace) => formatWorkspace(workspace, user));
   }
 
   if (userRole === "MANAGER") {
     const workspaces = await prisma.shootWorkspace.findMany({
       where: { createdById: user.id },
-      include: { createdBy: true, members: { include: { user: true } }, tasks: taskInclude },
+      include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
       orderBy: { createdAt: "desc" },
     });
-    return workspaces.map(formatWorkspace);
+    return workspaces.map((workspace) => formatWorkspace(workspace, user));
   }
 
   const workspaces = await prisma.shootWorkspace.findMany({
-    where: { members: { some: { userId: user.id } } },
-    include: { createdBy: true, members: { include: { user: true } }, tasks: taskInclude },
+    where: { tasks: { some: { assignments: { some: { userId: user.id } } } } },
+    include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
     orderBy: { createdAt: "desc" },
   });
 
-  return workspaces.map(formatWorkspace);
+  return workspaces.map((workspace) => formatWorkspace(workspace, user));
 };
 
 exports.getShootWorkspaceById = async (user, workspaceId) => {
   const workspace = await verifyWorkspaceAccess(user, workspaceId);
-  return formatWorkspace(workspace);
+  return formatWorkspace(workspace, user);
 };
 
 exports.updateShootWorkspace = async (user, workspaceId, body) => {
@@ -179,10 +242,10 @@ exports.updateShootWorkspace = async (user, workspaceId, body) => {
       ...(body.brandName !== undefined ? { name: body.brandName } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
     },
-    include: { createdBy: true, members: { include: { user: true } }, tasks: true },
+    include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
   });
 
-  return formatWorkspace(workspace);
+  return formatWorkspace(workspace, user);
 };
 
 exports.deleteShootWorkspace = async (user, workspaceId) => {
@@ -262,7 +325,7 @@ exports.addShootWorkspaceMembers = async (user, workspaceId, body) => {
     }
   }
 
-  return formatWorkspace(updatedWorkspace);
+  return formatWorkspace(updatedWorkspace, user);
 };
 
 exports.removeShootWorkspaceMember = async (user, workspaceId, memberId) => {
@@ -294,7 +357,104 @@ exports.removeShootWorkspaceMember = async (user, workspaceId, memberId) => {
   });
 
   const workspace = await getWorkspace(workspaceId);
-  return formatWorkspace(workspace);
+  return formatWorkspace(workspace, user);
+};
+
+exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
+  await verifyWorkspaceOwnership(user, workspaceId);
+
+  const task = await prisma.shootTask.findFirst({ where: { id: taskId, workspaceId } });
+  if (!task) {
+    throw new ApiError(404, {
+      code: ERRORS.TASK.NOT_FOUND.code,
+      message: ERRORS.TASK.NOT_FOUND.message,
+    });
+  }
+
+  const employeeIds = [...new Set(body.employeeIds)];
+  const employees = await prisma.user.findMany({
+    where: { employeeId: { in: employeeIds }, role: "EMPLOYEE" },
+    select: assignedEmployeeSelect,
+  });
+  if (employees.length !== employeeIds.length) {
+    throw new ApiError(400, {
+      code: ERRORS.TASK.EMPLOYEE_NOT_FOUND.code,
+      message: ERRORS.TASK.EMPLOYEE_NOT_FOUND.message,
+    });
+  }
+
+  const existing = await prisma.shootTaskAssignment.findMany({
+    where: { taskId, userId: { in: employees.map((employee) => employee.id) } },
+  });
+  const existingIds = new Set(existing.map((assignment) => assignment.userId));
+  const newEmployees = employees.filter((employee) => !existingIds.has(employee.id));
+
+  await prisma.shootTaskAssignment.createMany({
+    data: newEmployees.map((employee) => ({ taskId, userId: employee.id })),
+    skipDuplicates: true,
+  });
+
+  const workspace = await prisma.shootWorkspace.findUnique({
+    where: { id: workspaceId },
+    select: { name: true },
+  });
+  const manager = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { name: true },
+  });
+  for (const employee of newEmployees) {
+    if (employee.email) {
+      sendShootTaskAssignedToEmployeeMail({
+        email: employee.email,
+        employeeName: employee.name,
+        managerName: manager?.name || null,
+        workspaceName: workspace?.name || null,
+        taskTitle: task.title,
+        taskDate: task.date,
+        taskLocation: task.location,
+        description: task.description,
+      }).catch((err) =>
+        console.error(`[Mail] Failed to send shoot task email to ${employee.email}:`, err.message)
+      );
+    }
+    incrementUnread(employee.id, "shoots").catch(() => {});
+  }
+
+  const updatedTask = await prisma.shootTask.findUnique({
+    where: { id: taskId },
+    include: shootTaskInclude,
+  });
+  return formatShootTask(updatedTask);
+};
+
+exports.removeShootTaskEmployee = async (user, workspaceId, taskId, employeeId) => {
+  await verifyWorkspaceOwnership(user, workspaceId);
+
+  const task = await prisma.shootTask.findFirst({ where: { id: taskId, workspaceId } });
+  if (!task) {
+    throw new ApiError(404, {
+      code: ERRORS.TASK.NOT_FOUND.code,
+      message: ERRORS.TASK.NOT_FOUND.message,
+    });
+  }
+
+  const employee = await prisma.user.findFirst({
+    where: { employeeId, role: "EMPLOYEE" },
+    select: { id: true },
+  });
+  if (!employee) {
+    throw new ApiError(404, {
+      code: ERRORS.TASK.EMPLOYEE_NOT_FOUND.code,
+      message: ERRORS.TASK.EMPLOYEE_NOT_FOUND.message,
+    });
+  }
+
+  await prisma.shootTaskAssignment.deleteMany({ where: { taskId, userId: employee.id } });
+  const updatedTask = await prisma.shootTask.findUnique({
+    where: { id: taskId },
+    include: shootTaskInclude,
+  });
+  return formatShootTask(updatedTask);
 };
 
 exports.createShootTask = async (user, workspaceId, body) => {
@@ -313,82 +473,27 @@ exports.createShootTask = async (user, workspaceId, body) => {
       setupType: body.setupType ?? null,
       createdById: user.id,
     },
-    include: { subtasks: true },
+    include: shootTaskInclude,
   });
 
-  return {
-    id: task.id,
-    workspaceId: task.workspaceId,
-    title: task.title,
-    description: task.description,
-    noOfPics: task.noOfPics,
-    noOfReels: task.noOfReels,
-    createdById: task.createdById,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    subtasks: task.subtasks.map((subtask) => ({
-      id: subtask.id,
-      dayId: subtask.dayId,
-      title: subtask.title,
-      description: subtask.description,
-      type: subtask.type,
-      referenceLinks: subtask.referenceLinks,
-      videoType: subtask.videoType,
-      setupType: subtask.setupType,
-      submissionLinks: subtask.submissionLinks,
-      unableToSubmitReason: subtask.unableToSubmitReason,
-      submittedById: subtask.submittedById,
-      submittedAt: subtask.submittedAt,
-      createdAt: subtask.createdAt,
-      updatedAt: subtask.updatedAt,
-    })),
-  };
+  return formatShootTask(task);
 };
 
 exports.getShootTasks = async (user, workspaceId) => {
   await verifyWorkspaceAccess(user, workspaceId);
 
   const tasks = await prisma.shootTask.findMany({
-    where: { workspaceId },
-    include: { subtasks: true },
+    where: {
+      workspaceId,
+      ...(user.role === "EMPLOYEE"
+        ? { assignments: { some: { userId: user.id } } }
+        : {}),
+    },
+    include: shootTaskInclude,
     orderBy: { createdAt: "desc" },
   });
 
-  return tasks.map((task) => ({
-    id: task.id,
-    workspaceId: task.workspaceId,
-    title: task.title,
-    description: task.description,
-    noOfPics: task.noOfPics,
-    noOfReels: task.noOfReels,
-    date: task.date,
-    arrivalTime: task.arrivalTime,
-    location: task.location,
-    setupType: task.setupType,
-    createdById: task.createdById,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    subtasks: task.subtasks.map((subtask) => ({
-      id: subtask.id,
-      dayId: subtask.dayId,
-      title: subtask.title,
-      description: subtask.description,
-      type: subtask.type,
-      referenceLinks: subtask.referenceLinks,
-      videoType: subtask.videoType,
-      setupType: subtask.setupType,
-      submissionLinks: subtask.submissionLinks,
-      unableToSubmitReason: subtask.unableToSubmitReason,
-      submittedById: subtask.submittedById,
-      submittedAt: subtask.submittedAt,
-      status: subtask.status,
-      reviewReason: subtask.reviewReason,
-      reviewedById: subtask.reviewedById,
-      reviewedAt: subtask.reviewedAt,
-      createdAt: subtask.createdAt,
-      updatedAt: subtask.updatedAt,
-    })),
-  }));
+  return tasks.map(formatShootTask);
 };
 
 exports.getMyShootTasks = async (user) => {
@@ -397,61 +502,23 @@ exports.getMyShootTasks = async (user) => {
       ? undefined
       : user.role === "MANAGER"
       ? { workspace: { createdById: user.id } }
-      : { workspace: { members: { some: { userId: user.id } } } };
+      : { assignments: { some: { userId: user.id } } };
 
   const tasks = await prisma.shootTask.findMany({
     where,
-    include: {
-      workspace: true,
-      subtasks: true,
-    },
+    include: { workspace: true, ...shootTaskInclude },
     orderBy: { createdAt: "desc" },
   });
 
-  return tasks.map((task) => ({
-    id: task.id,
-    workspaceId: task.workspaceId,
-    workspaceName: task.workspace?.name ?? null,
-    title: task.title,
-    description: task.description,
-    noOfPics: task.noOfPics,
-    noOfReels: task.noOfReels,
-    date: task.date,
-    arrivalTime: task.arrivalTime,
-    location: task.location,
-    setupType: task.setupType,
-    createdById: task.createdById,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    subtasks: task.subtasks.map((subtask) => ({
-      id: subtask.id,
-      dayId: subtask.dayId,
-      title: subtask.title,
-      description: subtask.description,
-      type: subtask.type,
-      referenceLinks: subtask.referenceLinks,
-      videoType: subtask.videoType,
-      setupType: subtask.setupType,
-      submissionLinks: subtask.submissionLinks,
-      unableToSubmitReason: subtask.unableToSubmitReason,
-      submittedById: subtask.submittedById,
-      submittedAt: subtask.submittedAt,
-      status: subtask.status,
-      reviewReason: subtask.reviewReason,
-      reviewedById: subtask.reviewedById,
-      reviewedAt: subtask.reviewedAt,
-      createdAt: subtask.createdAt,
-      updatedAt: subtask.updatedAt,
-    })),
-  }));
+  return tasks.map((task) => ({ ...formatShootTask(task), workspaceName: task.workspace?.name ?? null }));
 };
 
 exports.getShootTaskById = async (user, workspaceId, taskId) => {
-  await verifyWorkspaceAccess(user, workspaceId);
+  await verifyShootTaskAccess(user, workspaceId, taskId);
 
   const task = await prisma.shootTask.findFirst({
     where: { id: taskId, workspaceId },
-    include: { subtasks: true },
+    include: shootTaskInclude,
   });
 
   if (!task) {
@@ -461,32 +528,7 @@ exports.getShootTaskById = async (user, workspaceId, taskId) => {
     });
   }
 
-  return {
-    id: task.id,
-    workspaceId: task.workspaceId,
-    title: task.title,
-    description: task.description,
-    noOfPics: task.noOfPics,
-    noOfReels: task.noOfReels,
-    createdById: task.createdById,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    subtasks: task.subtasks.map((subtask) => ({
-      id: subtask.id,
-      title: subtask.title,
-      description: subtask.description,
-      type: subtask.type,
-      referenceLinks: subtask.referenceLinks,
-      videoType: subtask.videoType,
-      setupType: subtask.setupType,
-      submissionLinks: subtask.submissionLinks,
-      unableToSubmitReason: subtask.unableToSubmitReason,
-      submittedById: subtask.submittedById,
-      submittedAt: subtask.submittedAt,
-      createdAt: subtask.createdAt,
-      updatedAt: subtask.updatedAt,
-    })),
-  };
+  return formatShootTask(task);
 };
 
 exports.updateShootTask = async (user, workspaceId, taskId, body) => {
@@ -512,31 +554,10 @@ exports.updateShootTask = async (user, workspaceId, taskId, body) => {
       ...(body.location !== undefined ? { location: body.location ?? null } : {}),
       ...(body.setupType !== undefined ? { setupType: body.setupType ?? null } : {}),
     },
-    include: { subtasks: true },
+    include: shootTaskInclude,
   });
 
-  return {
-    id: updatedTask.id,
-    workspaceId: updatedTask.workspaceId,
-    title: updatedTask.title,
-    description: updatedTask.description,
-    noOfPics: updatedTask.noOfPics,
-    noOfReels: updatedTask.noOfReels,
-    date: updatedTask.date,
-    arrivalTime: updatedTask.arrivalTime,
-    location: updatedTask.location,
-    setupType: updatedTask.setupType,
-    createdById: updatedTask.createdById,
-    createdAt: updatedTask.createdAt,
-    updatedAt: updatedTask.updatedAt,
-    subtasks: updatedTask.subtasks.map((subtask) => ({
-      id: subtask.id,
-      title: subtask.title,
-      type: subtask.type,
-      videoType: subtask.videoType,
-      setupType: subtask.setupType,
-    })),
-  };
+  return formatShootTask(updatedTask);
 };
 
 exports.deleteShootTask = async (user, workspaceId, taskId) => {
@@ -605,18 +626,24 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
     updatedAt: subtask.updatedAt,
   };
 
-  // 🔥 Notify all workspace members about the new shoot subtask (fire-and-forget)
+  // Notify only employees assigned to this shoot.
   try {
     const workspace = await prisma.shootWorkspace.findUnique({
       where: { id: workspaceId },
       include: {
-        members: {
-          include: { user: { select: { id: true, name: true, email: true } } },
+        tasks: {
+          where: { id: taskId },
+          include: {
+            assignments: {
+              include: { user: { select: { id: true, name: true, email: true } } },
+            },
+          },
         },
       },
     });
 
-    if (workspace && workspace.members.length > 0) {
+    const assignedEmployees = workspace?.tasks[0]?.assignments || [];
+    if (assignedEmployees.length > 0) {
       const managerUser = await prisma.user.findUnique({
         where: { id: user.id },
         select: { name: true },
@@ -626,11 +653,11 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
         ? new Date(task.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
         : null;
 
-      for (const member of workspace.members) {
-        if (member.user.email) {
+      for (const assignment of assignedEmployees) {
+        if (assignment.user.email) {
           sendShootTaskAssignedToEmployeeMail({
-            email: member.user.email,
-            employeeName: member.user.name,
+            email: assignment.user.email,
+            employeeName: assignment.user.name,
             managerName: managerUser?.name || null,
             workspaceName: workspace.name,
             taskTitle: subtask.title,
@@ -638,12 +665,11 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
             taskLocation: task.location || null,
             description: subtask.description || null,
           }).catch((err) =>
-            console.error(`[Mail] Failed to send shoot subtask email to ${member.user.email}:`, err.message)
+            console.error(`[Mail] Failed to send shoot subtask email to ${assignment.user.email}:`, err.message)
           );
         }
         
-        // 🔔 Increment sidebar unread badge for workspace member
-        incrementUnread(member.user.id, "shoots").catch(() => {});
+        incrementUnread(assignment.user.id, "shoots").catch(() => {});
       }
     }
   } catch (mailErr) {
@@ -654,7 +680,7 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
 };
 
 exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) => {
-  await verifyWorkspaceAccess(user, workspaceId);
+  await verifyShootTaskAccess(user, workspaceId, taskId);
 
   const subtask = await prisma.shootSubTask.findFirst({
     where: {
@@ -855,7 +881,7 @@ exports.reviewShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
 };
 
 exports.getShootSubTasks = async (user, workspaceId, taskId) => {
-  await verifyWorkspaceAccess(user, workspaceId);
+  await verifyShootTaskAccess(user, workspaceId, taskId);
 
   const subtasks = await prisma.shootSubTask.findMany({
     where: { taskId },
@@ -886,7 +912,7 @@ exports.getShootSubTasks = async (user, workspaceId, taskId) => {
 };
 
 exports.getShootSubTaskById = async (user, workspaceId, taskId, subtaskId) => {
-  await verifyWorkspaceAccess(user, workspaceId);
+  await verifyShootTaskAccess(user, workspaceId, taskId);
 
   const subtask = await prisma.shootSubTask.findFirst({
     where: { id: subtaskId, taskId },

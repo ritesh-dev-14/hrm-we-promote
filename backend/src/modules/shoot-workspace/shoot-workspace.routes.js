@@ -8,6 +8,7 @@ const {
   createShootWorkspaceSchema,
   updateShootWorkspaceSchema,
   addWorkspaceMembersSchema,
+  assignShootTaskEmployeesSchema,
   createShootTaskSchema,
   updateShootTaskSchema,
   createShootSubTaskSchema,
@@ -72,6 +73,21 @@ router.delete(
   auth,
   role("MANAGER"),
   controller.removeShootWorkspaceMember
+);
+
+router.post(
+  "/:workspaceId/tasks/:taskId/assignees",
+  auth,
+  role("MANAGER"),
+  validate(assignShootTaskEmployeesSchema),
+  controller.assignShootTaskEmployees
+);
+
+router.delete(
+  "/:workspaceId/tasks/:taskId/assignees/:employeeId",
+  auth,
+  role("MANAGER"),
+  controller.removeShootTaskEmployee
 );
 
 router.post(

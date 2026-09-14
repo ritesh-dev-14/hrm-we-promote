@@ -81,16 +81,13 @@ exports.getEmployeeStats = async (userId) => {
   const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // SHOOT WORKSPACE SUBTASKS
-  const shootMemberships = await prisma.shootWorkspaceMember.findMany({
+  const shootAssignments = await prisma.shootTaskAssignment.findMany({
     where: { userId },
     include: {
-      workspace: {
+      task: {
         include: {
-          tasks: {
-            include: {
-              subtasks: true
-            }
-          }
+          workspace: true,
+          subtasks: true,
         }
       }
     }
@@ -101,28 +98,25 @@ exports.getEmployeeStats = async (userId) => {
   let pendingShoots = 0;
   const shootSubtasks = [];
 
-  shootMemberships.forEach((membership) => {
-    if (membership.workspace && membership.workspace.tasks) {
-      membership.workspace.tasks.forEach((task) => {
-        if (task.subtasks) {
-          task.subtasks.forEach((subtask) => {
-            totalShoots += 1;
-            if (subtask.status === "APPROVED") {
-              completedShoots += 1;
-            } else {
-              pendingShoots += 1;
-            }
-            shootSubtasks.push({
-              id: subtask.id,
-              title: subtask.title,
-              type: subtask.type,
-              status: subtask.status,
-              workspaceName: membership.workspace.name,
-              taskTitle: task.title,
-              date: task.date
-            });
-          });
+  shootAssignments.forEach((assignment) => {
+    const task = assignment.task;
+    if (task?.subtasks) {
+      task.subtasks.forEach((subtask) => {
+        totalShoots += 1;
+        if (subtask.status === "APPROVED") {
+          completedShoots += 1;
+        } else {
+          pendingShoots += 1;
         }
+        shootSubtasks.push({
+          id: subtask.id,
+          title: subtask.title,
+          type: subtask.type,
+          status: subtask.status,
+          workspaceName: task.workspace?.name,
+          taskTitle: task.title,
+          date: task.date
+        });
       });
     }
   });
@@ -154,15 +148,12 @@ exports.getAllEmployeesStats = async () => {
         }
       },
       taskItemAssignments: true,
-      shootWorkspaceMemberships: {
+      shootTaskAssignments: {
         include: {
-          workspace: {
+          task: {
             include: {
-              tasks: {
-                include: {
-                  subtasks: true
-                }
-              }
+              workspace: true,
+              subtasks: true,
             }
           }
         }
@@ -178,13 +169,11 @@ exports.getAllEmployeesStats = async () => {
     let totalShoots = 0;
     let completedShoots = 0;
 
-    if (user.shootWorkspaceMemberships) {
-      user.shootWorkspaceMemberships.forEach(membership => {
-        if (membership.workspace && membership.workspace.tasks) {
-          membership.workspace.tasks.forEach(task => {
-            totalShoots += task.subtasks.length;
-            completedShoots += task.subtasks.filter(s => s.status === "APPROVED").length;
-          });
+    if (user.shootTaskAssignments) {
+      user.shootTaskAssignments.forEach(assignment => {
+        if (assignment.task) {
+          totalShoots += assignment.task.subtasks.length;
+          completedShoots += assignment.task.subtasks.filter(s => s.status === "APPROVED").length;
         }
       });
     }
@@ -249,23 +238,20 @@ exports.getEmployeeProjectStats = async (employeeId) => {
   });
 
   // SHOOT TASKS
-  const shootMemberships = await prisma.shootWorkspaceMember.findMany({
+  const shootAssignments = await prisma.shootTaskAssignment.findMany({
     where: { userId: employeeId },
     include: {
-      workspace: {
+      task: {
         include: {
-          tasks: {
-            include: {
-              subtasks: true
-            }
-          }
+          workspace: true,
+          subtasks: true,
         }
       }
     }
   });
 
-  shootMemberships.forEach(membership => {
-    const workspaceName = membership.workspace.name;
+  shootAssignments.forEach(assignment => {
+    const workspaceName = assignment.task.workspace.name;
     if (!projectsMap[workspaceName]) {
       projectsMap[workspaceName] = {
         projectName: workspaceName,
@@ -275,13 +261,9 @@ exports.getEmployeeProjectStats = async (employeeId) => {
       };
     }
 
-    if (membership.workspace.tasks) {
-      membership.workspace.tasks.forEach(task => {
-        if (task.subtasks) {
-          projectsMap[workspaceName].totalTasks += task.subtasks.length;
-          projectsMap[workspaceName].completedTasks += task.subtasks.filter(s => s.status === "APPROVED").length;
-        }
-      });
+    if (assignment.task.subtasks) {
+      projectsMap[workspaceName].totalTasks += assignment.task.subtasks.length;
+      projectsMap[workspaceName].completedTasks += assignment.task.subtasks.filter(s => s.status === "APPROVED").length;
     }
   });
 

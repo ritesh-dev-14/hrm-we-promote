@@ -728,9 +728,22 @@ model ShootTask {
   workspace ShootWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy User           @relation("UserCreatedShootTasks", fields: [createdById], references: [id])
   subtasks  ShootSubTask[]
+  assignments ShootTaskAssignment[]
 
   @@index([workspaceId])
   @@index([createdById])
+}
+
+model ShootTaskAssignment {
+  taskId     String
+  userId     String
+  assignedAt DateTime @default(now())
+
+  task ShootTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User      @relation("UserShootTaskAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
 }
 
 model ShootWorkspace {
@@ -973,6 +986,7 @@ model User {
   createdProjectMonthlySheets  ProjectMonthlySheet[]     @relation("CreatedProjectMonthlySheets")
   createdShootWorkspaces       ShootWorkspace[]          @relation("UserCreatedShootWorkspaces")
   createdShootTasks            ShootTask[]               @relation("UserCreatedShootTasks")
+  shootTaskAssignments         ShootTaskAssignment[]     @relation("UserShootTaskAssignments")
   submittedShootSubTasks       ShootSubTask[]            @relation("UserSubmittedShootSubTasks")
   reviewedShootSubTasks        ShootSubTask[]            @relation("UserReviewedShootSubTasks")
   shootWorkspaceMemberships    ShootWorkspaceMember[]    @relation("UserShootWorkspaceMembers")

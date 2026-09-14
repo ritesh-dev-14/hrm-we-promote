@@ -63,6 +63,34 @@ exports.removeShootWorkspaceMember = async (req, res, next) => {
   }
 };
 
+exports.assignShootTaskEmployees = async (req, res, next) => {
+  try {
+    const data = await service.assignShootTaskEmployees(
+      req.user,
+      req.params.workspaceId,
+      req.params.taskId,
+      req.body
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.removeShootTaskEmployee = async (req, res, next) => {
+  try {
+    const data = await service.removeShootTaskEmployee(
+      req.user,
+      req.params.workspaceId,
+      req.params.taskId,
+      req.params.employeeId
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createShootTask = async (req, res, next) => {
   try {
     const data = await service.createShootTask(req.user, req.params.workspaceId, req.body);
