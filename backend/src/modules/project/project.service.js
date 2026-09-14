@@ -23,6 +23,53 @@ const WEB_DEV_DEPARTMENTS = [
   "IT",
 ];
 
+const formatShootContent = (workspaces = []) => {
+  const totals = {
+    plannedPics: 0,
+    plannedReels: 0,
+    submittedPics: 0,
+    submittedReels: 0,
+    approvedPics: 0,
+    approvedReels: 0,
+    extraPics: 0,
+    extraReels: 0,
+  };
+
+  const shoots = [];
+  for (const workspace of workspaces) {
+    for (const task of workspace.tasks || []) {
+      const summary = {
+        workspaceId: workspace.id,
+        workspaceName: workspace.name,
+        shootId: task.id,
+        shootName: task.title,
+        date: task.date,
+        plannedPics: task.noOfPics,
+        plannedReels: task.noOfReels,
+        submittedPics: (task.subtasks || []).filter((item) => item.type === "PIC" && item.status !== "DRAFT").length,
+        submittedReels: (task.subtasks || []).filter((item) => item.type === "REEL" && item.status !== "DRAFT").length,
+        approvedPics: (task.subtasks || []).filter((item) => item.type === "PIC" && item.status === "APPROVED").length,
+        approvedReels: (task.subtasks || []).filter((item) => item.type === "REEL" && item.status === "APPROVED").length,
+        extraPics: (task.extraContent || []).reduce((sum, item) => sum + item.extraPics, 0),
+        extraReels: (task.extraContent || []).reduce((sum, item) => sum + item.extraReels, 0),
+        extraContent: (task.extraContent || []).map((item) => ({
+          id: item.id,
+          extraPics: item.extraPics,
+          extraReels: item.extraReels,
+          driveLink: item.driveLink,
+          notes: item.notes,
+          submittedAt: item.submittedAt,
+        })),
+      };
+
+      for (const key of Object.keys(totals)) totals[key] += summary[key];
+      shoots.push(summary);
+    }
+  }
+
+  return { totals, shoots };
+};
+
 const formatProject = (project) => {
   const department = project.department || { id: null, name: null };
   const createdBy =
@@ -102,6 +149,9 @@ const formatProject = (project) => {
           position: assignment.manager.position,
         },
       })),
+    shootContent: project.shootWorkspaces
+      ? formatShootContent(project.shootWorkspaces)
+      : { totals: null, shoots: [] },
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
   };
@@ -403,6 +453,13 @@ exports.getProjects = async (user, query = {}) => {
         assignments: {
           include: { manager: true },
         },
+        shootWorkspaces: {
+          include: {
+            tasks: {
+              include: { subtasks: true, extraContent: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -451,6 +508,13 @@ exports.getAssignedProjects = async (user, query = {}) => {
         assignments: {
           include: { manager: true },
         },
+        shootWorkspaces: {
+          include: {
+            tasks: {
+              include: { subtasks: true, extraContent: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -477,6 +541,13 @@ exports.getProjectById = async (user, projectId) => {
       assignments: {
         include: {
           manager: true,
+        },
+      },
+      shootWorkspaces: {
+        include: {
+          tasks: {
+            include: { subtasks: true, extraContent: true },
+          },
         },
       },
     },

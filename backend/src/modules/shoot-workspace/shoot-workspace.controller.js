@@ -91,6 +91,33 @@ exports.removeShootTaskEmployee = async (req, res, next) => {
   }
 };
 
+exports.submitShootExtraContent = async (req, res, next) => {
+  try {
+    const data = await service.submitShootExtraContent(
+      req.user,
+      req.params.workspaceId,
+      req.params.taskId,
+      req.body
+    );
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getShootExtraContent = async (req, res, next) => {
+  try {
+    const data = await service.getShootExtraContent(
+      req.user,
+      req.params.workspaceId,
+      req.params.taskId
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createShootTask = async (req, res, next) => {
   try {
     const data = await service.createShootTask(req.user, req.params.workspaceId, req.body);

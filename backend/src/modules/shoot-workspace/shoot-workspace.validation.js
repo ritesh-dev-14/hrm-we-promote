@@ -3,12 +3,29 @@ const Joi = require("joi");
 exports.createShootWorkspaceSchema = Joi.object({
   brandName: Joi.string().min(2).max(200).required(),
   description: Joi.string().max(500).allow("", null),
+  projectId: Joi.string().uuid().allow(null, ""),
 }).unknown(false);
 
 exports.updateShootWorkspaceSchema = Joi.object({
   brandName: Joi.string().min(2).max(200),
   description: Joi.string().max(500).allow("", null),
+  projectId: Joi.string().uuid().allow(null, ""),
 }).unknown(false);
+
+exports.submitShootExtraContentSchema = Joi.object({
+  extraPics: Joi.number().integer().min(0).default(0),
+  extraReels: Joi.number().integer().min(0).default(0),
+  driveLink: Joi.string().uri().required(),
+  notes: Joi.string().max(1000).allow("", null),
+})
+  .custom((value, helpers) => {
+    if (value.extraPics === 0 && value.extraReels === 0) {
+      return helpers.error("any.custom");
+    }
+    return value;
+  })
+  .messages({ "any.custom": "At least one extra photo or reel is required." })
+  .unknown(false);
 
 exports.addWorkspaceMembersSchema = Joi.object({
   employeeIds: Joi.array().items(Joi.string().required()).min(1).required(),

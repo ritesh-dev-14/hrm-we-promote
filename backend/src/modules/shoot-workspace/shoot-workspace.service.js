@@ -19,10 +19,33 @@ const assignedEmployeeSelect = {
 
 const shootTaskInclude = {
   subtasks: true,
+  extraContent: {
+    include: {
+      submittedBy: { select: assignedEmployeeSelect },
+    },
+    orderBy: { submittedAt: "desc" },
+  },
   assignments: {
     include: { user: { select: assignedEmployeeSelect } },
   },
 };
+
+const formatExtraContent = (content) => ({
+  id: content.id,
+  taskId: content.taskId,
+  extraPics: content.extraPics,
+  extraReels: content.extraReels,
+  driveLink: content.driveLink,
+  notes: content.notes,
+  submittedAt: content.submittedAt,
+  submittedBy: content.submittedBy
+    ? {
+        id: content.submittedBy.id,
+        employeeId: content.submittedBy.employeeId,
+        name: content.submittedBy.name,
+      }
+    : null,
+});
 
 const formatShootTask = (task) => ({
   id: task.id,
@@ -42,6 +65,13 @@ const formatShootTask = (task) => ({
     assignedAt: assignment.assignedAt,
     ...assignment.user,
   })),
+  extraContent: (task.extraContent || []).map(formatExtraContent),
+  extraPics: (task.extraContent || []).reduce((total, item) => total + item.extraPics, 0),
+  extraReels: (task.extraContent || []).reduce((total, item) => total + item.extraReels, 0),
+  submittedPics: (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status !== "DRAFT").length,
+  submittedReels: (task.subtasks || []).filter((subtask) => subtask.type === "REEL" && subtask.status !== "DRAFT").length,
+  approvedPics: (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status === "APPROVED").length,
+  approvedReels: (task.subtasks || []).filter((subtask) => subtask.type === "REEL" && subtask.status === "APPROVED").length,
   subtasks: (task.subtasks || []).map((subtask) => ({
     id: subtask.id,
     dayId: subtask.dayId,
@@ -69,6 +99,7 @@ const getWorkspace = async (workspaceId) => {
     where: { id: workspaceId },
     include: {
       createdBy: true,
+      project: { select: { id: true, projectName: true, clientName: true } },
       members: {
         include: {
           user: true,
@@ -106,6 +137,7 @@ const formatWorkspace = (workspace, viewer) => {
   return {
     id: workspace.id,
     name: workspace.name,
+    project: workspace.project || null,
     description: workspace.description,
     createdBy: {
       id: workspace.createdBy.id,
@@ -185,16 +217,27 @@ const verifyShootTaskAccess = async (user, workspaceId, taskId) => {
 };
 
 exports.createShootWorkspace = async (user, body) => {
+  if (body.projectId) {
+    const project = await prisma.project.findUnique({ where: { id: body.projectId }, select: { id: true } });
+    if (!project) {
+      throw new ApiError(400, {
+        code: ERRORS.VALIDATION.INVALID_INPUT.code,
+        message: "Project not found.",
+      });
+    }
+  }
+
   const workspace = await prisma.shootWorkspace.create({
     data: {
       name: body.brandName,
       description: body.description || null,
       createdById: user.id,
+      projectId: body.projectId || null,
       members: {
         create: [],
       },
     },
-    include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
+    include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
   });
   return formatWorkspace(workspace, user);
 };
@@ -204,7 +247,7 @@ exports.getShootWorkspaces = async (user) => {
 
   if (["ADMIN", "HR"].includes(userRole)) {
     const workspaces = await prisma.shootWorkspace.findMany({
-      include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
+      include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
       orderBy: { createdAt: "desc" },
     });
     return workspaces.map((workspace) => formatWorkspace(workspace, user));
@@ -213,7 +256,7 @@ exports.getShootWorkspaces = async (user) => {
   if (userRole === "MANAGER") {
     const workspaces = await prisma.shootWorkspace.findMany({
       where: { createdById: user.id },
-      include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
+      include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
       orderBy: { createdAt: "desc" },
     });
     return workspaces.map((workspace) => formatWorkspace(workspace, user));
@@ -221,7 +264,7 @@ exports.getShootWorkspaces = async (user) => {
 
   const workspaces = await prisma.shootWorkspace.findMany({
     where: { tasks: { some: { assignments: { some: { userId: user.id } } } } },
-    include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
+    include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -236,13 +279,24 @@ exports.getShootWorkspaceById = async (user, workspaceId) => {
 exports.updateShootWorkspace = async (user, workspaceId, body) => {
   await verifyWorkspaceOwnership(user, workspaceId);
 
+  if (body.projectId) {
+    const project = await prisma.project.findUnique({ where: { id: body.projectId }, select: { id: true } });
+    if (!project) {
+      throw new ApiError(400, {
+        code: ERRORS.VALIDATION.INVALID_INPUT.code,
+        message: "Project not found.",
+      });
+    }
+  }
+
   const workspace = await prisma.shootWorkspace.update({
     where: { id: workspaceId },
     data: {
       ...(body.brandName !== undefined ? { name: body.brandName } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
+      ...(body.projectId !== undefined ? { projectId: body.projectId || null } : {}),
     },
-    include: { createdBy: true, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
+    include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
   });
 
   return formatWorkspace(workspace, user);
@@ -455,6 +509,44 @@ exports.removeShootTaskEmployee = async (user, workspaceId, taskId, employeeId) 
     include: shootTaskInclude,
   });
   return formatShootTask(updatedTask);
+};
+
+exports.submitShootExtraContent = async (user, workspaceId, taskId, body) => {
+  const { task } = await verifyShootTaskAccess(user, workspaceId, taskId);
+
+  if ((user.role || "").toUpperCase() !== "EMPLOYEE") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const extraContent = await prisma.shootExtraContent.create({
+    data: {
+      taskId: task.id,
+      submittedById: user.id,
+      extraPics: body.extraPics || 0,
+      extraReels: body.extraReels || 0,
+      driveLink: body.driveLink.trim(),
+      notes: body.notes || null,
+    },
+    include: {
+      submittedBy: { select: assignedEmployeeSelect },
+    },
+  });
+
+  return formatExtraContent(extraContent);
+};
+
+exports.getShootExtraContent = async (user, workspaceId, taskId) => {
+  await verifyShootTaskAccess(user, workspaceId, taskId);
+
+  const content = await prisma.shootExtraContent.findMany({
+    where: { taskId },
+    include: {
+      submittedBy: { select: assignedEmployeeSelect },
+    },
+    orderBy: { submittedAt: "desc" },
+  });
+
+  return content.map(formatExtraContent);
 };
 
 exports.createShootTask = async (user, workspaceId, body) => {

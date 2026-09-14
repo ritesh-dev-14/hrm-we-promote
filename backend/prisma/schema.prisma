@@ -551,6 +551,7 @@ model Project {
   marketingMonthlyReportRows MarketingMonthlyReportRow[]
   whatsappMessages WhatsappMessage[] @relation("ProjectWhatsappMessages")
   campaigns      Campaign[]
+  shootWorkspaces ShootWorkspace[]
 }
 
 model ProjectAssignment {
@@ -729,9 +730,29 @@ model ShootTask {
   createdBy User           @relation("UserCreatedShootTasks", fields: [createdById], references: [id])
   subtasks  ShootSubTask[]
   assignments ShootTaskAssignment[]
+  extraContent ShootExtraContent[]
 
   @@index([workspaceId])
   @@index([createdById])
+}
+
+model ShootExtraContent {
+  id            String   @id @default(uuid())
+  taskId        String
+  submittedById String
+  extraPics     Int      @default(0)
+  extraReels    Int      @default(0)
+  driveLink     String
+  notes         String?
+  submittedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  task        ShootTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submittedBy User      @relation("UserSubmittedShootExtraContent", fields: [submittedById], references: [id])
+
+  @@index([taskId])
+  @@index([submittedById])
 }
 
 model ShootTaskAssignment {
@@ -751,14 +772,17 @@ model ShootWorkspace {
   name        String
   description String?
   createdById String
+  projectId   String?
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
 
   createdBy User                   @relation("UserCreatedShootWorkspaces", fields: [createdById], references: [id])
+  project   Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
   members   ShootWorkspaceMember[]
   tasks     ShootTask[]
 
   @@index([createdById])
+  @@index([projectId])
 }
 
 model ShootWorkspaceMember {
@@ -989,6 +1013,7 @@ model User {
   shootTaskAssignments         ShootTaskAssignment[]     @relation("UserShootTaskAssignments")
   submittedShootSubTasks       ShootSubTask[]            @relation("UserSubmittedShootSubTasks")
   reviewedShootSubTasks        ShootSubTask[]            @relation("UserReviewedShootSubTasks")
+  submittedShootExtraContent   ShootExtraContent[]       @relation("UserSubmittedShootExtraContent")
   shootWorkspaceMemberships    ShootWorkspaceMember[]    @relation("UserShootWorkspaceMembers")
   sentFollowUps                CoordinatorFollowUp[]
   assignments                  TaskAssignment[]
