@@ -255,6 +255,45 @@ exports.getProjectMonthlySheets = async (user, projectId) => {
   return sheets.map(formatSheet);
 };
 
+exports.getAllUploadCalendarSheets = async (user) => {
+  const allowedRoles = ["ADMIN", "HR", "EA", "MANAGER", "EMPLOYEE", "COORDINATOR"];
+  if (!user?.role || !allowedRoles.includes(user.role)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const projectAccess = user.role === "MANAGER"
+    ? { assignments: { some: { managerId: user.id } } }
+    : {};
+
+  const sheets = await prisma.projectMonthlySheet.findMany({
+    where: {
+      project: {
+        ...projectAccess,
+        department: { name: { in: FREQUENCY_DEPARTMENTS } },
+      },
+    },
+    select: {
+      id: true,
+      projectId: true,
+      days: true,
+      project: {
+        select: {
+          projectName: true,
+          clientName: true,
+        },
+      },
+    },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+  });
+
+  return sheets.map((sheet) => ({
+    ...sheet,
+    projectName: sheet.project?.projectName,
+    clientName: sheet.project?.clientName,
+    project: undefined,
+  }));
+};
+
 exports.getProjectMonthlySheetById = async (user, projectId, sheetId) => {
   const { project, assignedManager } = await verifyProjectAccess(user, projectId);
 
