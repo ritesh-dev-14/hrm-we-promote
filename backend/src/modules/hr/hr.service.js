@@ -1212,63 +1212,58 @@ exports.getDashboardOverview = async () => {
   // Build comprehensive overview for each manager
   const overview = await Promise.all(
     managers.map(async (manager) => {
-      // Get manager's employees
-      const employees = await prisma.user.findMany({
-        where: {
-          managerId: manager.id,
-          role: "EMPLOYEE",
-        },
-        select: {
-          id: true,
-          employeeId: true,
-          name: true,
-          email: true,
-          department: true,
-        },
-      });
-
-      // Get manager's tasks
-      const tasks = await prisma.task.findMany({
-        where: {
-          createdById: manager.id,
-        },
-        select: {
-          id: true,
-          description: true,
-          status: true,
-          createdAt: true,
-          projectName: true,
-        },
-      });
-
-      // Get task assignments for this manager's tasks
-      const taskAssignments = await prisma.taskAssignment.findMany({
-        where: {
-          task: {
+      const [employees, tasks, taskAssignments, taskItems] = await Promise.all([
+        prisma.user.findMany({
+          where: {
+            managerId: manager.id,
+            role: "EMPLOYEE",
+          },
+          select: {
+            id: true,
+            employeeId: true,
+            name: true,
+            email: true,
+            department: true,
+          },
+        }),
+        prisma.task.findMany({
+          where: {
             createdById: manager.id,
           },
-        },
-        select: {
-          id: true,
-          status: true,
-        },
-      });
-
-      // Get task items created by this manager's tasks
-      const taskItems = await prisma.taskItem.findMany({
-        where: {
-          task: {
-            createdById: manager.id,
+          select: {
+            id: true,
+            description: true,
+            status: true,
+            createdAt: true,
+            projectName: true,
           },
-        },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          status: true,
-          createdAt: true,
-        },
-      });
+        }),
+        prisma.taskAssignment.findMany({
+          where: {
+            task: {
+              createdById: manager.id,
+            },
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        }),
+        prisma.taskItem.findMany({
+          where: {
+            task: {
+              createdById: manager.id,
+            },
+          },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            status: true,
+            createdAt: true,
+          },
+        }),
+      ]);
 
       // Get all task item assignments for this manager's team
       const assignments = await prisma.taskItemAssignment.findMany({
