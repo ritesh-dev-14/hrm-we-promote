@@ -10,6 +10,8 @@ exports.updateShootWorkspaceSchema = Joi.object({
   brandName: Joi.string().min(2).max(200),
   description: Joi.string().max(500).allow("", null),
   projectId: Joi.string().uuid().allow(null, ""),
+  pendingUploadCount: Joi.number().integer().min(0),
+  videosUploadedCount: Joi.number().integer().min(0),
 }).unknown(false);
 
 exports.submitShootExtraContentSchema = Joi.object({

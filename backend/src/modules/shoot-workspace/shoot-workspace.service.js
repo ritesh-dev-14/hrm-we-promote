@@ -240,6 +240,10 @@ const buildShootManagementSummary = (workspaces = []) => {
   for (const workspace of workspaceList) {
     const tasks = Array.isArray(workspace?.tasks) ? workspace.tasks : [];
     summary.workspaceCount += 1;
+    if (workspace.pendingUploadCount !== undefined) summary.pendingForUpload += Number(workspace.pendingUploadCount);
+    summary.videosUploaded += Number(workspace.videosUploadedCount || 0);
+    summary.videosEdited += Number(workspace.editorVideosEdited || 0);
+    summary.picsEdited += Number(workspace.editorPicsEdited || 0);
 
     for (const task of tasks) {
       const reels = Number(task?.noOfReels || 0);
@@ -264,9 +268,7 @@ const buildShootManagementSummary = (workspaces = []) => {
       summary.reelsApprovedByManager += approvedReels;
       summary.picsApprovedByManager += approvedPics;
       summary.pendingForEdit += pendingEdit;
-      summary.pendingForUpload += pendingUpload;
-      summary.videosEdited += Number(workspace.editorVideosEdited || 0);
-      summary.picsEdited += Number(workspace.editorPicsEdited || 0);
+      if (workspace.pendingUploadCount === undefined) summary.pendingForUpload += pendingUpload;
 
       const firstDriveLink = extraContent.find((item) => sanitizeString(item?.driveLink).length > 0)?.driveLink || "";
       if (firstDriveLink && !summary.rawDataLink) {
@@ -296,6 +298,16 @@ const formatShootManagementWorkspace = (workspace) => {
     (sum, task) => sum + (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status === "APPROVED").length,
     0,
   );
+  const workspaceVideosAvailable = tasks.reduce(
+    (sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraReels || 0), 0),
+    0,
+  ) + reelsApprovedByManager;
+  const workspacePicsAvailable = tasks.reduce(
+    (sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraPics || 0), 0),
+    0,
+  ) + picsApprovedByManager;
+  const workspacePendingVideoEdit = Math.max(0, workspaceVideosAvailable - Number(workspace.editorVideosEdited || 0));
+  const workspacePendingPicEdit = Math.max(0, workspacePicsAvailable - Number(workspace.editorPicsEdited || 0));
 
   return {
     id: workspace.id,
@@ -335,11 +347,10 @@ const formatShootManagementWorkspace = (workspace) => {
       + picsApprovedByManager
       - Number(workspace.editorPicsEdited || 0),
     ),
-    pendingForUpload: tasks.reduce(
-      (sum, task) => sum + (task.subtasks || []).filter((subtask) => subtask.status === "REJECTED").length,
-      0,
-    ),
-    videosUploaded: 0,
+    pendingForUpload: workspace.pendingUploadCount !== undefined
+      ? Number(workspace.pendingUploadCount)
+      : tasks.reduce((sum, task) => sum + (task.subtasks || []).filter((subtask) => subtask.status === "REJECTED").length, 0),
+    videosUploaded: Number(workspace.videosUploadedCount || 0),
     videosEdited: Number(workspace.editorVideosEdited || 0),
     picsEdited: Number(workspace.editorPicsEdited || 0),
     shoots: tasks.map((task) => ({
@@ -351,9 +362,16 @@ const formatShootManagementWorkspace = (workspace) => {
       extraPics: (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraPics || 0), 0),
       reelsApprovedByManager: (task.subtasks || []).filter((subtask) => subtask.type === "REEL" && subtask.status === "APPROVED").length,
       picsApprovedByManager: (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status === "APPROVED").length,
-      pendingForEdit: (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraReels || 0) + Number(item.extraPics || 0), 0)
-        + (task.subtasks || []).filter((subtask) => subtask.status === "APPROVED").length,
-      pendingForUpload: (task.subtasks || []).filter((subtask) => subtask.status === "REJECTED").length,
+      pendingForEdit: tasks.length === 1
+        ? workspacePendingVideoEdit + workspacePendingPicEdit
+        : (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraReels || 0) + Number(item.extraPics || 0), 0)
+          + (task.subtasks || []).filter((subtask) => subtask.status === "APPROVED").length,
+      pendingForVideoEdit: tasks.length === 1 ? workspacePendingVideoEdit : undefined,
+      pendingForPicEdit: tasks.length === 1 ? workspacePendingPicEdit : undefined,
+      pendingForUpload: tasks.length === 1 && workspace.pendingUploadCount !== undefined
+        ? Number(workspace.pendingUploadCount)
+        : (task.subtasks || []).filter((subtask) => subtask.status === "REJECTED").length,
+      videosUploaded: tasks.length === 1 ? Number(workspace.videosUploadedCount || 0) : undefined,
     })),
   };
 };
@@ -635,6 +653,8 @@ exports.updateShootWorkspace = async (user, workspaceId, body) => {
       ...(body.brandName !== undefined ? { name: body.brandName } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
       ...(body.projectId !== undefined ? { projectId: body.projectId || null } : {}),
+      ...(body.pendingUploadCount !== undefined ? { pendingUploadCount: body.pendingUploadCount } : {}),
+      ...(body.videosUploadedCount !== undefined ? { videosUploadedCount: body.videosUploadedCount } : {}),
     },
     include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
   });
