@@ -1140,6 +1140,8 @@ exports.getTaskItemsWithDetails =
             item.progress,
           priority:
             item.priority,
+          mediaType:
+            item.mediaType,
           dueDate:
             item.dueDate,
           createdAt:

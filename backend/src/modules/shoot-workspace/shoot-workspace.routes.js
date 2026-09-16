@@ -40,6 +40,13 @@ router.get(
 );
 
 router.get(
+  "/management-summary",
+  auth,
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  controller.getShootManagementSummary
+);
+
+router.get(
   "/:workspaceId",
   auth,
   role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),

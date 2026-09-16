@@ -127,6 +127,11 @@ enum TaskItemStatus {
   UNABLE_TO_SUBMIT
 }
 
+enum TaskItemMediaType {
+  VIDEO
+  PIC
+}
+
 enum Priority {
   LOW
   MEDIUM
@@ -900,6 +905,7 @@ model TaskItem {
   progress    Int                  @default(0)
   dueDate     DateTime
   priority    Priority             @default(MEDIUM)
+  mediaType   TaskItemMediaType    @default(VIDEO)
   referenceLink String?
   rawDataLink   String?
   task        Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)

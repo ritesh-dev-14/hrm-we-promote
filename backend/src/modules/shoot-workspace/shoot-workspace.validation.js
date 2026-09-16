@@ -60,7 +60,7 @@ exports.updateShootTaskSchema = Joi.object({
 exports.createShootSubTaskSchema = Joi.object({
   title: Joi.string().min(1).max(200).required(),
   description: Joi.string().max(1000).allow("", null).optional(),
-  type: Joi.string().valid("PIC", "REEL").required(),
+  type: Joi.string().uppercase().valid("PIC", "REEL", "IMAGE", "PHOTO", "VIDEO").required(),
   referenceLinks: Joi.array().items(Joi.string().allow("")).default([]).optional(),
   videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow("", null).optional(),
   setupType: Joi.string().valid("PREMIUM", "VERY_PREMIUM", "PHONE").allow("", null).optional(),
@@ -70,7 +70,7 @@ exports.createShootSubTaskSchema = Joi.object({
 exports.updateShootSubTaskSchema = Joi.object({
   title: Joi.string().min(1).max(200).optional(),
   description: Joi.string().max(1000).allow("", null).optional(),
-  type: Joi.string().valid("PIC", "REEL").optional(),
+  type: Joi.string().uppercase().valid("PIC", "REEL", "IMAGE", "PHOTO", "VIDEO").optional(),
   referenceLinks: Joi.array().items(Joi.string().allow("")).default([]).optional(),
   videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow("", null).optional(),
   setupType: Joi.string().valid("PREMIUM", "VERY_PREMIUM", "PHONE").allow("", null).optional(),

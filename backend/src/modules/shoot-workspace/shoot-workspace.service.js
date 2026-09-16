@@ -159,6 +159,245 @@ const formatWorkspace = (workspace, viewer) => {
   };
 };
 
+const sanitizeString = (value) => (typeof value === "string" ? value.trim() : "");
+
+const normalizeShootSubtaskType = (value) => {
+  const normalized = String(value || "").trim().toUpperCase();
+  if (normalized === "IMAGE" || normalized === "PHOTO") return "PIC";
+  if (normalized === "VIDEO") return "REEL";
+  return normalized;
+};
+
+exports.normalizeShootSubtaskType = normalizeShootSubtaskType;
+
+const getVerifiedEditorMediaCounts = async (workspaces) => {
+  const projectIds = workspaces.map((workspace) => workspace.project?.id).filter(Boolean);
+  const projectNames = workspaces
+    .flatMap((workspace) => [
+      sanitizeString(workspace.project?.projectName),
+      sanitizeString(workspace.name),
+    ])
+    .filter(Boolean);
+
+  if (projectIds.length === 0 && projectNames.length === 0) return new Map();
+
+  const editorItems = await prisma.taskItem.findMany({
+    where: {
+      mediaType: { in: ["VIDEO", "PIC"] },
+      assignments: { some: { status: "VERIFIED" } },
+      task: {
+        OR: [
+          ...(projectIds.length > 0 ? [{ projectId: { in: projectIds } }] : []),
+          ...(projectNames.length > 0 ? [{ projectName: { in: projectNames } }] : []),
+        ],
+      },
+    },
+    select: {
+      id: true,
+      mediaType: true,
+      task: { select: { projectId: true, projectName: true } },
+    },
+  });
+
+  const counts = new Map();
+  for (const item of editorItems) {
+    const keys = [
+      item.task.projectId,
+      `name:${sanitizeString(item.task.projectName).toLowerCase()}`,
+    ].filter(Boolean);
+    for (const key of keys) {
+      const existing = counts.get(key) || { videos: 0, pics: 0 };
+      existing[item.mediaType === "PIC" ? "pics" : "videos"] += 1;
+      counts.set(key, existing);
+    }
+  }
+  return counts;
+};
+
+const buildShootManagementSummary = (workspaces = []) => {
+  const summary = {
+    totalReels: 0,
+    totalPics: 0,
+    extraReels: 0,
+    extraPics: 0,
+    reelsApprovedByManager: 0,
+    picsApprovedByManager: 0,
+    totalVideosAvailable: 0,
+    totalPicsAvailable: 0,
+    rawDataLink: "",
+    pendingForEdit: 0,
+    pendingForVideoEdit: 0,
+    pendingForPicEdit: 0,
+    pendingForUpload: 0,
+    videosUploaded: 0,
+    videosEdited: 0,
+    picsEdited: 0,
+    workspaceCount: 0,
+  };
+
+  const workspaceList = Array.isArray(workspaces) ? workspaces : [];
+
+  for (const workspace of workspaceList) {
+    const tasks = Array.isArray(workspace?.tasks) ? workspace.tasks : [];
+    summary.workspaceCount += 1;
+
+    for (const task of tasks) {
+      const reels = Number(task?.noOfReels || 0);
+      const pics = Number(task?.noOfPics || 0);
+      const extraContent = Array.isArray(task?.extraContent) ? task.extraContent : [];
+      const extraReels = extraContent.reduce((total, item) => total + Number(item?.extraReels || 0), 0);
+      const extraPics = extraContent.reduce((total, item) => total + Number(item?.extraPics || 0), 0);
+      const approvedReels = (task?.subtasks || []).filter((subtask) => subtask?.type === "REEL" && subtask?.status === "APPROVED").length;
+      const approvedPics = (task?.subtasks || []).filter((subtask) => subtask?.type === "PIC" && subtask?.status === "APPROVED").length;
+      const rejectedReels = (task?.subtasks || []).filter((subtask) => subtask?.type === "REEL" && subtask?.status === "REJECTED").length;
+      const rejectedPics = (task?.subtasks || []).filter((subtask) => subtask?.type === "PIC" && subtask?.status === "REJECTED").length;
+      const pendingEdit = extraReels + extraPics + approvedReels + approvedPics;
+
+      const pendingUpload = (task?.subtasks || []).filter(
+        (subtask) => (subtask?.type === "REEL" || subtask?.type === "PIC") && subtask?.status === "REJECTED"
+      ).length;
+
+      summary.totalReels += reels;
+      summary.totalPics += pics;
+      summary.extraReels += extraReels;
+      summary.extraPics += extraPics;
+      summary.reelsApprovedByManager += approvedReels;
+      summary.picsApprovedByManager += approvedPics;
+      summary.pendingForEdit += pendingEdit;
+      summary.pendingForUpload += pendingUpload;
+      summary.videosEdited += Number(workspace.editorVideosEdited || 0);
+      summary.picsEdited += Number(workspace.editorPicsEdited || 0);
+
+      const firstDriveLink = extraContent.find((item) => sanitizeString(item?.driveLink).length > 0)?.driveLink || "";
+      if (firstDriveLink && !summary.rawDataLink) {
+        summary.rawDataLink = firstDriveLink;
+      }
+    }
+  }
+
+  summary.totalVideosAvailable = summary.extraReels + summary.reelsApprovedByManager;
+  summary.totalPicsAvailable = summary.extraPics + summary.picsApprovedByManager;
+  summary.pendingForVideoEdit = Math.max(0, summary.totalVideosAvailable - summary.videosEdited);
+  summary.pendingForPicEdit = Math.max(0, summary.totalPicsAvailable - summary.picsEdited);
+  summary.pendingForEdit = summary.pendingForVideoEdit + summary.pendingForPicEdit;
+
+  return summary;
+};
+
+exports.buildShootManagementSummary = buildShootManagementSummary;
+
+const formatShootManagementWorkspace = (workspace) => {
+  const tasks = workspace.tasks || [];
+  const reelsApprovedByManager = tasks.reduce(
+    (sum, task) => sum + (task.subtasks || []).filter((subtask) => subtask.type === "REEL" && subtask.status === "APPROVED").length,
+    0,
+  );
+  const picsApprovedByManager = tasks.reduce(
+    (sum, task) => sum + (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status === "APPROVED").length,
+    0,
+  );
+
+  return {
+    id: workspace.id,
+    name: workspace.name,
+    project: workspace.project || null,
+    description: workspace.description,
+    createdBy: workspace.createdBy ? { id: workspace.createdBy.id, name: workspace.createdBy.name } : null,
+    taskCount: tasks.length,
+    totalReels: tasks.reduce((sum, task) => sum + Number(task.noOfReels || 0), 0),
+    totalPics: tasks.reduce((sum, task) => sum + Number(task.noOfPics || 0), 0),
+    extraReels: tasks.reduce(
+      (sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraReels || 0), 0),
+      0,
+    ),
+    extraPics: tasks.reduce(
+      (sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraPics || 0), 0),
+      0,
+    ),
+    reelsApprovedByManager,
+    picsApprovedByManager,
+    totalVideosAvailable: 0,
+    totalPicsAvailable: 0,
+    rawDataLink: tasks.flatMap((task) => task.extraContent || []).find((item) => item?.driveLink)?.driveLink || "",
+    pendingForEdit: tasks.reduce(
+      (sum, task) => sum
+        + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraReels || 0) + Number(item.extraPics || 0), 0)
+        + (task.subtasks || []).filter((subtask) => subtask.status === "APPROVED").length,
+      0,
+    ),
+    pendingForVideoEdit: Math.max(0,
+      tasks.reduce((sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraReels || 0), 0), 0)
+      + reelsApprovedByManager
+      - Number(workspace.editorVideosEdited || 0),
+    ),
+    pendingForPicEdit: Math.max(0,
+      tasks.reduce((sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraPics || 0), 0), 0)
+      + picsApprovedByManager
+      - Number(workspace.editorPicsEdited || 0),
+    ),
+    pendingForUpload: tasks.reduce(
+      (sum, task) => sum + (task.subtasks || []).filter((subtask) => subtask.status === "REJECTED").length,
+      0,
+    ),
+    videosUploaded: 0,
+    videosEdited: Number(workspace.editorVideosEdited || 0),
+    picsEdited: Number(workspace.editorPicsEdited || 0),
+    shoots: tasks.map((task) => ({
+      id: task.id,
+      name: task.title,
+      totalReels: Number(task.noOfReels || 0),
+      totalPics: Number(task.noOfPics || 0),
+      extraReels: (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraReels || 0), 0),
+      extraPics: (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraPics || 0), 0),
+      reelsApprovedByManager: (task.subtasks || []).filter((subtask) => subtask.type === "REEL" && subtask.status === "APPROVED").length,
+      picsApprovedByManager: (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status === "APPROVED").length,
+      pendingForEdit: (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraReels || 0) + Number(item.extraPics || 0), 0)
+        + (task.subtasks || []).filter((subtask) => subtask.status === "APPROVED").length,
+      pendingForUpload: (task.subtasks || []).filter((subtask) => subtask.status === "REJECTED").length,
+    })),
+  };
+};
+
+const buildWorkspaceSummaries = (workspaces) => workspaces.map((workspace) => ({
+  ...buildShootManagementSummary([workspace]),
+  ...formatShootManagementWorkspace(workspace),
+  totalVideosAvailable: formatShootManagementWorkspace(workspace).extraReels + formatShootManagementWorkspace(workspace).reelsApprovedByManager,
+  totalPicsAvailable: formatShootManagementWorkspace(workspace).extraPics + formatShootManagementWorkspace(workspace).picsApprovedByManager,
+}));
+
+exports.buildWorkspaceSummaries = buildWorkspaceSummaries;
+
+const buildProjectSummaries = (workspaces) => {
+  const projectGroups = new Map();
+
+  for (const workspace of workspaces) {
+    const project = workspace.project;
+    const projectId = project?.id || "unassigned";
+    const existing = projectGroups.get(projectId) || {
+      id: projectId,
+      name: project?.projectName || "Unassigned Project",
+      clientName: project?.clientName || "",
+      workspaces: [],
+    };
+    existing.workspaces.push(workspace);
+    projectGroups.set(projectId, existing);
+  }
+
+  return Array.from(projectGroups.values()).map((projectGroup) => ({
+    id: projectGroup.id,
+    name: projectGroup.name,
+    clientName: projectGroup.clientName,
+    ...buildShootManagementSummary(projectGroup.workspaces),
+    workspaces: projectGroup.workspaces.map(formatShootManagementWorkspace).map((workspace) => ({
+      ...workspace,
+      totalVideosAvailable: workspace.extraReels + workspace.reelsApprovedByManager,
+      totalPicsAvailable: workspace.extraPics + workspace.picsApprovedByManager,
+    })),
+  }));
+};
+
+exports.buildProjectSummaries = buildProjectSummaries;
+
 const verifyWorkspaceOwnership = async (user, workspaceId) => {
   const workspace = await getWorkspace(workspaceId);
   if (!workspace) {
@@ -269,6 +508,107 @@ exports.getShootWorkspaces = async (user) => {
   });
 
   return workspaces.map((workspace) => formatWorkspace(workspace, user));
+};
+
+exports.getShootManagementSummary = async (user) => {
+  const userRole = (user.role || "").toUpperCase();
+
+  let workspaces = [];
+
+  if (["ADMIN", "HR"].includes(userRole)) {
+    workspaces = await prisma.shootWorkspace.findMany({
+      include: {
+        createdBy: true,
+        project: { select: { id: true, projectName: true, clientName: true } },
+        members: { include: { user: true } },
+        tasks: {
+          include: {
+            ...shootTaskInclude,
+            subtasks: true,
+            extraContent: {
+              include: { submittedBy: { select: assignedEmployeeSelect } },
+              orderBy: { submittedAt: "desc" },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } else if (userRole === "MANAGER") {
+    workspaces = await prisma.shootWorkspace.findMany({
+      where: { createdById: user.id },
+      include: {
+        createdBy: true,
+        project: { select: { id: true, projectName: true, clientName: true } },
+        members: { include: { user: true } },
+        tasks: {
+          include: {
+            ...shootTaskInclude,
+            subtasks: true,
+            extraContent: {
+              include: { submittedBy: { select: assignedEmployeeSelect } },
+              orderBy: { submittedAt: "desc" },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } else {
+    workspaces = await prisma.shootWorkspace.findMany({
+      where: { tasks: { some: { assignments: { some: { userId: user.id } } } } },
+      include: {
+        createdBy: true,
+        project: { select: { id: true, projectName: true, clientName: true } },
+        members: { include: { user: true } },
+        tasks: {
+          include: {
+            ...shootTaskInclude,
+            subtasks: true,
+            extraContent: {
+              include: { submittedBy: { select: assignedEmployeeSelect } },
+              orderBy: { submittedAt: "desc" },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  const editorMediaCounts = await getVerifiedEditorMediaCounts(workspaces);
+  const summaryWorkspaces = workspaces.map((workspace) => {
+    const projectKey = workspace.project?.id || `name:${sanitizeString(workspace.project?.projectName || workspace.name).toLowerCase()}`;
+    return {
+      ...workspace,
+      editorVideosEdited: editorMediaCounts.get(projectKey)?.videos || 0,
+      editorPicsEdited: editorMediaCounts.get(projectKey)?.pics || 0,
+      tasks: (workspace.tasks || []).map((task) => ({
+        ...task,
+        extraContent: task.extraContent || [],
+        subtasks: task.subtasks || [],
+      })),
+    };
+  });
+
+  const summary = buildShootManagementSummary(summaryWorkspaces.map((workspace) => ({
+    ...workspace,
+  })));
+
+  const projects = buildProjectSummaries(summaryWorkspaces);
+  const workspaceSummaries = buildWorkspaceSummaries(summaryWorkspaces);
+
+  return {
+    ...summary,
+    workspaceCount: workspaces.length,
+    workspaces: summaryWorkspaces.map(formatShootManagementWorkspace).map((workspace) => ({
+      ...workspace,
+      totalVideosAvailable: workspace.extraReels + workspace.reelsApprovedByManager,
+      totalPicsAvailable: workspace.extraPics + workspace.picsApprovedByManager,
+    })),
+    projects,
+    workspaceSummaries,
+  };
 };
 
 exports.getShootWorkspaceById = async (user, workspaceId) => {
@@ -691,13 +1031,13 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
 
   const subtask = await prisma.shootSubTask.create({
     data: {
-      taskId,
-      dayId: validDayId,
+      task: { connect: { id: taskId } },
+      ...(validDayId ? { day: { connect: { id: validDayId } } } : {}),
       title: body.title,
       description: body.description || null,
-      type: body.type,
+      type: normalizeShootSubtaskType(body.type),
       referenceLinks: Array.isArray(body.referenceLinks) ? body.referenceLinks : [],
-      videoType: body.type === "REEL" ? (body.videoType || "HORIZONTAL") : null,
+      videoType: body.videoType || "HORIZONTAL",
       setupType: body.setupType ?? null,
       status: "DRAFT",
     },
@@ -800,6 +1140,7 @@ exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
 
   // ✅ REJECTED status is explicitly allowed for resubmission — fall through
 
+  const normalizedType = body.type !== undefined ? normalizeShootSubtaskType(body.type) : undefined;
   const updatedSubtask = await prisma.shootSubTask.update({
     where: { id: subtaskId },
     data: {
@@ -1071,9 +1412,9 @@ exports.updateShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
     data: {
       ...(body.title !== undefined ? { title: body.title } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
-      ...(body.type !== undefined ? { type: body.type } : {}),
+      ...(normalizedType !== undefined ? { type: normalizedType, videoType: body.videoType || "HORIZONTAL" } : {}),
       ...(body.referenceLinks !== undefined ? { referenceLinks: Array.isArray(body.referenceLinks) ? body.referenceLinks : [] } : {}),
-      ...(body.videoType !== undefined ? { videoType: body.videoType || null } : {}),
+      ...(body.videoType !== undefined && normalizedType === undefined ? { videoType: body.videoType || "HORIZONTAL" } : {}),
       ...(body.setupType !== undefined ? { setupType: body.setupType ?? null } : {}),
       ...(validDayId !== undefined ? { dayId: validDayId } : {}),
     },

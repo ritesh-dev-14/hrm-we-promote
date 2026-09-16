@@ -18,6 +18,15 @@ exports.getShootWorkspaces = async (req, res, next) => {
   }
 };
 
+exports.getShootManagementSummary = async (req, res, next) => {
+  try {
+    const data = await service.getShootManagementSummary(req.user);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getShootWorkspaceById = async (req, res, next) => {
   try {
     const data = await service.getShootWorkspaceById(req.user, req.params.workspaceId);

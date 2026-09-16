@@ -36,6 +36,11 @@ exports.createTaskItemSchema = Joi.object({
     .valid("DRAFT", "IN_PROGRESS")
     .optional()
     .default("DRAFT"),
+  mediaType: Joi.string()
+    .uppercase()
+    .valid("VIDEO", "PIC")
+    .optional()
+    .default("VIDEO"),
   referenceLink: Joi.string().uri().allow("", null).optional(),
   rawDataLink: Joi.string().uri().allow("", null).optional(),
 })
