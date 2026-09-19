@@ -115,6 +115,19 @@ exports.createTaskItem = async (
     }
   }
 
+  if (body.monthlySheetDayId) {
+    const calendarDay = await prisma.projectMonthlySheetDay.findFirst({
+      where: {
+        id: body.monthlySheetDayId,
+      },
+      select: { id: true },
+    });
+
+    if (!calendarDay) {
+      throw new ApiError(400, "Content calendar day not found");
+    }
+  }
+
   //
   // ✅ CREATE TASK ITEM
   //
@@ -130,6 +143,7 @@ exports.createTaskItem = async (
       referenceLink: body.referenceLink ?? null,
       rawDataLink: body.rawDataLink ?? null,
       shootTaskId: body.shootTaskId || null,
+      monthlySheetDayId: body.monthlySheetDayId || null,
     },
   });
 

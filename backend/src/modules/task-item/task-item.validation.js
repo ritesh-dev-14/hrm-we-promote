@@ -44,6 +44,7 @@ exports.createTaskItemSchema = Joi.object({
   referenceLink: Joi.string().uri().allow("", null).optional(),
   rawDataLink: Joi.string().uri().allow("", null).optional(),
   shootTaskId: Joi.string().allow("", null).optional(),
+  monthlySheetDayId: Joi.string().allow("", null).optional(),
 })
   .unknown(false);
 
