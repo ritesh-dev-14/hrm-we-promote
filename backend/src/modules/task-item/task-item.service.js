@@ -101,6 +101,20 @@ exports.createTaskItem = async (
     );
   }
 
+  if (body.shootTaskId) {
+    const shootTask = await prisma.shootTask.findFirst({
+      where: {
+        id: body.shootTaskId,
+        workspace: { projectId: task.projectId },
+      },
+      select: { id: true },
+    });
+
+    if (!shootTask) {
+      throw new ApiError(400, "Shoot task does not belong to this project");
+    }
+  }
+
   //
   // ✅ CREATE TASK ITEM
   //
@@ -115,6 +129,7 @@ exports.createTaskItem = async (
       mediaType: body.mediaType || "VIDEO",
       referenceLink: body.referenceLink ?? null,
       rawDataLink: body.rawDataLink ?? null,
+      shootTaskId: body.shootTaskId || null,
     },
   });
 
@@ -201,6 +216,7 @@ exports.createTaskItem = async (
     title: item.title,
     referenceLink: item.referenceLink,
     rawDataLink: item.rawDataLink,
+    shootTaskId: item.shootTaskId,
     project: task.projectName,
     assignedToEmployee: {
       id: employee.id,
@@ -331,6 +347,7 @@ exports.getTaskItems = async (
         : null,
       referenceLink: item.referenceLink,
       rawDataLink: item.rawDataLink,
+      shootTaskId: item.shootTaskId,
       dueDate: item.dueDate,
       priority: item.priority,
       mediaType: item.mediaType,
@@ -748,6 +765,7 @@ exports.updateTaskItem = async (itemId, body) => {
       ...(body.dueDate !== undefined && { dueDate: body.dueDate }),
       ...(body.referenceLink !== undefined && { referenceLink: body.referenceLink }),
       ...(body.rawDataLink !== undefined && { rawDataLink: body.rawDataLink }),
+      ...(body.shootTaskId !== undefined ? { shootTaskId: body.shootTaskId || null } : {}),
       ...(body.status && { status: body.status }),
     },
   });

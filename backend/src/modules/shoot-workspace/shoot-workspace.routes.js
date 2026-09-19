@@ -40,10 +40,38 @@ router.get(
 );
 
 router.get(
+  "/manager-submissions",
+  auth,
+  role("MANAGER"),
+  controller.getManagerShootSubmissions
+);
+
+router.get(
   "/management-summary",
   auth,
   role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
   controller.getShootManagementSummary
+);
+
+router.get(
+  "/:workspaceId/upload-feed",
+  auth,
+  role("MANAGER"),
+  controller.getWorkspaceUploadFeed
+);
+
+router.post(
+  "/:workspaceId/editor-items/:itemId/client-approve",
+  auth,
+  role("MANAGER"),
+  controller.approveEditorItemByClient
+);
+
+router.post(
+  "/:workspaceId/editor-items/:itemId/uploaded",
+  auth,
+  role("MANAGER"),
+  controller.markEditorItemUploaded
 );
 
 router.get(

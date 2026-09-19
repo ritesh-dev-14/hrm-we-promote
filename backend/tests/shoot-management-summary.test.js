@@ -1,7 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { buildShootManagementSummary, buildProjectSummaries, buildWorkspaceSummaries } = require('../src/modules/shoot-workspace/shoot-workspace.service');
+const {
+  buildShootManagementSummary,
+  buildProjectSummaries,
+  buildWorkspaceSummaries,
+  formatManagerShootSubmissions,
+  formatWorkspaceUploadFeed,
+} = require('../src/modules/shoot-workspace/shoot-workspace.service');
 
 test('buildShootManagementSummary aggregates reel/pic and approval metrics correctly', () => {
   const summary = buildShootManagementSummary([
@@ -129,4 +135,109 @@ test('counts verified editor pics and deducts them from pending pic edit', () =>
 
   assert.equal(summary.picsEdited, 1);
   assert.equal(summary.pendingForPicEdit, 0);
+});
+
+test('formats manager shoot submissions with brief, assignments, and submitted media only', () => {
+  const result = formatManagerShootSubmissions([
+    {
+      id: 'workspace-1',
+      name: 'Campaign shoots',
+      description: 'Workspace brief',
+      project: { id: 'project-1', projectName: 'Client campaign', clientName: 'Client' },
+      tasks: [
+        {
+          id: 'shoot-1',
+          title: 'Launch shoot',
+          description: 'Shoot brief',
+          assignments: [
+            {
+              assignedAt: '2026-09-10T00:00:00.000Z',
+              user: { id: 'employee-1', employeeId: 'EMP-1', name: 'Shoot Member', email: 'shoot@example.com' },
+            },
+          ],
+          subtasks: [
+            {
+              id: 'submission-1',
+              title: 'Launch reel',
+              description: 'Reel direction',
+              type: 'REEL',
+              referenceLinks: ['https://reference.example'],
+              videoType: 'VERTICAL',
+              setupType: 'PREMIUM',
+              submissionLinks: ['https://video.example'],
+              submittedBy: { id: 'employee-1', employeeId: 'EMP-1', name: 'Shoot Member', email: 'shoot@example.com' },
+              submittedAt: '2026-09-11T00:00:00.000Z',
+              status: 'APPROVED',
+              reviewReason: null,
+              reviewedBy: { id: 'manager-1', employeeId: 'M-1', name: 'Manager', email: 'manager@example.com' },
+              reviewedAt: '2026-09-12T00:00:00.000Z',
+            },
+            { id: 'draft-1', submissionLinks: [], status: 'DRAFT' },
+          ],
+        },
+        {
+          id: 'shoot-without-submission',
+          title: 'Not submitted',
+          assignments: [],
+          subtasks: [{ id: 'draft-2', submissionLinks: [], status: 'DRAFT' }],
+        },
+      ],
+    },
+  ]);
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].project.projectName, 'Client campaign');
+  assert.equal(result[0].shoots.length, 1);
+  assert.equal(result[0].shoots[0].assignedEmployees[0].employeeId, 'EMP-1');
+  assert.deepEqual(result[0].shoots[0].submissions[0].submissionLinks, ['https://video.example']);
+  assert.equal(result[0].shoots[0].submissions[0].status, 'APPROVED');
+});
+
+test('formats workspace upload feed with shoot links and editor task links', () => {
+  const result = formatWorkspaceUploadFeed(
+    {
+      id: 'workspace-1',
+      name: 'expertttt',
+      description: 'Shoot workspace',
+      project: { id: 'project-1', projectName: 'Expert project', clientName: 'Client' },
+      pendingUploadCount: 2,
+      videosUploadedCount: 4,
+      tasks: [
+        {
+          id: 'shoot-1',
+          title: 'Opening shoot',
+          description: 'Shoot details',
+          assignments: [],
+          uploadRecord: { uploadedAt: '2026-09-19T01:00:00.000Z' },
+          editorItems: [],
+        },
+      ],
+    },
+    [{
+      id: 'editor-item-1',
+      shootTaskId: 'shoot-1',
+      title: 'Opening edit',
+      description: 'Edit submitted reel',
+      status: 'SUBMITTED',
+      referenceLink: 'https://editor-reference.example',
+      rawDataLink: 'https://raw.example',
+      clientApproved: true,
+      clientApprovedAt: '2026-09-19T01:00:00.000Z',
+      instagramUploaded: false,
+      instagramUploadedAt: null,
+      shootTask: { id: 'shoot-1', title: 'Opening shoot', date: '2026-09-19' },
+      assignments: [{
+        id: 'assignment-1',
+        status: 'VERIFIED',
+        employee: { id: 'employee-2', name: 'Editor' },
+        submission: { driveLink: 'https://edited.example', verifiedByManager: true },
+      }],
+    }]
+  );
+
+  assert.equal(result.videosUploadedCount, 4);
+  assert.equal(result.approvedByClientCount, 1);
+  assert.equal(result.editorItems[0].rawDataLink, 'https://raw.example');
+  assert.equal(result.editorItems[0].clientApproved, true);
+  assert.equal(result.editorItems[0].assignments[0].submission.driveLink, 'https://edited.example');
 });

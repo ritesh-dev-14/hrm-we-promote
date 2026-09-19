@@ -736,6 +736,7 @@ model ShootTask {
   subtasks  ShootSubTask[]
   assignments ShootTaskAssignment[]
   extraContent ShootExtraContent[]
+  editorItems TaskItem[]
 
   @@index([workspaceId])
   @@index([createdById])
@@ -910,10 +911,21 @@ model TaskItem {
   mediaType   TaskItemMediaType    @default(VIDEO)
   referenceLink String?
   rawDataLink   String?
+  shootTaskId   String?
+  clientApproved Boolean   @default(false)
+  clientApprovedAt DateTime?
+  clientApprovedById String?
+  instagramUploaded Boolean @default(false)
+  instagramUploadedAt DateTime?
+  instagramUploadedById String?
   task        Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  shootTask   ShootTask?           @relation(fields: [shootTaskId], references: [id], onDelete: SetNull)
+  clientApprovedBy User?           @relation("TaskItemClientApprover", fields: [clientApprovedById], references: [id], onDelete: SetNull)
+  instagramUploadedBy User?        @relation("TaskItemInstagramUploader", fields: [instagramUploadedById], references: [id], onDelete: SetNull)
   assignments TaskItemAssignment[]
 
   @@index([taskId])
+  @@index([shootTaskId])
 }
 
 model TaskItemAssignment {
@@ -1021,6 +1033,8 @@ model User {
   shootTaskAssignments         ShootTaskAssignment[]     @relation("UserShootTaskAssignments")
   submittedShootSubTasks       ShootSubTask[]            @relation("UserSubmittedShootSubTasks")
   reviewedShootSubTasks        ShootSubTask[]            @relation("UserReviewedShootSubTasks")
+  approvedClientTaskItems      TaskItem[]                @relation("TaskItemClientApprover")
+  uploadedInstagramTaskItems   TaskItem[]                @relation("TaskItemInstagramUploader")
   submittedShootExtraContent   ShootExtraContent[]       @relation("UserSubmittedShootExtraContent")
   shootWorkspaceMemberships    ShootWorkspaceMember[]    @relation("UserShootWorkspaceMembers")
   sentFollowUps                CoordinatorFollowUp[]

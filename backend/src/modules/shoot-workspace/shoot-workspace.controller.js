@@ -27,6 +27,33 @@ exports.getShootManagementSummary = async (req, res, next) => {
   }
 };
 
+exports.getWorkspaceUploadFeed = async (req, res, next) => {
+  try {
+    const data = await service.getWorkspaceUploadFeed(req.user, req.params.workspaceId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.approveEditorItemByClient = async (req, res, next) => {
+  try {
+    const data = await service.approveEditorItemByClient(req.user, req.params.workspaceId, req.params.itemId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.markEditorItemUploaded = async (req, res, next) => {
+  try {
+    const data = await service.markEditorItemUploaded(req.user, req.params.workspaceId, req.params.itemId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getShootWorkspaceById = async (req, res, next) => {
   try {
     const data = await service.getShootWorkspaceById(req.user, req.params.workspaceId);
@@ -148,6 +175,15 @@ exports.getShootTasks = async (req, res, next) => {
 exports.getMyShootTasks = async (req, res, next) => {
   try {
     const data = await service.getMyShootTasks(req.user);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getManagerShootSubmissions = async (req, res, next) => {
+  try {
+    const data = await service.getManagerShootSubmissions(req.user);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

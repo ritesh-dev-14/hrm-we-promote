@@ -94,6 +94,70 @@ const formatShootTask = (task) => ({
   })),
 });
 
+const formatManagerShootSubmissions = (workspaces) =>
+  workspaces.map((workspace) => ({
+    id: workspace.id,
+    name: workspace.name,
+    description: workspace.description,
+    project: workspace.project
+      ? {
+          id: workspace.project.id,
+          projectName: workspace.project.projectName,
+          clientName: workspace.project.clientName,
+        }
+      : null,
+    shoots: (workspace.tasks || [])
+      .filter((task) => (task.subtasks || []).some((subtask) => Array.isArray(subtask.submissionLinks) && subtask.submissionLinks.length > 0))
+      .map((task) => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      noOfPics: task.noOfPics,
+      noOfReels: task.noOfReels,
+      date: task.date,
+      arrivalTime: task.arrivalTime,
+      location: task.location,
+      setupType: task.setupType,
+      assignedEmployees: (task.assignments || []).map((assignment) => ({
+        assignedAt: assignment.assignedAt,
+        ...assignment.user,
+      })),
+      submissions: (task.subtasks || [])
+        .filter((subtask) => Array.isArray(subtask.submissionLinks) && subtask.submissionLinks.length > 0)
+        .map((subtask) => ({
+          id: subtask.id,
+          dayId: subtask.dayId,
+          title: subtask.title,
+          description: subtask.description,
+          type: subtask.type,
+          referenceLinks: subtask.referenceLinks,
+          videoType: subtask.videoType,
+          setupType: subtask.setupType,
+          submissionLinks: subtask.submissionLinks,
+          submittedBy: subtask.submittedBy
+            ? {
+                id: subtask.submittedBy.id,
+                employeeId: subtask.submittedBy.employeeId,
+                name: subtask.submittedBy.name,
+                email: subtask.submittedBy.email,
+              }
+            : null,
+          submittedAt: subtask.submittedAt,
+          status: subtask.status,
+          reviewReason: subtask.reviewReason,
+          reviewedBy: subtask.reviewedBy
+            ? {
+                id: subtask.reviewedBy.id,
+                employeeId: subtask.reviewedBy.employeeId,
+                name: subtask.reviewedBy.name,
+                email: subtask.reviewedBy.email,
+              }
+            : null,
+          reviewedAt: subtask.reviewedAt,
+        })),
+      })),
+  }));
+
 const getWorkspace = async (workspaceId) => {
   return prisma.shootWorkspace.findUnique({
     where: { id: workspaceId },
@@ -629,6 +693,175 @@ exports.getShootManagementSummary = async (user) => {
   };
 };
 
+const formatEditorUploadItem = (item) => ({
+  id: item.id,
+  shootTaskId: item.shootTaskId,
+  title: item.title,
+  description: item.description,
+  status: item.status,
+  dueDate: item.dueDate,
+  priority: item.priority,
+  mediaType: item.mediaType,
+  referenceLink: item.referenceLink,
+  rawDataLink: item.rawDataLink,
+  clientApproved: item.clientApproved,
+  clientApprovedAt: item.clientApprovedAt,
+  instagramUploaded: item.instagramUploaded,
+  instagramUploadedAt: item.instagramUploadedAt,
+  shoot: item.shootTask
+    ? { id: item.shootTask.id, title: item.shootTask.title, date: item.shootTask.date }
+    : { id: null, title: item.task?.projectName || "Project editor task", date: null },
+  assignments: (item.assignments || [])
+    .filter((assignment) => assignment.status === "VERIFIED" || assignment.submission?.verifiedByManager)
+    .map((assignment) => ({
+      id: assignment.id,
+      status: assignment.status,
+      submittedAt: assignment.submittedAt,
+      verifiedAt: assignment.verifiedAt,
+      employee: assignment.employee,
+      submission: assignment.submission,
+    })),
+});
+
+const formatWorkspaceUploadFeed = (workspace, editorItems) => ({
+  id: workspace.id,
+  name: workspace.name,
+  description: workspace.description,
+  project: workspace.project || null,
+  pendingUploadCount: workspace.pendingUploadCount,
+  videosUploadedCount: workspace.videosUploadedCount,
+  approvedByClientCount: editorItems.filter((item) => item.clientApproved).length,
+  editorItems: editorItems.map(formatEditorUploadItem),
+  shoots: (workspace.tasks || []).map((task) => ({
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    noOfPics: task.noOfPics,
+    noOfReels: task.noOfReels,
+    date: task.date,
+    arrivalTime: task.arrivalTime,
+    location: task.location,
+    setupType: task.setupType,
+    editorItems: editorItems.filter((item) => item.shootTaskId === task.id).map(formatEditorUploadItem),
+  })),
+});
+
+exports.getWorkspaceUploadFeed = async (user, workspaceId) => {
+  const workspace = await verifyWorkspaceOwnership(user, workspaceId);
+  const fullWorkspace = await prisma.shootWorkspace.findUnique({
+    where: { id: workspace.id },
+    include: {
+      project: { select: { id: true, projectName: true, clientName: true } },
+      tasks: {
+        include: {
+          assignments: { include: { user: { select: assignedEmployeeSelect } } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+
+  const editorItems = await prisma.taskItem.findMany({
+    where: {
+      OR: [
+        { shootTask: { workspaceId: fullWorkspace.id } },
+        ...(fullWorkspace.projectId ? [{ task: { projectId: fullWorkspace.projectId } }] : []),
+        { task: { projectName: fullWorkspace.name } },
+      ],
+      assignments: {
+        some: {
+          OR: [
+            { status: "VERIFIED" },
+            { submission: { is: { verifiedByManager: true } } },
+          ],
+        },
+      },
+    },
+    include: {
+      shootTask: { select: { id: true, title: true, date: true } },
+      task: { select: { projectName: true } },
+      assignments: {
+        include: {
+          employee: { select: assignedEmployeeSelect },
+          submission: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return formatWorkspaceUploadFeed(fullWorkspace, editorItems);
+};
+
+const findManagedEditorItem = async (user, workspaceId, itemId) => {
+  await verifyWorkspaceOwnership(user, workspaceId);
+  const item = await prisma.taskItem.findFirst({
+    where: {
+      id: itemId,
+      OR: [
+        { shootTask: { workspaceId } },
+        { task: { project: { shootWorkspaces: { some: { id: workspaceId } } } } },
+        { task: { projectName: (await prisma.shootWorkspace.findUnique({ where: { id: workspaceId }, select: { name: true } }))?.name } },
+      ],
+    },
+    include: {
+      shootTask: { select: { id: true, title: true, date: true } },
+      task: { select: { projectName: true } },
+      assignments: { include: { employee: { select: assignedEmployeeSelect }, submission: true } },
+    },
+  });
+  if (!item) {
+    throw new ApiError(404, { code: ERRORS.TASK.NOT_FOUND.code, message: "Editor task item not found." });
+  }
+  if (!item.assignments.some((assignment) => assignment.status === "VERIFIED" || assignment.submission?.verifiedByManager)) {
+    throw new ApiError(400, { code: ERRORS.VALIDATION.INVALID_INPUT.code, message: "Editor submission is not verified yet." });
+  }
+  return item;
+};
+
+exports.approveEditorItemByClient = async (user, workspaceId, itemId) => {
+  const item = await findManagedEditorItem(user, workspaceId, itemId);
+  if (item.clientApproved) return { item: formatEditorUploadItem(item), alreadyApproved: true };
+  return {
+    item: formatEditorUploadItem(await prisma.taskItem.update({
+    where: { id: itemId },
+    data: { clientApproved: true, clientApprovedAt: new Date(), clientApprovedById: user.id },
+    include: {
+      shootTask: { select: { id: true, title: true, date: true } },
+      assignments: { include: { employee: { select: assignedEmployeeSelect }, submission: true } },
+    },
+    })),
+    alreadyApproved: false,
+  };
+};
+
+exports.markEditorItemUploaded = async (user, workspaceId, itemId) => {
+  const item = await findManagedEditorItem(user, workspaceId, itemId);
+  if (!item.clientApproved) {
+    throw new ApiError(400, { code: ERRORS.VALIDATION.INVALID_INPUT.code, message: "Approve this edited video by client before uploading." });
+  }
+  if (item.instagramUploaded) return formatEditorUploadItem(item);
+
+  return prisma.$transaction(async (transaction) => {
+    const updatedItem = await transaction.taskItem.update({
+      where: { id: itemId },
+      data: { instagramUploaded: true, instagramUploadedAt: new Date(), instagramUploadedById: user.id },
+      include: {
+        shootTask: { select: { id: true, title: true, date: true } },
+        assignments: { include: { employee: { select: assignedEmployeeSelect }, submission: true } },
+      },
+    });
+    const workspace = await transaction.shootWorkspace.update({
+      where: { id: workspaceId },
+      data: { videosUploadedCount: { increment: 1 } },
+      select: { id: true, videosUploadedCount: true },
+    });
+    return { item: formatEditorUploadItem(updatedItem), workspace };
+  });
+};
+
+exports.formatWorkspaceUploadFeed = formatWorkspaceUploadFeed;
+
 exports.getShootWorkspaceById = async (user, workspaceId) => {
   const workspace = await verifyWorkspaceAccess(user, workspaceId);
   return formatWorkspace(workspace, user);
@@ -964,6 +1197,36 @@ exports.getMyShootTasks = async (user) => {
 
   return tasks.map((task) => ({ ...formatShootTask(task), workspaceName: task.workspace?.name ?? null }));
 };
+
+exports.getManagerShootSubmissions = async (user) => {
+  const workspaces = await prisma.shootWorkspace.findMany({
+    where: { createdById: user.id },
+    include: {
+      project: { select: { id: true, projectName: true, clientName: true } },
+      tasks: {
+        include: {
+          assignments: {
+            include: { user: { select: assignedEmployeeSelect } },
+          },
+          subtasks: {
+            where: { submissionLinks: { isEmpty: false } },
+            include: {
+              submittedBy: { select: assignedEmployeeSelect },
+              reviewedBy: { select: assignedEmployeeSelect },
+            },
+            orderBy: { submittedAt: "desc" },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return formatManagerShootSubmissions(workspaces);
+};
+
+exports.formatManagerShootSubmissions = formatManagerShootSubmissions;
 
 exports.getShootTaskById = async (user, workspaceId, taskId) => {
   await verifyShootTaskAccess(user, workspaceId, taskId);
