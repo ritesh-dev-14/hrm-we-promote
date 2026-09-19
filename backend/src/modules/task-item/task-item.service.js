@@ -92,6 +92,7 @@ exports.createTaskItem = async (
       where: {
         employeeId: body.employeeId,
       },
+      include: { department: { select: { name: true } } },
     });
 
   if (!employee || employee.role !== "EMPLOYEE") {
@@ -101,7 +102,7 @@ exports.createTaskItem = async (
     );
   }
 
-  if (body.shootTaskId) {
+  if (body.shootTaskId && !body.shootSubTaskId && !body.shootExtraContentId) {
     const shootTask = await prisma.shootTask.findFirst({
       where: {
         id: body.shootTaskId,
@@ -128,6 +129,37 @@ exports.createTaskItem = async (
     }
   }
 
+  if (body.shootSubTaskId && body.shootExtraContentId) {
+    throw new ApiError(400, "Choose one shoot asset source");
+  }
+
+  if (body.shootSubTaskId) {
+    const source = await prisma.shootSubTask.findFirst({
+      where: {
+        id: body.shootSubTaskId,
+        task: { workspace: { createdById: user.id } },
+        status: "APPROVED",
+        submissionLinks: { isEmpty: false },
+      },
+      select: { id: true, taskId: true },
+    });
+    if (!source) throw new ApiError(400, "Approved shoot submission not found");
+    if (body.shootTaskId && source.taskId !== body.shootTaskId) throw new ApiError(400, "Shoot asset does not belong to this shoot");
+  }
+
+  if (body.shootExtraContentId) {
+    const source = await prisma.shootExtraContent.findFirst({
+      where: {
+        id: body.shootExtraContentId,
+        task: { workspace: { createdById: user.id } },
+        type: { not: null },
+      },
+      select: { id: true, taskId: true },
+    });
+    if (!source) throw new ApiError(400, "Typed extra content not found");
+    if (body.shootTaskId && source.taskId !== body.shootTaskId) throw new ApiError(400, "Extra content does not belong to this shoot");
+  }
+
   //
   // ✅ CREATE TASK ITEM
   //
@@ -144,6 +176,8 @@ exports.createTaskItem = async (
       rawDataLink: body.rawDataLink ?? null,
       shootTaskId: body.shootTaskId || null,
       monthlySheetDayId: body.monthlySheetDayId || null,
+      shootSubTaskId: body.shootSubTaskId || null,
+      shootExtraContentId: body.shootExtraContentId || null,
     },
   });
 

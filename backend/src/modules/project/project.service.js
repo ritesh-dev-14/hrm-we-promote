@@ -23,6 +23,11 @@ const WEB_DEV_DEPARTMENTS = [
   "IT",
 ];
 
+const countExtraContent = (items = [], type) => (items || []).reduce(
+  (total, item) => total + (item.type ? (item.type === type ? 1 : 0) : Number(item[type === "PIC" ? "extraPics" : "extraReels"] || 0)),
+  0,
+);
+
 const formatShootContent = (workspaces = []) => {
   const totals = {
     plannedPics: 0,
@@ -50,13 +55,15 @@ const formatShootContent = (workspaces = []) => {
         submittedReels: (task.subtasks || []).filter((item) => item.type === "REEL" && item.status !== "DRAFT").length,
         approvedPics: (task.subtasks || []).filter((item) => item.type === "PIC" && item.status === "APPROVED").length,
         approvedReels: (task.subtasks || []).filter((item) => item.type === "REEL" && item.status === "APPROVED").length,
-        extraPics: (task.extraContent || []).reduce((sum, item) => sum + item.extraPics, 0),
-        extraReels: (task.extraContent || []).reduce((sum, item) => sum + item.extraReels, 0),
+        extraPics: countExtraContent(task.extraContent, "PIC"),
+        extraReels: countExtraContent(task.extraContent, "REEL"),
         extraContent: (task.extraContent || []).map((item) => ({
           id: item.id,
+          type: item.type,
           extraPics: item.extraPics,
           extraReels: item.extraReels,
           driveLink: item.driveLink,
+          referenceLink: item.referenceLink,
           notes: item.notes,
           submittedAt: item.submittedAt,
         })),

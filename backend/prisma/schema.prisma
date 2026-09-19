@@ -151,6 +151,11 @@ enum ShootSubTaskType {
   REEL
 }
 
+enum ShootExtraContentType {
+  PIC
+  REEL
+}
+
 enum VideoType {
   HORIZONTAL
   VERTICAL
@@ -710,6 +715,7 @@ model ShootSubTask {
   day         ProjectMonthlySheetDay? @relation(fields: [dayId], references: [id], onDelete: SetNull)
   submittedBy User?                   @relation("UserSubmittedShootSubTasks", fields: [submittedById], references: [id])
   reviewedBy  User?                   @relation("UserReviewedShootSubTasks", fields: [reviewedById], references: [id])
+  editorItems TaskItem[]
 
   @@index([taskId])
   @@index([dayId])
@@ -747,9 +753,11 @@ model ShootExtraContent {
   id            String   @id @default(uuid())
   taskId        String
   submittedById String
+  type          ShootExtraContentType?
   extraPics     Int      @default(0)
   extraReels    Int      @default(0)
   driveLink     String
+  referenceLink String?
   notes         String?
   submittedAt   DateTime @default(now())
   createdAt     DateTime @default(now())
@@ -757,6 +765,7 @@ model ShootExtraContent {
 
   task        ShootTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
   submittedBy User      @relation("UserSubmittedShootExtraContent", fields: [submittedById], references: [id])
+  editorItems TaskItem[]
 
   @@index([taskId])
   @@index([submittedById])
@@ -914,6 +923,8 @@ model TaskItem {
   rawDataLink           String?
   shootTaskId           String?
   monthlySheetDayId     String?
+  shootSubTaskId        String?
+  shootExtraContentId   String?
   clientApproved        Boolean                 @default(false)
   clientApprovedAt      DateTime?
   clientApprovedById    String?
@@ -923,6 +934,8 @@ model TaskItem {
   task                  Task                    @relation(fields: [taskId], references: [id], onDelete: Cascade)
   shootTask             ShootTask?              @relation(fields: [shootTaskId], references: [id], onDelete: SetNull)
   monthlySheetDay       ProjectMonthlySheetDay? @relation(fields: [monthlySheetDayId], references: [id], onDelete: SetNull)
+  shootSubTask          ShootSubTask?           @relation(fields: [shootSubTaskId], references: [id], onDelete: SetNull)
+  shootExtraContent     ShootExtraContent?     @relation(fields: [shootExtraContentId], references: [id], onDelete: SetNull)
   clientApprovedBy      User?                   @relation("TaskItemClientApprover", fields: [clientApprovedById], references: [id], onDelete: SetNull)
   instagramUploadedBy   User?                   @relation("TaskItemInstagramUploader", fields: [instagramUploadedById], references: [id], onDelete: SetNull)
   assignments           TaskItemAssignment[]
@@ -930,6 +943,8 @@ model TaskItem {
   @@index([taskId])
   @@index([shootTaskId])
   @@index([monthlySheetDayId])
+  @@index([shootSubTaskId])
+  @@index([shootExtraContentId])
 }
 
 model TaskItemAssignment {

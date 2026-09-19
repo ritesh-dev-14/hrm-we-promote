@@ -33,9 +33,11 @@ const shootTaskInclude = {
 const formatExtraContent = (content) => ({
   id: content.id,
   taskId: content.taskId,
+  type: content.type,
   extraPics: content.extraPics,
   extraReels: content.extraReels,
   driveLink: content.driveLink,
+  referenceLink: content.referenceLink,
   notes: content.notes,
   submittedAt: content.submittedAt,
   submittedBy: content.submittedBy
@@ -46,6 +48,11 @@ const formatExtraContent = (content) => ({
       }
     : null,
 });
+
+const countExtraContent = (items = [], type) => (items || []).reduce(
+  (total, item) => total + (item.type ? (item.type === type ? 1 : 0) : Number(item[type === "PIC" ? "extraPics" : "extraReels"] || 0)),
+  0,
+);
 
 const formatShootTask = (task) => ({
   id: task.id,
@@ -66,8 +73,8 @@ const formatShootTask = (task) => ({
     ...assignment.user,
   })),
   extraContent: (task.extraContent || []).map(formatExtraContent),
-  extraPics: (task.extraContent || []).reduce((total, item) => total + item.extraPics, 0),
-  extraReels: (task.extraContent || []).reduce((total, item) => total + item.extraReels, 0),
+  extraPics: countExtraContent(task.extraContent, "PIC"),
+  extraReels: countExtraContent(task.extraContent, "REEL"),
   submittedPics: (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status !== "DRAFT").length,
   submittedReels: (task.subtasks || []).filter((subtask) => subtask.type === "REEL" && subtask.status !== "DRAFT").length,
   approvedPics: (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status === "APPROVED").length,
@@ -107,7 +114,7 @@ const formatManagerShootSubmissions = (workspaces) =>
         }
       : null,
     shoots: (workspace.tasks || [])
-      .filter((task) => (task.subtasks || []).some((subtask) => Array.isArray(subtask.submissionLinks) && subtask.submissionLinks.length > 0))
+      .filter((task) => (task.subtasks || []).some((subtask) => subtask.status === "APPROVED" && Array.isArray(subtask.submissionLinks) && subtask.submissionLinks.length > 0) || (task.extraContent || []).some((item) => item.type))
       .map((task) => ({
       id: task.id,
       title: task.title,
@@ -123,7 +130,7 @@ const formatManagerShootSubmissions = (workspaces) =>
         ...assignment.user,
       })),
       submissions: (task.subtasks || [])
-        .filter((subtask) => Array.isArray(subtask.submissionLinks) && subtask.submissionLinks.length > 0)
+        .filter((subtask) => subtask.status === "APPROVED" && Array.isArray(subtask.submissionLinks) && subtask.submissionLinks.length > 0)
         .map((subtask) => ({
           id: subtask.id,
           dayId: subtask.dayId,
@@ -154,6 +161,21 @@ const formatManagerShootSubmissions = (workspaces) =>
               }
             : null,
           reviewedAt: subtask.reviewedAt,
+        })),
+      extraContent: (task.extraContent || [])
+        .filter((item) => item.type)
+        .map((item) => ({
+          id: item.id,
+          taskId: task.id,
+          type: item.type,
+          title: item.type === "PIC" ? "Extra Pic" : "Extra Reel",
+          description: item.notes,
+          referenceLink: item.referenceLink,
+          driveLink: item.driveLink,
+          submittedBy: item.submittedBy
+            ? { id: item.submittedBy.id, employeeId: item.submittedBy.employeeId, name: item.submittedBy.name }
+            : null,
+          submittedAt: item.submittedAt,
         })),
       })),
   }));
@@ -313,8 +335,8 @@ const buildShootManagementSummary = (workspaces = []) => {
       const reels = Number(task?.noOfReels || 0);
       const pics = Number(task?.noOfPics || 0);
       const extraContent = Array.isArray(task?.extraContent) ? task.extraContent : [];
-      const extraReels = extraContent.reduce((total, item) => total + Number(item?.extraReels || 0), 0);
-      const extraPics = extraContent.reduce((total, item) => total + Number(item?.extraPics || 0), 0);
+        const extraReels = countExtraContent(extraContent, "REEL");
+        const extraPics = countExtraContent(extraContent, "PIC");
       const approvedReels = (task?.subtasks || []).filter((subtask) => subtask?.type === "REEL" && subtask?.status === "APPROVED").length;
       const approvedPics = (task?.subtasks || []).filter((subtask) => subtask?.type === "PIC" && subtask?.status === "APPROVED").length;
       const rejectedReels = (task?.subtasks || []).filter((subtask) => subtask?.type === "REEL" && subtask?.status === "REJECTED").length;
@@ -363,11 +385,11 @@ const formatShootManagementWorkspace = (workspace) => {
     0,
   );
   const workspaceVideosAvailable = tasks.reduce(
-    (sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraReels || 0), 0),
+    (sum, task) => sum + countExtraContent(task.extraContent, "REEL"),
     0,
   ) + reelsApprovedByManager;
   const workspacePicsAvailable = tasks.reduce(
-    (sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraPics || 0), 0),
+    (sum, task) => sum + countExtraContent(task.extraContent, "PIC"),
     0,
   ) + picsApprovedByManager;
   const workspacePendingVideoEdit = Math.max(0, workspaceVideosAvailable - Number(workspace.editorVideosEdited || 0));
@@ -383,11 +405,11 @@ const formatShootManagementWorkspace = (workspace) => {
     totalReels: tasks.reduce((sum, task) => sum + Number(task.noOfReels || 0), 0),
     totalPics: tasks.reduce((sum, task) => sum + Number(task.noOfPics || 0), 0),
     extraReels: tasks.reduce(
-      (sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraReels || 0), 0),
+      (sum, task) => sum + countExtraContent(task.extraContent, "REEL"),
       0,
     ),
     extraPics: tasks.reduce(
-      (sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraPics || 0), 0),
+      (sum, task) => sum + countExtraContent(task.extraContent, "PIC"),
       0,
     ),
     reelsApprovedByManager,
@@ -397,17 +419,17 @@ const formatShootManagementWorkspace = (workspace) => {
     rawDataLink: tasks.flatMap((task) => task.extraContent || []).find((item) => item?.driveLink)?.driveLink || "",
     pendingForEdit: tasks.reduce(
       (sum, task) => sum
-        + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraReels || 0) + Number(item.extraPics || 0), 0)
+        + countExtraContent(task.extraContent, "REEL") + countExtraContent(task.extraContent, "PIC")
         + (task.subtasks || []).filter((subtask) => subtask.status === "APPROVED").length,
       0,
     ),
     pendingForVideoEdit: Math.max(0,
-      tasks.reduce((sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraReels || 0), 0), 0)
+      tasks.reduce((sum, task) => sum + countExtraContent(task.extraContent, "REEL"), 0)
       + reelsApprovedByManager
       - Number(workspace.editorVideosEdited || 0),
     ),
     pendingForPicEdit: Math.max(0,
-      tasks.reduce((sum, task) => sum + (task.extraContent || []).reduce((inner, item) => inner + Number(item.extraPics || 0), 0), 0)
+      tasks.reduce((sum, task) => sum + countExtraContent(task.extraContent, "PIC"), 0)
       + picsApprovedByManager
       - Number(workspace.editorPicsEdited || 0),
     ),
@@ -422,13 +444,13 @@ const formatShootManagementWorkspace = (workspace) => {
       name: task.title,
       totalReels: Number(task.noOfReels || 0),
       totalPics: Number(task.noOfPics || 0),
-      extraReels: (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraReels || 0), 0),
-      extraPics: (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraPics || 0), 0),
+      extraReels: countExtraContent(task.extraContent, "REEL"),
+      extraPics: countExtraContent(task.extraContent, "PIC"),
       reelsApprovedByManager: (task.subtasks || []).filter((subtask) => subtask.type === "REEL" && subtask.status === "APPROVED").length,
       picsApprovedByManager: (task.subtasks || []).filter((subtask) => subtask.type === "PIC" && subtask.status === "APPROVED").length,
       pendingForEdit: tasks.length === 1
         ? workspacePendingVideoEdit + workspacePendingPicEdit
-        : (task.extraContent || []).reduce((sum, item) => sum + Number(item.extraReels || 0) + Number(item.extraPics || 0), 0)
+        : countExtraContent(task.extraContent, "REEL") + countExtraContent(task.extraContent, "PIC")
           + (task.subtasks || []).filter((subtask) => subtask.status === "APPROVED").length,
       pendingForVideoEdit: tasks.length === 1 ? workspacePendingVideoEdit : undefined,
       pendingForPicEdit: tasks.length === 1 ? workspacePendingPicEdit : undefined,
@@ -1115,9 +1137,11 @@ exports.submitShootExtraContent = async (user, workspaceId, taskId, body) => {
     data: {
       taskId: task.id,
       submittedById: user.id,
+      type: body.type || null,
       extraPics: body.extraPics || 0,
       extraReels: body.extraReels || 0,
       driveLink: body.driveLink.trim(),
+      referenceLink: body.referenceLink?.trim() || null,
       notes: body.notes || null,
     },
     include: {
@@ -1214,6 +1238,10 @@ exports.getManagerShootSubmissions = async (user) => {
               submittedBy: { select: assignedEmployeeSelect },
               reviewedBy: { select: assignedEmployeeSelect },
             },
+            orderBy: { submittedAt: "desc" },
+          },
+          extraContent: {
+            include: { submittedBy: { select: assignedEmployeeSelect } },
             orderBy: { submittedAt: "desc" },
           },
         },

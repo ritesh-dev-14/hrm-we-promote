@@ -15,18 +15,24 @@ exports.updateShootWorkspaceSchema = Joi.object({
 }).unknown(false);
 
 exports.submitShootExtraContentSchema = Joi.object({
+  type: Joi.string().uppercase().valid("PIC", "REEL").optional(),
   extraPics: Joi.number().integer().min(0).default(0),
   extraReels: Joi.number().integer().min(0).default(0),
   driveLink: Joi.string().uri().required(),
+  referenceLink: Joi.string().uri().allow("", null).optional(),
   notes: Joi.string().max(1000).allow("", null),
 })
   .custom((value, helpers) => {
-    if (value.extraPics === 0 && value.extraReels === 0) {
+    const hasLegacyCounts = value.extraPics > 0 || value.extraReels > 0;
+    if (!value.type && !hasLegacyCounts) {
+      return helpers.error("any.custom");
+    }
+    if (value.type && hasLegacyCounts) {
       return helpers.error("any.custom");
     }
     return value;
   })
-  .messages({ "any.custom": "At least one extra photo or reel is required." })
+  .messages({ "any.custom": "Submit an item type or provide legacy extra content counts." })
   .unknown(false);
 
 exports.addWorkspaceMembersSchema = Joi.object({
