@@ -427,6 +427,42 @@ exports.deleteManager = async (employeeId) => {
       where: { createdById: manager.id },
     });
 
+    await prisma.marketingMonthlyReportRemark.deleteMany({
+      where: { managerId: manager.id },
+    });
+
+    await prisma.marketingMonthlyReport.deleteMany({
+      where: { managerId: manager.id },
+    });
+
+    await prisma.marketingReport.deleteMany({
+      where: {
+        OR: [{ managerId: manager.id }, { reviewedById: manager.id }],
+      },
+    });
+
+    await prisma.seoReport.deleteMany({
+      where: { managerId: manager.id },
+    });
+
+    await prisma.seoTask.deleteMany({
+      where: { managerId: manager.id },
+    });
+
+    await prisma.metaAdsTask.deleteMany({
+      where: {
+        OR: [{ createdById: manager.id }, { assignedToId: manager.id }],
+      },
+    });
+
+    await prisma.notification.deleteMany({
+      where: { userId: manager.id },
+    });
+
+    await prisma.shootExtraContent.deleteMany({
+      where: { submittedById: manager.id },
+    });
+
     await prisma.user.delete({
       where: { id: manager.id },
     });
