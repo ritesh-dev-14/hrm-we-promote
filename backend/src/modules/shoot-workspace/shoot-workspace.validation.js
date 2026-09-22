@@ -2,13 +2,13 @@ const Joi = require("joi");
 
 exports.createShootWorkspaceSchema = Joi.object({
   brandName: Joi.string().min(2).max(200).required(),
-  description: Joi.string().max(500).allow("", null),
+  description: Joi.string().allow("", null),
   projectId: Joi.string().uuid().allow(null, ""),
 }).unknown(false);
 
 exports.updateShootWorkspaceSchema = Joi.object({
   brandName: Joi.string().min(2).max(200),
-  description: Joi.string().max(500).allow("", null),
+  description: Joi.string().allow("", null),
   projectId: Joi.string().uuid().allow(null, ""),
   pendingUploadCount: Joi.number().integer().min(0),
   videosUploadedCount: Joi.number().integer().min(0),

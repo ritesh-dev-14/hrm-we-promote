@@ -28,7 +28,6 @@ exports.createTaskItemSchema = Joi.object({
     .default("MEDIUM"),
 
   description: Joi.string()
-    .max(500)
     .allow("", null)
     .optional(),
 
