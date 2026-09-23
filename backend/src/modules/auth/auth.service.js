@@ -30,12 +30,18 @@ exports.login = async (data) => {
     process.env.JWT_SECRET
   );
 
-  // Map userDepartments to user.department if necessary
-  if (!user.department && user.userDepartments?.length > 0) {
-    user.department = user.userDepartments[0].department;
-  }
+  // Build a flat array of all departments this user belongs to
+  const allDepartments = (user.userDepartments || []).map((ud) => ud.department).filter(Boolean);
   
-  // Clean up userDepartments so it doesn't leak unnecessary data
+  // Ensure user.department is always set (fallback to first userDepartment)
+  if (!user.department && allDepartments.length > 0) {
+    user.department = allDepartments[0];
+  }
+
+  // Expose all departments as a clean array for multi-department managers
+  user.departments = allDepartments.length > 0 ? allDepartments : (user.department ? [user.department] : []);
+  
+  // Clean up raw junction data
   delete user.userDepartments;
 
   return { token, user };
