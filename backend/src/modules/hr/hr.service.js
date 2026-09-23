@@ -253,6 +253,8 @@ exports.updateManager = async (employeeId, body) => {
   }
 
   const updatedManager = await prisma.$transaction(async (tx) => {
+    let newDepartmentId = undefined;
+    
     if (shouldUpdateDepartments) {
       await tx.userDepartment.deleteMany({
         where: { userId: manager.id },
@@ -267,6 +269,10 @@ exports.updateManager = async (employeeId, body) => {
           });
         })
       );
+
+      if (departmentRecords.length > 0) {
+        newDepartmentId = departmentRecords[0].id;
+      }
 
       await tx.userDepartment.createMany({
         data: departmentRecords.map((department) => ({
@@ -285,6 +291,7 @@ exports.updateManager = async (employeeId, body) => {
         position: body.position,
         probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : undefined,
         role: body.role,
+        ...(newDepartmentId !== undefined ? { department: { connect: { id: newDepartmentId } } } : {}),
         ...(hashedPassword && { password: hashedPassword }),
       },
       select: {
@@ -744,6 +751,8 @@ exports.updateEmployee = async (employeeId, body) => {
     Object.prototype.hasOwnProperty.call(body, "managerIds");
 
   const updatedEmployee = await prisma.$transaction(async (tx) => {
+    let newDepartmentId = undefined;
+
     if (shouldUpdateDepartments) {
       await tx.userDepartment.deleteMany({
         where: { userId: employee.id },
@@ -759,6 +768,10 @@ exports.updateEmployee = async (employeeId, body) => {
             });
           })
         );
+
+        if (departments.length > 0) {
+          newDepartmentId = departments[0].id;
+        }
 
         await tx.userDepartment.createMany({
           data: departments.map((department) => ({
@@ -794,6 +807,7 @@ exports.updateEmployee = async (employeeId, body) => {
         position: body.position,
         probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : undefined,
         role: body.role,
+        ...(newDepartmentId !== undefined ? { department: { connect: { id: newDepartmentId } } } : {}),
         ...(hashedPassword && { password: hashedPassword }),
       },
       select: {
