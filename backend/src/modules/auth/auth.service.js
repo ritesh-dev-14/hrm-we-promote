@@ -6,7 +6,13 @@ const ERRORS = require("../../utils/errors");
 
 exports.login = async (data) => {
   const user = await prisma.user.findUnique({
-    where: { email: data.email }
+    where: { email: data.email },
+    include: {
+      department: true,
+      userDepartments: {
+        include: { department: true }
+      }
+    }
   });
 
   if (!user) {
@@ -23,6 +29,14 @@ exports.login = async (data) => {
     { id: user.id, employeeId: user.employeeId, role: user.role },
     process.env.JWT_SECRET
   );
+
+  // Map userDepartments to user.department if necessary
+  if (!user.department && user.userDepartments?.length > 0) {
+    user.department = user.userDepartments[0].department;
+  }
+  
+  // Clean up userDepartments so it doesn't leak unnecessary data
+  delete user.userDepartments;
 
   return { token, user };
 };

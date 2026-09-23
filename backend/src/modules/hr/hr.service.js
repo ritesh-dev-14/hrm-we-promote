@@ -76,6 +76,16 @@ exports.createManager = async (user, body) => {
     ? await prisma.user.findUnique({ where: { id: user.id } })
     : null;
 
+  const departmentRecords = await Promise.all(
+    departmentNames.map(async (departmentName) => {
+      return prisma.department.upsert({
+        where: { name: departmentName },
+        update: {},
+        create: { name: departmentName },
+      });
+    })
+  );
+
   const createdManager = await prisma.user.create({
     data: {
       employeeId: body.employeeId || "MGR-" + Date.now(),
@@ -84,6 +94,7 @@ exports.createManager = async (user, body) => {
       ...(hashed && { password: hashed }),
       role: "MANAGER",
       position: body.position || null,
+      ...(departmentRecords.length > 0 ? { department: { connect: { id: departmentRecords[0].id } } } : {}),
       probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : true,
       ...(creator ? { createdBy: { connect: { id: creator.id } } } : {}),
     },
@@ -96,6 +107,7 @@ exports.createManager = async (user, body) => {
       position: true,
       probationPeriod: true,
       createdAt: true,
+      department: true,
       userDepartments: {
         select: {
           department: {
@@ -108,16 +120,6 @@ exports.createManager = async (user, body) => {
       },
     },
   });
-
-  const departmentRecords = await Promise.all(
-    departmentNames.map(async (departmentName) => {
-      return prisma.department.upsert({
-        where: { name: departmentName },
-        update: {},
-        create: { name: departmentName },
-      });
-    })
-  );
 
   await prisma.userDepartment.createMany({
     data: departmentRecords.map((department) => ({
@@ -514,6 +516,16 @@ exports.createEmployee = async (user, body) => {
 
   const creator = user && user.id ? await prisma.user.findUnique({ where: { id: user.id } }) : null;
 
+  const departmentRecords = await Promise.all(
+    departmentNames.map(async (departmentName) => {
+      return prisma.department.upsert({
+        where: { name: departmentName },
+        update: {},
+        create: { name: departmentName },
+      });
+    })
+  );
+
   const createdUser = await prisma.user.create({
     data: {
       employeeId: body.employeeId || "EMP-" + Date.now(),
@@ -522,6 +534,7 @@ exports.createEmployee = async (user, body) => {
       ...(hashed && { password: hashed }),
       role: body.role,
       position: body.position,
+      ...(departmentRecords.length > 0 ? { department: { connect: { id: departmentRecords[0].id } } } : {}),
       probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : true,
       ...(creator ? { createdBy: { connect: { id: creator.id } } } : {}),
     },
@@ -536,16 +549,6 @@ exports.createEmployee = async (user, body) => {
       createdAt: true,
     },
   });
-
-  const departmentRecords = await Promise.all(
-    departmentNames.map(async (departmentName) => {
-      return prisma.department.upsert({
-        where: { name: departmentName },
-        update: {},
-        create: { name: departmentName },
-      });
-    })
-  );
 
   await prisma.userDepartment.createMany({
     data: departmentRecords.map((department) => ({
