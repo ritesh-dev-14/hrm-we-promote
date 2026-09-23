@@ -370,6 +370,11 @@ exports.deleteManager = async (employeeId) => {
       where: { managerId: manager.id },
     });
 
+    // Delete Break records first (FK constraint: Break -> Attendance)
+    await prisma.break.deleteMany({
+      where: { attendance: { userId: manager.id } },
+    });
+
     await prisma.attendance.deleteMany({
       where: { userId: manager.id },
     });
@@ -901,6 +906,11 @@ exports.deleteEmployee = async (employeeId) => {
 
     await prisma.taskEscalation.deleteMany({
       where: { managerId: employee.id },
+    });
+
+    // Delete Break records first (FK constraint: Break -> Attendance)
+    await prisma.break.deleteMany({
+      where: { attendance: { userId: employee.id } },
     });
 
     await prisma.attendance.deleteMany({
