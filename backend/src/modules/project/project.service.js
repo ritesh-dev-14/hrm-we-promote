@@ -136,6 +136,9 @@ const formatProject = (project) => {
     seoPassword: project.seoPassword,
     seoName: project.seoName,
     seoContact: project.seoContact,
+    // Client classification
+    clientTier: project.clientTier || null,
+    clientPriority: project.clientPriority || null,
     status: project.status,
     createdBy: {
       id: createdBy.id,
@@ -370,6 +373,9 @@ exports.createProject = async (user, body) => {
       seoPassword: body.seoPassword || null,
       seoName: body.seoName || null,
       seoContact: body.seoContact || null,
+      // Client classification
+      clientTier: body.clientTier || null,
+      clientPriority: body.clientPriority || null,
       createdById: user.id,
       assignments: {
         create: managers.map((manager) => ({
@@ -1120,4 +1126,54 @@ exports.renewProject = async (user, projectId, body) => {
   });
 
   return formatProject(updatedProject);
+};
+
+// ── Allowed enum values ──────────────────────────────────────────────────────
+const VALID_TIERS = ["STRATEGIC", "PREMIUM", "GROWTH", "STANDARD"];
+const VALID_PRIORITIES = ["P1", "P2", "P3", "P4"];
+
+exports.updateClientTier = async (user, projectId, body) => {
+  if (!["ADMIN", "HR", "EA"].includes(user.role)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const { clientTier, clientPriority } = body;
+
+  if (clientTier && !VALID_TIERS.includes(clientTier)) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: `Invalid clientTier. Must be one of: ${VALID_TIERS.join(", ")}.`,
+    });
+  }
+
+  if (clientPriority && !VALID_PRIORITIES.includes(clientPriority)) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: `Invalid clientPriority. Must be one of: ${VALID_PRIORITIES.join(", ")}.`,
+    });
+  }
+
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Project not found.",
+    });
+  }
+
+  const data = {};
+  if (clientTier !== undefined) data.clientTier = clientTier || null;
+  if (clientPriority !== undefined) data.clientPriority = clientPriority || null;
+
+  const updated = await prisma.project.update({
+    where: { id: projectId },
+    data,
+    include: {
+      department: true,
+      createdBy: true,
+      assignments: { include: { manager: true } },
+    },
+  });
+
+  return formatProject(updated);
 };

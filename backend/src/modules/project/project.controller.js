@@ -159,3 +159,16 @@ exports.deleteProject = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.updateClientTier = async (req, res, next) => {
+  try {
+    const data = await service.updateClientTier(
+      req.user,
+      req.params.id,
+      req.body
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};

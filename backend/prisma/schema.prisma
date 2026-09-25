@@ -499,6 +499,20 @@ model Payslip {
   @@index([month, year])
 }
 
+enum ClientTier {
+  STRATEGIC
+  PREMIUM
+  GROWTH
+  STANDARD
+}
+
+enum ClientPriority {
+  P1
+  P2
+  P3
+  P4
+}
+
 model Project {
   id                  String               @id @default(uuid())
   projectName         String
@@ -544,6 +558,9 @@ model Project {
   seoPassword         String?
   seoName             String?
   seoContact          String?
+  // Client classification fields
+  clientTier          ClientTier?
+  clientPriority      ClientPriority?
   createdById         String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

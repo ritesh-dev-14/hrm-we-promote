@@ -55,6 +55,13 @@ router.patch(
   controller.renewProject
 );
 
+router.patch(
+  "/:id/tier",
+  auth,
+  role("ADMIN", "HR", "EA"),
+  controller.updateClientTier
+);
+
 router.delete(
   "/:id",
   auth,

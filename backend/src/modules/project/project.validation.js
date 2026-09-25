@@ -59,6 +59,9 @@ exports.createProjectSchema = Joi.object({
   seoContact: Joi.string().min(1).max(100).allow(null, ""),
   seoEmail: Joi.string().email().allow(null, ""),
   seoPassword: Joi.string().min(1).max(200).allow(null, ""),
+  // Client classification
+  clientTier: Joi.string().valid("STRATEGIC", "PREMIUM", "GROWTH", "STANDARD").allow(null, ""),
+  clientPriority: Joi.string().valid("P1", "P2", "P3", "P4").allow(null, ""),
 }).unknown(false);
 
 exports.updateProjectSchema = Joi.object({
@@ -111,6 +114,9 @@ exports.updateProjectSchema = Joi.object({
   seoContact: Joi.string().min(1).max(100).allow(null, ""),
   seoEmail: Joi.string().email().allow(null, ""),
   seoPassword: Joi.string().min(1).max(200).allow(null, ""),
+  // Client classification
+  clientTier: Joi.string().valid("STRATEGIC", "PREMIUM", "GROWTH", "STANDARD").allow(null, ""),
+  clientPriority: Joi.string().valid("P1", "P2", "P3", "P4").allow(null, ""),
 }).unknown(false);
 
 exports.updateProjectLogoSchema = Joi.object({
