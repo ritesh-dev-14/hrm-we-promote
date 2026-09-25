@@ -168,6 +168,11 @@ app.use(
   require("./modules/daily-report/daily-report.routes")
 );
 
+app.use(
+  "/api/health-scores",
+  require("./modules/health-score/health-score.routes")
+);
+
 // Error handling middleware
 
 app.use(errorMiddleware);
