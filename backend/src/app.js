@@ -173,6 +173,11 @@ app.use(
   require("./modules/health-score/health-score.routes")
 );
 
+app.use(
+  "/api/admin-dashboard",
+  require("./modules/admin-dashboard/admin-dashboard.routes")
+);
+
 // Error handling middleware
 
 app.use(errorMiddleware);
