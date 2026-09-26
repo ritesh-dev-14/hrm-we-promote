@@ -7,14 +7,14 @@ const role = require("../../middlewares/role.middleware");
 const controller = require("./manager.controller");
 
 router.post("/employee", auth, role("MANAGER"), controller.createEmployee);
-router.get("/employees", auth, role("MANAGER"), controller.getEmployees);
+router.get("/employees", auth, role("MANAGER", "HR", "ADMIN", "EA"), controller.getEmployees);
 router.put("/employee/:id", auth, role("MANAGER"), controller.updateEmployee);
 router.delete("/employee/:id", auth, role("MANAGER"), controller.deleteEmployee);
 
 router.get(
   "/my-employees",
   auth,
-  role("MANAGER"),
+  role("MANAGER", "HR", "ADMIN", "EA"),
   controller.getMyEmployees
 );
 
