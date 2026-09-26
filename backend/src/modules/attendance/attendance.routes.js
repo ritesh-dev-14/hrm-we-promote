@@ -26,6 +26,12 @@ router.get(
   controller.getAttendanceDashboard
 );
 
+// Sidebar Appeals
+router.post("/appeal-sidebar", auth, controller.appealSidebarAccess);
+router.get("/appeals", auth, role("EA", "ADMIN", "HR", "COORDINATOR"), controller.getPendingAppeals);
+router.post("/appeal-sidebar/:attendanceId/approve", auth, role("EA", "ADMIN", "HR", "COORDINATOR"), controller.approveSidebarAppeal);
+router.post("/appeal-sidebar/:attendanceId/reject", auth, role("EA", "ADMIN", "HR", "COORDINATOR"), controller.rejectSidebarAppeal);
+
 router.get(
   "/:employeeId",
   auth,

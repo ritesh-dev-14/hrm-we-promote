@@ -39,6 +39,13 @@ enum AttendanceStatus {
   LEAVE
 }
 
+enum SidebarAccessStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum SetupType {
   PREMIUM
   VERY_PREMIUM
@@ -195,17 +202,19 @@ enum WhatsappMessageStatus {
 }
 
 model Attendance {
-  id         String           @id @default(uuid())
-  userId     String
-  date       DateTime
-  startTime  DateTime?
-  endTime    DateTime?
-  totalHours Float?
-  breakHours Float?
-  status     AttendanceStatus
-  createdAt  DateTime         @default(now())
-  user       User             @relation(fields: [userId], references: [id])
-  breaks     Break[]
+  id                  String              @id @default(uuid())
+  userId              String
+  date                DateTime
+  startTime           DateTime?
+  endTime             DateTime?
+  totalHours          Float?
+  breakHours          Float?
+  status              AttendanceStatus
+  sidebarAccessStatus SidebarAccessStatus @default(NONE)
+  sidebarAccessReason String?
+  createdAt           DateTime            @default(now())
+  user                User                @relation(fields: [userId], references: [id])
+  breaks              Break[]
 
   @@unique([userId, date])
   @@index([userId, date(sort: Desc)])
@@ -767,21 +776,21 @@ model ShootTask {
 }
 
 model ShootExtraContent {
-  id            String   @id @default(uuid())
+  id            String                 @id @default(uuid())
   taskId        String
   submittedById String
   type          ShootExtraContentType?
-  extraPics     Int      @default(0)
-  extraReels    Int      @default(0)
+  extraPics     Int                    @default(0)
+  extraReels    Int                    @default(0)
   driveLink     String
   referenceLink String?
   notes         String?
-  submittedAt   DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  submittedAt   DateTime               @default(now())
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
 
-  task        ShootTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  submittedBy User      @relation("UserSubmittedShootExtraContent", fields: [submittedById], references: [id])
+  task        ShootTask  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submittedBy User       @relation("UserSubmittedShootExtraContent", fields: [submittedById], references: [id])
   editorItems TaskItem[]
 
   @@index([taskId])
@@ -952,7 +961,7 @@ model TaskItem {
   shootTask             ShootTask?              @relation(fields: [shootTaskId], references: [id], onDelete: SetNull)
   monthlySheetDay       ProjectMonthlySheetDay? @relation(fields: [monthlySheetDayId], references: [id], onDelete: SetNull)
   shootSubTask          ShootSubTask?           @relation(fields: [shootSubTaskId], references: [id], onDelete: SetNull)
-  shootExtraContent     ShootExtraContent?     @relation(fields: [shootExtraContentId], references: [id], onDelete: SetNull)
+  shootExtraContent     ShootExtraContent?      @relation(fields: [shootExtraContentId], references: [id], onDelete: SetNull)
   clientApprovedBy      User?                   @relation("TaskItemClientApprover", fields: [clientApprovedById], references: [id], onDelete: SetNull)
   instagramUploadedBy   User?                   @relation("TaskItemInstagramUploader", fields: [instagramUploadedById], references: [id], onDelete: SetNull)
   assignments           TaskItemAssignment[]

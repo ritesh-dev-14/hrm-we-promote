@@ -408,3 +408,54 @@ exports.getAttendanceDashboard = async () => {
     absent,
   };
 };
+
+// 🔹 SIDEBAR APPEALS
+exports.appealSidebarAccess = async (userId, reason) => {
+  const today = getToday();
+  const attendance = await prisma.attendance.findUnique({
+    where: { userId_date: { userId, date: today } },
+  });
+  if (!attendance) throw new ApiError(404, "Attendance record not found for today.");
+  if (attendance.sidebarAccessStatus === "APPROVED") throw new ApiError(400, "Access already approved.");
+  
+  return prisma.attendance.update({
+    where: { id: attendance.id },
+    data: {
+      sidebarAccessStatus: "PENDING",
+      sidebarAccessReason: reason,
+    }
+  });
+};
+
+exports.getPendingAppeals = async () => {
+  const today = getToday();
+  return prisma.attendance.findMany({
+    where: { 
+      sidebarAccessStatus: "PENDING",
+      date: today 
+    },
+    include: {
+      user: {
+        select: {
+          name: true,
+          employeeId: true,
+          department: true,
+        }
+      }
+    }
+  });
+};
+
+exports.approveSidebarAppeal = async (attendanceId) => {
+  return prisma.attendance.update({
+    where: { id: attendanceId },
+    data: { sidebarAccessStatus: "APPROVED" }
+  });
+};
+
+exports.rejectSidebarAppeal = async (attendanceId) => {
+  return prisma.attendance.update({
+    where: { id: attendanceId },
+    data: { sidebarAccessStatus: "REJECTED" }
+  });
+};

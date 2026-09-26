@@ -160,3 +160,32 @@ exports.getAttendanceDashboard = async (req, res, next) => {
   }
 };
 
+// Sidebar Appeals
+exports.appealSidebarAccess = async (req, res, next) => {
+  try {
+    const data = await attendanceService.appealSidebarAccess(req.user.id, req.body.reason);
+    return res.status(200).json({ success: true, message: "Appeal submitted successfully", data });
+  } catch (error) { next(error); }
+};
+
+exports.getPendingAppeals = async (req, res, next) => {
+  try {
+    const data = await attendanceService.getPendingAppeals();
+    return res.status(200).json({ success: true, message: "Pending appeals fetched", data });
+  } catch (error) { next(error); }
+};
+
+exports.approveSidebarAppeal = async (req, res, next) => {
+  try {
+    const data = await attendanceService.approveSidebarAppeal(req.params.attendanceId);
+    return res.status(200).json({ success: true, message: "Appeal approved", data });
+  } catch (error) { next(error); }
+};
+
+exports.rejectSidebarAppeal = async (req, res, next) => {
+  try {
+    const data = await attendanceService.rejectSidebarAppeal(req.params.attendanceId);
+    return res.status(200).json({ success: true, message: "Appeal rejected", data });
+  } catch (error) { next(error); }
+};
+
