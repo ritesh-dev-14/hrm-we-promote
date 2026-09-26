@@ -91,7 +91,7 @@ exports.getControlTowerStats = async () => {
   }).filter(p => p.amount > 0).sort((a, b) => b.amount - a.amount);
 
   // ── 3. People (Editors) ──────────────────────────────────────────
-  const editorsWithOverdue = await prisma.user.findMany({
+  const editorsWithOverdueData = await prisma.user.findMany({
     where: {
       role: "EMPLOYEE",
       taskItemAssignments: {
@@ -103,8 +103,28 @@ exports.getControlTowerStats = async () => {
         }
       }
     },
-    select: { id: true, name: true, employeeId: true }
+    select: { 
+      id: true, 
+      name: true, 
+      employeeId: true,
+      taskItemAssignments: {
+        where: {
+          taskItem: {
+            dueDate: { lt: now },
+            status: { notIn: ["COMPLETED", "VERIFIED", "UNABLE_TO_SUBMIT"] }
+          }
+        },
+        select: { id: true }
+      }
+    }
   });
+
+  const editorsWithOverdue = editorsWithOverdueData.map(e => ({
+    id: e.id,
+    name: e.name,
+    employeeId: e.employeeId,
+    overdueCount: e.taskItemAssignments.length
+  })).sort((a, b) => b.overdueCount - a.overdueCount);
 
   // ── 4. Clients ───────────────────────────────────────────────────
   const healthScores = await computeAllProjectHealth();
