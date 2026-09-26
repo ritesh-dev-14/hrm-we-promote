@@ -47,26 +47,48 @@ exports.getControlTowerStats = async () => {
     }
   });
 
+  // ── Monthly Budget ──
   const marketingProjects = await prisma.project.findMany({
     where: {
       status: "ONGOING",
       department: { name: { in: ["Social Media", "Social Media Department", "Marketing", "Marketing Department", "Meta Ads", "Meta Ads Department"] } }
     },
-    select: { projectName: true, clientName: true, monthlyBudget: true }
+    select: { id: true, projectName: true, clientName: true, monthlyBudget: true }
   });
   
-  let totalAdSpend = 0;
-  const spendBreakdown = marketingProjects.map(p => {
-    const weeklySpend = Math.round((p.monthlyBudget || 0) / 4);
-    totalAdSpend += weeklySpend;
+  let totalMonthlyBudget = 0;
+  const budgetBreakdown = marketingProjects.map(p => {
+    const budget = p.monthlyBudget || 0;
+    totalMonthlyBudget += budget;
     return {
+      projectId: p.id,
       projectName: p.projectName,
       clientName: p.clientName,
-      weeklySpend
+      amount: budget
     };
-  }).filter(p => p.weeklySpend > 0).sort((a, b) => b.weeklySpend - a.weeklySpend);
+  }).filter(p => p.amount > 0).sort((a, b) => b.amount - a.amount);
   
-  const adSpendPlanned = totalAdSpend;
+  // ── Monthly Spent (MTD) ──
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const marketingReports = await prisma.marketingReport.groupBy({
+    by: ['projectId'],
+    _sum: { todayAmountSpend: true },
+    where: {
+      date: { gte: startOfMonth, lte: now }
+    }
+  });
+
+  let totalMonthlySpent = 0;
+  const spentBreakdown = marketingReports.map(r => {
+    const spent = r._sum.todayAmountSpend || 0;
+    totalMonthlySpent += spent;
+    const project = marketingProjects.find(p => p.id === r.projectId);
+    return {
+      projectName: project ? project.projectName : 'Unknown',
+      clientName: project ? project.clientName : '',
+      amount: spent
+    };
+  }).filter(p => p.amount > 0).sort((a, b) => b.amount - a.amount);
 
   // ── 3. People (Editors) ──────────────────────────────────────────
   const editorsWithOverdue = await prisma.user.findMany({
@@ -103,8 +125,10 @@ exports.getControlTowerStats = async () => {
     thisWeek: {
       shootsScheduled,
       contentPiecesDue,
-      adSpendPlanned,
-      spendBreakdown
+      totalMonthlyBudget,
+      budgetBreakdown,
+      totalMonthlySpent,
+      spentBreakdown
     },
     people: {
       editorsWithOverdueCount: editorsWithOverdue.length,
