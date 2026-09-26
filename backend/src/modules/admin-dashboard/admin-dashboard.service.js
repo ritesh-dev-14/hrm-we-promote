@@ -5,30 +5,27 @@ exports.getControlTowerStats = async () => {
   const now = new Date();
   
   // ── 1. Critical ──────────────────────────────────────────────────
-  const overdueDeliverables = await prisma.taskItem.count({
+  const overdueDeliverablesData = await prisma.taskItem.findMany({
     where: {
       dueDate: { lt: now },
       status: { notIn: ["COMPLETED", "VERIFIED", "UNABLE_TO_SUBMIT"] },
-    }
+    },
+    select: { id: true, title: true, dueDate: true, task: { select: { project: { select: { projectName: true, clientName: true } } } } }
   });
 
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const oldApprovals = await prisma.taskItem.count({
+  const oldApprovalsData = await prisma.taskItem.findMany({
     where: {
       clientApproved: false,
       status: "VERIFIED",
       assignments: { some: { verifiedAt: { lt: threeDaysAgo } } }
-    }
+    },
+    select: { id: true, title: true, task: { select: { project: { select: { projectName: true, clientName: true } } } } }
   });
 
-  // ── 2. This Week ─────────────────────────────────────────────────
-  const startOfWeek = new Date();
-  startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
-  startOfWeek.setHours(0,0,0,0);
-  
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
-  endOfWeek.setHours(23,59,59,999);
+  // ── 2. This Month ────────────────────────────────────────────────
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
   const allShoots = await prisma.shootTask.findMany({
     select: { date: true }
@@ -37,12 +34,12 @@ exports.getControlTowerStats = async () => {
   const shootsScheduled = allShoots.filter(shoot => {
     if (!shoot.date) return false;
     const shootDate = new Date(shoot.date);
-    return shootDate >= startOfWeek && shootDate <= endOfWeek;
+    return shootDate >= startOfMonth && shootDate <= endOfMonth;
   }).length;
 
   const contentPiecesDue = await prisma.taskItem.count({
     where: {
-      dueDate: { gte: startOfWeek, lte: endOfWeek },
+      dueDate: { gte: startOfMonth, lte: endOfMonth },
       status: { notIn: ["COMPLETED", "VERIFIED", "UNABLE_TO_SUBMIT"] },
     }
   });
@@ -69,12 +66,11 @@ exports.getControlTowerStats = async () => {
   }).filter(p => p.amount > 0).sort((a, b) => b.amount - a.amount);
   
   // ── Monthly Spent (MTD) ──
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const marketingReports = await prisma.marketingReport.groupBy({
     by: ['projectId'],
     _sum: { todayAmountSpend: true },
     where: {
-      date: { gte: startOfMonth, lte: now }
+      date: { gte: startOfMonth, lte: endOfMonth }
     }
   });
 
@@ -130,9 +126,11 @@ exports.getControlTowerStats = async () => {
 
   return {
     critical: {
-      overdueDeliverables,
+      overdueDeliverables: overdueDeliverablesData.length,
+      overdueDeliverablesList: overdueDeliverablesData,
       unresolvedComplaints: 0, // Placeholder for Phase 3
-      oldApprovals
+      oldApprovals: oldApprovalsData.length,
+      oldApprovalsList: oldApprovalsData
     },
     thisWeek: {
       shootsScheduled,
