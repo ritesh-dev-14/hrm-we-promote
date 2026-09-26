@@ -51,6 +51,7 @@ exports.getLogoutStatus = async (user) => {
   const eaAssignments = await prisma.coordinatorAssignment.findMany({
     where: {
       assignedToId: user.id,
+      // Only block logout for EA tasks due TODAY
       completionDate: {
         gte: start,
         lt: end,
