@@ -47,14 +47,26 @@ exports.getControlTowerStats = async () => {
     }
   });
 
-  const marketingProjects = await prisma.project.aggregate({
-    _sum: { monthlyBudget: true },
+  const marketingProjects = await prisma.project.findMany({
     where: {
       status: "ONGOING",
       department: { name: { in: ["Social Media", "Social Media Department", "Marketing", "Marketing Department", "Meta Ads", "Meta Ads Department"] } }
-    }
+    },
+    select: { projectName: true, clientName: true, monthlyBudget: true }
   });
-  const adSpendPlanned = Math.round((marketingProjects._sum.monthlyBudget || 0) / 4);
+  
+  let totalAdSpend = 0;
+  const spendBreakdown = marketingProjects.map(p => {
+    const weeklySpend = Math.round((p.monthlyBudget || 0) / 4);
+    totalAdSpend += weeklySpend;
+    return {
+      projectName: p.projectName,
+      clientName: p.clientName,
+      weeklySpend
+    };
+  }).filter(p => p.weeklySpend > 0).sort((a, b) => b.weeklySpend - a.weeklySpend);
+  
+  const adSpendPlanned = totalAdSpend;
 
   // ── 3. People (Editors) ──────────────────────────────────────────
   const editorsWithOverdue = await prisma.user.findMany({
@@ -91,7 +103,8 @@ exports.getControlTowerStats = async () => {
     thisWeek: {
       shootsScheduled,
       contentPiecesDue,
-      adSpendPlanned
+      adSpendPlanned,
+      spendBreakdown
     },
     people: {
       editorsWithOverdueCount: editorsWithOverdue.length,
