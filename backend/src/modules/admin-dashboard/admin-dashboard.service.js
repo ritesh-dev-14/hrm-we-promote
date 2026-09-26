@@ -126,15 +126,7 @@ exports.getControlTowerStats = async () => {
     overdueCount: e.taskItemAssignments.length
   })).sort((a, b) => b.overdueCount - a.overdueCount);
 
-  // ── 4. Clients ───────────────────────────────────────────────────
-  const healthScores = await computeAllProjectHealth();
-  let clientsAtRisk = 0;
-  let clientsNotContacted7Days = 0;
-  
-  for (const h of healthScores) {
-    if (h.status === "AT_RISK") clientsAtRisk++;
-    if (h.breakdown.daysSinceLastComm && h.breakdown.daysSinceLastComm >= 7) clientsNotContacted7Days++;
-  }
+  // Clients health calculation has been moved to the frontend to drastically reduce loading time
 
   return {
     critical: {
@@ -154,10 +146,6 @@ exports.getControlTowerStats = async () => {
       editorsWithOverdueCount: editorsWithOverdue.length,
       editorsWithOverdue,
       underutilizedEditors: 0 // Placeholder
-    },
-    clients: {
-      atRisk: clientsAtRisk,
-      notContacted7Days: clientsNotContacted7Days
     }
   };
 };
