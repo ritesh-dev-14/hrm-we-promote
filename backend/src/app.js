@@ -149,6 +149,11 @@ app.use(
 );
 
 app.use(
+  "/api/editor-workload",
+  require("./modules/editor-workload/editor-workload.routes")
+);
+
+app.use(
   "/api/meta-ads-tasks",
   require("./modules/meta-ads-task/meta-ads-task.routes")
 );
