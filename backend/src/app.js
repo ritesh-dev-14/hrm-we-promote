@@ -154,6 +154,11 @@ app.use(
 );
 
 app.use(
+  "/api/approvals",
+  require("./modules/approval-tracker/approval-tracker.routes")
+);
+
+app.use(
   "/api/meta-ads-tasks",
   require("./modules/meta-ads-task/meta-ads-task.routes")
 );
