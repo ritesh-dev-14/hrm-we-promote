@@ -144,145 +144,64 @@ function buildMessage({
   marketingReport,
   date,
 }) {
-  const dateStr = formatDate(date);
-  const divider = '━━━━━━━━━━━━━━━━━━━━━━';
+  const divider = '━━━━━━━━━━━━━━━━━━━━';
 
-  let msg = '';
+  const formatNumber = (num) => (num !== null && num !== undefined) ? num.toLocaleString('en-IN') : '0';
+  const adSpent = marketingReport?.todayAmountSpend ? formatNumber(marketingReport.todayAmountSpend) : '0';
+  const reach = marketingReport?.todayReachObtained ? formatNumber(marketingReport.todayReachObtained) : '0';
+  const leads = marketingReport?.leadObtained ? formatNumber(marketingReport.leadObtained) : '0';
 
-  // ── Header ─────────────────────────────────────────────────────────────────
-  msg += '📱 *Automated Message from We Promote*\n';
-  msg += `Project: *${projectName}*\n`;
-  msg += `Date: ${dateStr}\n`;
+  const lastUpdateDate = new Date(date);
+  const dateStr = lastUpdateDate.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
 
-  // ── Social Media Section ───────────────────────────────────────────────────
-  if (isSocialMedia) {
-    msg += `\n${divider}\n\n`;
-    msg += '📅 *Social Media — Today\'s Update*\n';
-
-    // Content Calendar block
-    msg += '\n📤 *Content Calendar*\n';
-    if (monthlySheetDay) {
-      const status = monthlySheetDay.uploadStatus || 'PENDING';
-      const statusEmoji = {
-        APPROVED:  '✅',
-        PENDING:   '⏳',
-        REJECTED:  '❌',
-        DONE:      '✅',
-      }[status] || '⏳';
-
-      msg += `${statusEmoji} Upload Status: *${status}*\n`;
-
-      // Content type
-      const types = [];
-      if (monthlySheetDay.reelType)  types.push(`Reel (${monthlySheetDay.reelType})`);
-      if (monthlySheetDay.postType)  types.push(`Post (${monthlySheetDay.postType})`);
-      if (monthlySheetDay.videoType) types.push(`Video (${monthlySheetDay.videoType})`);
-      if (types.length > 0) {
-        msg += `🎞️ Content Type: ${types.join(' + ')}\n`;
-      }
-
-      if (monthlySheetDay.title) {
-        msg += `📝 Title: "${monthlySheetDay.title}"\n`;
-      }
-
-      if (monthlySheetDay.description) {
-        msg += `📄 Description: ${monthlySheetDay.description}\n`;
-      }
-
-      // Links
-      const submissionLinks   = monthlySheetDay.submissionLinks   || [];
-      const contentUploadLinks = monthlySheetDay.contentUploadLinks || [];
-      const videoUploadLinks  = monthlySheetDay.videoUploadLinks  || [];
-
-      if (submissionLinks.length > 0) {
-        msg += `🔗 Submission Link: ${submissionLinks[0]}\n`;
-      }
-      if (contentUploadLinks.length > 0) {
-        msg += `📸 Content Link: ${contentUploadLinks[0]}\n`;
-      }
-      if (videoUploadLinks.length > 0) {
-        msg += `🎬 Video Link: ${videoUploadLinks[0]}\n`;
-      }
-
-      if (monthlySheetDay.uploadStatus === 'REJECTED' && monthlySheetDay.uploadRejectReason) {
-        msg += `⚠️ Reject Reason: ${monthlySheetDay.uploadRejectReason}\n`;
-      }
-    } else {
-      msg += '📭 No content scheduled for today in the Content Calendar.\n';
-    }
-
-    // Uploads block
-    msg += '\n📦 *Uploads*\n';
-    if (todayUploads.length > 0) {
-      const totalCount = todayUploads.reduce((sum, u) => sum + (u.totalUploads || 0), 0);
-      msg += `✅ ${totalCount} upload(s) recorded today\n`;
-
-      // Collect all items across all upload records
-      const allItems = todayUploads.flatMap(u => u.items || []);
-      if (allItems.length > 0) {
-        allItems.forEach(item => {
-          const platform = item.platform ? ` (${item.platform})` : '';
-          msg += `  • ${item.dataType}${platform}\n`;
-        });
-      }
-    } else {
-      msg += '❌ No uploads recorded today.\n';
+  // Recent content
+  let recentContent = '';
+  if (todayUploads && todayUploads.length > 0) {
+    const allItems = todayUploads.flatMap(u => u.items || []);
+    if (allItems.length > 0) {
+      recentContent = allItems.map(item => `- ${item.dataType} ${item.platform ? `(${item.platform})` : ''}`).join('\n');
     }
   }
 
-  // ── Marketing Section ──────────────────────────────────────────────────────
-  if (isMarketing) {
-    msg += `\n${divider}\n\n`;
-    msg += '📊 *Marketing — Today\'s Report*\n\n';
-
-    if (marketingReport) {
-      // Ad running status
-      if (marketingReport.isAdRunning !== null && marketingReport.isAdRunning !== undefined) {
-        const adEmoji = marketingReport.isAdRunning ? '🟢' : '🔴';
-        const adStatus = marketingReport.isAdRunning ? 'Running' : 'Not Running';
-        msg += `${adEmoji} *Ad Status:* ${adStatus}\n`;
-
-        if (!marketingReport.isAdRunning && marketingReport.reasonNotRunning) {
-          msg += `  ↳ Reason: ${marketingReport.reasonNotRunning}\n`;
-        }
-      }
-
-      if (marketingReport.typeOfAds) {
-        msg += `📢 *Type of Ads:* ${marketingReport.typeOfAds}\n`;
-      }
-
-      if (marketingReport.areaName) {
-        msg += `🗺️ *Area:* ${marketingReport.areaName}\n`;
-      }
-
-      if (marketingReport.todayReachObtained !== null && marketingReport.todayReachObtained !== undefined) {
-        msg += `👥 *Reach Obtained:* ${marketingReport.todayReachObtained.toLocaleString('en-IN')}\n`;
-      }
-
-      if (marketingReport.todayAmountSpend !== null && marketingReport.todayAmountSpend !== undefined) {
-        msg += `💰 *Amount Spent:* ₹${marketingReport.todayAmountSpend.toLocaleString('en-IN', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}\n`;
-      }
-
-      if (marketingReport.leadObtained !== null && marketingReport.leadObtained !== undefined) {
-        msg += `🎯 *Leads Obtained:* ${marketingReport.leadObtained}\n`;
-      }
-
-      if (marketingReport.videoLink) {
-        msg += `🔗 *Video / Post Link:* ${marketingReport.videoLink}\n`;
-      }
-    } else {
-      msg += '📭 No marketing report submitted for today.\n';
-    }
+  // Next expected
+  let nextExpected = '';
+  if (monthlySheetDay && monthlySheetDay.title) {
+    nextExpected = `- ${monthlySheetDay.title} (${monthlySheetDay.postType || 'Post'})`;
   }
 
-  // ── Footer ─────────────────────────────────────────────────────────────────
-  msg += `\n${divider}\n`;
-  msg += '_Sent by We Promote HRM System_';
+  let msg = `Hello ${clientName},
 
-  return msg.trim();
+Here is your complete daily report from We Promote.
+
+Yesterday add spent: ₹${adSpent}
+Reach: ${reach}
+Leads Obtained: ${leads}
+
+${divider}
+
+🌐 SEO REPORT
+
+Last Update: ${dateStr}
+Next Update: Monday
+
+${divider}
+Recent content posted 
+${recentContent}
+
+next expected content posted 
+${nextExpected}
+
+pending task from your side
+
+${divider}
+
+Thank you for choosing We Promote`;
+
+  return msg;
 }
 
 /**
