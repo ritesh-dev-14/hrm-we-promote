@@ -162,6 +162,9 @@ const formatProject = (project) => {
     shootContent: project.shootWorkspaces
       ? formatShootContent(project.shootWorkspaces)
       : { totals: null, shoots: [] },
+    lastCommunication: project.whatsappMessages && project.whatsappMessages.length > 0 
+      ? project.whatsappMessages[0].createdAt 
+      : null,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
   };
@@ -391,6 +394,11 @@ exports.createProject = async (user, body) => {
           manager: true,
         },
       },
+      whatsappMessages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true }
+      }
     },
   });
 
@@ -473,6 +481,11 @@ exports.getProjects = async (user, query = {}) => {
             },
           },
         },
+        whatsappMessages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { createdAt: true }
+        }
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -528,6 +541,11 @@ exports.getAssignedProjects = async (user, query = {}) => {
             },
           },
         },
+        whatsappMessages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { createdAt: true }
+        }
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -563,6 +581,11 @@ exports.getProjectById = async (user, projectId) => {
           },
         },
       },
+      whatsappMessages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true }
+      }
     },
   });
 
