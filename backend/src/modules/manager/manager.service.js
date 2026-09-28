@@ -354,6 +354,28 @@ exports.getDashboardStats = async (user) => {
     employees.map(async (emp) => {
       const assignments = await prisma.taskItemAssignment.findMany({
         where: { userId: emp.id },
+        include: { taskItem: true },
+      });
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let overdueTasks = [];
+      let dueTodayTasks = [];
+
+      assignments.forEach((a) => {
+        if (['COMPLETED', 'VERIFIED'].includes(a.status)) return;
+        const dueDate = a.taskItem?.dueDate;
+        if (!dueDate) return;
+
+        const due = new Date(dueDate);
+        due.setHours(0, 0, 0, 0);
+
+        const diffTime = due.getTime() - today.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) overdueTasks.push(a);
+        if (diffDays === 0) dueTodayTasks.push(a);
       });
 
       return {
@@ -371,6 +393,12 @@ exports.getDashboardStats = async (user) => {
         draftTasksCount: assignments.filter(
           (a) => a.status === "ASSIGNED" || a.status === "PENDING" || a.status === "REJECTED" || a.status === "UNABLE_TO_SUBMIT"
         ).length,
+        overdueTasksCount: overdueTasks.length,
+        dueTodayTasksCount: dueTodayTasks.length,
+        assignments: assignments.map(a => ({
+          ...a,
+          employee: { id: emp.id, name: emp.name }
+        }))
       };
     })
   );
