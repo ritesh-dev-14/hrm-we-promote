@@ -567,6 +567,7 @@ model Project {
   seoPassword         String?
   seoName             String?
   seoContact          String?
+  gmbStatus           String?
   // Client classification fields
   clientTier          ClientTier?
   clientPriority      ClientPriority?
