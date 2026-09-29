@@ -5,7 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "start": "pm2-runtime start server.js -i max",
+    "start": "node server.js",
     "build": "prisma generate",
     "postinstall": "prisma generate",
     "seed": "node prisma/seed.js"
@@ -31,7 +31,6 @@
     "multer": "^2.2.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7",
-    "pm2": "^7.0.4",
     "prisma": "^5.22.0",
     "socket.io": "^4.8.3",
     "streamifier": "^0.1.1"
