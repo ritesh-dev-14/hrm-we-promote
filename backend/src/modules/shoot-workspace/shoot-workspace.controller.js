@@ -20,7 +20,7 @@ exports.getShootWorkspaces = async (req, res, next) => {
 
 exports.getShootManagementSummary = async (req, res, next) => {
   try {
-    const data = await service.getShootManagementSummary(req.user);
+    const data = await service.getShootManagementSummary(req.user, req.query.month);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

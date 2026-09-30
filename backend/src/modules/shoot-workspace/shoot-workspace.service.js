@@ -614,7 +614,7 @@ exports.getShootWorkspaces = async (user) => {
   return workspaces.map((workspace) => formatWorkspace(workspace, user));
 };
 
-exports.getShootManagementSummary = async (user) => {
+exports.getShootManagementSummary = async (user, monthStr) => {
   const userRole = (user.role || "").toUpperCase();
 
   let workspaces = [];
@@ -677,6 +677,16 @@ exports.getShootManagementSummary = async (user) => {
         },
       },
       orderBy: { createdAt: "desc" },
+    });
+  }
+
+  if (monthStr) {
+    const [year, month] = monthStr.split("-").map(Number);
+    workspaces.forEach((ws) => {
+      ws.tasks = (ws.tasks || []).filter((task) => {
+        const taskDate = task.date ? new Date(task.date) : new Date(task.createdAt);
+        return taskDate.getFullYear() === year && taskDate.getMonth() + 1 === month;
+      });
     });
   }
 
