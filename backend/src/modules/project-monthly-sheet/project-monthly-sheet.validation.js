@@ -44,4 +44,6 @@ exports.updateUploadStatusSchema = Joi.object({
     then: Joi.required(),
     otherwise: Joi.optional(),
   }),
+  contentUploadLinks: Joi.array().items(Joi.string().allow("")).optional(),
+  videoUploadLinks: Joi.array().items(Joi.string().allow("")).optional(),
 }).unknown(false);

@@ -492,12 +492,23 @@ exports.updateUploadStatus = async (user, projectId, sheetId, dayId, body) => {
     });
   }
 
+  const updateData = {
+    uploadStatus: body.uploadStatus,
+    uploadRejectReason: body.uploadStatus === "REJECTED" ? body.uploadRejectReason : null,
+  };
+
+  if (body.uploadStatus === "APPROVED") {
+    if (body.contentUploadLinks !== undefined) {
+      updateData.contentUploadLinks = body.contentUploadLinks;
+    }
+    if (body.videoUploadLinks !== undefined) {
+      updateData.videoUploadLinks = body.videoUploadLinks;
+    }
+  }
+
   const updatedDay = await prisma.projectMonthlySheetDay.update({
     where: { id: dayId },
-    data: {
-      uploadStatus: body.uploadStatus,
-      uploadRejectReason: body.uploadStatus === "REJECTED" ? body.uploadRejectReason : null,
-    },
+    data: updateData,
   });
 
   return formatDay(updatedDay);

@@ -271,7 +271,7 @@ exports.getManagerLogoutStatus = async (user) => {
   const pendingMarketingReports = projectAssignments
     .filter((pa) => {
       const report = pa.project.marketingReports[0];
-      return !report || report.approvalStatus !== "APPROVED";
+      return !report || report.approvalStatus === "REJECTED";
     })
     .map((pa) => ({
       projectId: pa.project.id,
@@ -339,10 +339,57 @@ exports.getManagerLogoutStatus = async (user) => {
       }));
   }
 
+  // ─── 4. Content Calendar Uploads (Pending Uploads for Today) ─────────────
+  const uploadsSheets = await prisma.projectMonthlySheet.findMany({
+    where: {
+      project: {
+        assignments: {
+          some: { managerId: user.id }
+        },
+        department: { name: { in: ["SEO", "Social Media", "Social Media Department"] } }
+      }
+    },
+    include: {
+      days: {
+        where: {
+          date: {
+            gte: start,
+            lt: end,
+          },
+          OR: [
+            { uploadStatus: "PENDING" }
+          ]
+        }
+      },
+      project: {
+        select: {
+          projectName: true,
+          clientName: true,
+        }
+      }
+    }
+  });
+
+  const pendingUploads = [];
+  for (const sheet of uploadsSheets) {
+    if (sheet.days && sheet.days.length > 0) {
+      for (const day of sheet.days) {
+        pendingUploads.push({
+          id: `${sheet.id}-${day.id}`,
+          projectId: sheet.projectId,
+          projectName: sheet.project?.projectName,
+          clientName: sheet.project?.clientName,
+          title: day.title,
+        });
+      }
+    }
+  }
+
   const canLogout =
     pendingEaTasks.length === 0 && 
     pendingMarketingReports.length === 0 &&
-    pendingWeeklyVoiceReports.length === 0;
+    pendingWeeklyVoiceReports.length === 0 &&
+    pendingUploads.length === 0;
 
   return {
     canLogout,
@@ -350,6 +397,7 @@ exports.getManagerLogoutStatus = async (user) => {
     pendingEaTasks,
     pendingMarketingReports,
     pendingWeeklyVoiceReports,
+    pendingUploads,
   };
 };
 

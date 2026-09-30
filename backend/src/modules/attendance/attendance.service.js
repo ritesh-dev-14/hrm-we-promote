@@ -36,6 +36,8 @@ const ensureCanStopWork = async (user) => {
       error.details = {
         pendingEaTasks: logoutStatus.pendingEaTasks,
         pendingMarketingReports: logoutStatus.pendingMarketingReports,
+        pendingWeeklyVoiceReports: logoutStatus.pendingWeeklyVoiceReports,
+        pendingUploads: logoutStatus.pendingUploads,
       };
       throw error;
     }
