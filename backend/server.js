@@ -3,6 +3,7 @@ const http = require("http");
 const { setupSocketIO } = require("./src/config/socket.config");
 const { setupEscalationJobs } = require("./src/jobs/escalationJobs");
 const { initializeDailyMessagingJob } = require("./src/jobs/dailyClientMessagesJob");
+const { initializeWeeklyVoiceReportJob } = require("./src/jobs/weeklyVoiceReportJob");
 const mailService = require("./src/modules/mail/mail.service");
 
 const PORT = process.env.PORT || 8000;
@@ -22,6 +23,13 @@ try {
   initializeDailyMessagingJob();
 } catch (error) {
   console.error("Failed to initialize daily messaging job:", error);
+}
+
+// Setup Weekly Voice Report Reminder job
+try {
+  initializeWeeklyVoiceReportJob();
+} catch (error) {
+  console.error("Failed to initialize weekly voice report job:", error);
 }
 
 server.listen(PORT, async () => {

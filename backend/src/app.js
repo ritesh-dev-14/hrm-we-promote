@@ -188,6 +188,11 @@ app.use(
   require("./modules/admin-dashboard/admin-dashboard.routes")
 );
 
+app.use(
+  "/api/weekly-voice-reports",
+  require("./modules/weekly-voice-report/weekly-voice-report.routes")
+);
+
 // Error handling middleware
 
 app.use(errorMiddleware);

@@ -1112,6 +1112,26 @@ model User {
   createdMetaAdsTasks         MetaAdsTask[]                  @relation("CreatedMetaAdsTasks")
   assignedMetaAdsTasks        MetaAdsTask[]                  @relation("AssignedMetaAdsTasks")
   whatsappMessages            WhatsappMessage[]              @relation("ManagerWhatsappMessages")
+  weeklyVoiceReports          WeeklyVoiceReport[]            @relation("ManagerWeeklyVoiceReports")
+}
+
+model WeeklyVoiceReport {
+  id            String   @id @default(uuid())
+  managerId     String
+  department    String
+  clients       Json?
+  audioUrl      String
+  reportDate    DateTime @default(now())
+  weekNumber    Int
+  year          Int
+  status        String   @default("Submitted")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  manager       User     @relation("ManagerWeeklyVoiceReports", fields: [managerId], references: [id])
+
+  @@index([managerId])
+  @@index([weekNumber, year])
 }
 
 model UserDepartment {

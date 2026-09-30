@@ -284,14 +284,72 @@ exports.getManagerLogoutStatus = async (user) => {
       unableToSubmitReason: pa.project.marketingReports[0]?.unableToSubmitReason || null,
     }));
 
+  // ─── 3. Weekly Voice Reports (Only on Saturday) ──────────────────────────
+  let pendingWeeklyVoiceReports = [];
+  const isSaturday = start.getDay() === 6; // 6 is Saturday
+
+  if (isSaturday) {
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), 0, 1);
+    const days = Math.floor((now - startDate) / (24 * 60 * 60 * 1000));
+    const weekNumber = Math.ceil(days / 7);
+    const year = now.getFullYear();
+
+    // Get all active projects assigned to this manager
+    const activeProjectAssignments = await prisma.projectAssignment.findMany({
+      where: {
+        managerId: user.id,
+        project: {
+          OR: [
+            { isRunning: true },
+            { status: "ONGOING" }
+          ]
+        },
+      },
+      include: {
+        project: true
+      }
+    });
+
+    // Find reports they have already submitted this week
+    const submittedReports = await prisma.weeklyVoiceReport.findMany({
+      where: {
+        managerId: user.id,
+        weekNumber,
+        year
+      }
+    });
+
+    const submittedClientIds = new Set();
+    submittedReports.forEach(r => {
+      // Depending on how JSON is returned by Prisma (string vs object)
+      const clientsObj = typeof r.clients === 'string' ? JSON.parse(r.clients) : r.clients;
+      if (Array.isArray(clientsObj)) {
+        clientsObj.forEach(c => submittedClientIds.add(String(c.id)));
+      } else if (clientsObj && clientsObj.id) {
+        submittedClientIds.add(String(clientsObj.id));
+      }
+    });
+
+    pendingWeeklyVoiceReports = activeProjectAssignments
+      .filter(pa => !submittedClientIds.has(String(pa.projectId)))
+      .map(pa => ({
+        projectId: pa.projectId,
+        projectName: pa.project.projectName || pa.project.clientName
+      }));
+  }
+
   const canLogout =
-    pendingEaTasks.length === 0 && pendingMarketingReports.length === 0;
+    pendingEaTasks.length === 0 && 
+    pendingMarketingReports.length === 0 &&
+    pendingWeeklyVoiceReports.length === 0;
 
   return {
     canLogout,
     date: start.toISOString().slice(0, 10),
     pendingEaTasks,
     pendingMarketingReports,
+    pendingWeeklyVoiceReports,
   };
 };
 
