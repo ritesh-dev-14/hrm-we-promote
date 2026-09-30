@@ -307,38 +307,23 @@ async function runDailyMessagingJob() {
 }
 
 /**
- * Build the 12 body parameters required by the approved Meta template.
+ * Build the 5 body parameters required by the approved Meta template.
  */
 function buildApprovedTemplateParameters(data, today) {
   const marketing = data.reports?.marketing?.[0]?.report || {};
-  const seo = data.reports?.seo?.[0]?.report || {};
   const socialProject = data.reports?.socialMedia?.[0]?.project || {};
   const marketingProject = data.reports?.marketing?.[0]?.project || {};
   const seoProject = data.reports?.seo?.[0]?.project || {};
   const project = socialProject.projectName ? socialProject : marketingProject.projectName ? marketingProject : seoProject;
-  const social = socialProject.contentCalendar || {};
-  const uploadLinks = [
-    ...(social.contentUploadLinks || []),
-    ...(social.videoUploadLinks || []),
-    ...(social.submissionLinks || []),
-  ];
-  const lastChecked = seo.checkDate
-    ? new Date(seo.checkDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
-    : 'N/A';
+  
+  const lastUpdate = today.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
 
   return [
-    project.clientName || marketing.clientName || 'Client',
-    project.projectName || 'N/A',
-    marketing.typeOfAds || 'N/A',
-    marketing.areaName || 'N/A',
-    marketing.todayReachObtained ?? 'N/A',
-    marketing.todayAmountSpend != null ? Number(marketing.todayAmountSpend).toFixed(2) : 'N/A',
-    marketing.leadObtained ?? 'N/A',
-    seo.rankingNo != null ? `#${seo.rankingNo}` : 'N/A',
-    lastChecked,
-    social.title || 'N/A',
-    social.uploadStatus || 'N/A',
-    uploadLinks.length > 0 ? uploadLinks.join(', ') : 'N/A',
+    project.clientName || marketing.clientName || 'Client', // {{1}} Client Name
+    marketing.todayAmountSpend != null ? Number(marketing.todayAmountSpend).toFixed(2) : '0', // {{2}} Yesterday's Ad Spent
+    marketing.todayReachObtained ?? '0', // {{3}} Reach
+    marketing.leadObtained ?? '0', // {{4}} Leads Obtained
+    lastUpdate, // {{5}} Last Update Date
   ].map(String);
 }
 

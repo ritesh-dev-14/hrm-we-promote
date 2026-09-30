@@ -170,10 +170,10 @@ exports.sendTemplateMessage = async (
     };
   }
 
-  if (!phoneNumber || !Array.isArray(templateParameters) || templateParameters.length !== 12 || !customMessage) {
+  if (!phoneNumber || !Array.isArray(templateParameters) || !customMessage) {
     return {
       success: false,
-      error: 'Phone number, 12 template parameters, and custom message are required',
+      error: 'Phone number, template parameters array, and custom message are required',
       errorCode: 'WHATSAPP_INVALID_TEMPLATE_INPUT',
     };
   }
