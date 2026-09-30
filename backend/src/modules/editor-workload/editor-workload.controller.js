@@ -40,21 +40,59 @@ exports.getEditorWorkload = async (req, res, next) => {
       const detailedTasks = [];
       const completedTasks = [];
 
+      const stats = {
+        daily: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0 },
+        weekly: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0 },
+        monthly: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0 },
+        allTime: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0 }
+      };
+
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      const dayOfWeek = now.getDay() || 7; // Sunday = 7
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
+      
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
       assignments.forEach(assignment => {
         const isCompleted = ["SUBMITTED", "VERIFIED", "COMPLETED"].includes(assignment.status);
         
-        // Calculate TAT for completed assignments
-        if (assignment.startedAt && assignment.completedAt) {
-          const tat = new Date(assignment.completedAt) - new Date(assignment.startedAt);
-          totalTatSeconds += tat / 1000;
-          tatCount++;
-        } else if (assignment.createdAt && assignment.completedAt) {
-            const tat = new Date(assignment.completedAt) - new Date(assignment.createdAt);
-            totalTatSeconds += tat / 1000;
-            tatCount++;
-        }
+        if (isCompleted) {
+          completedTasks.push(assignment);
+          const completedAtDate = new Date(assignment.completedAt || assignment.submittedAt || assignment.updatedAt);
+          
+          let tatSec = 0;
+          if (assignment.startedAt && assignment.completedAt) {
+            tatSec = (new Date(assignment.completedAt) - new Date(assignment.startedAt)) / 1000;
+          } else if (assignment.createdAt && assignment.completedAt) {
+            tatSec = (new Date(assignment.completedAt) - new Date(assignment.createdAt)) / 1000;
+          }
 
-        if (!isCompleted) {
+          const mediaType = assignment.taskItem?.mediaType;
+
+          const updateStats = (period) => {
+            if (mediaType === 'VIDEO') {
+              stats[period].videoCount++;
+              if (tatSec > 0) {
+                stats[period].videoTatSec += tatSec;
+                stats[period].videoTatCount++;
+              }
+            } else if (mediaType === 'PIC') {
+              stats[period].postCount++;
+              if (tatSec > 0) {
+                stats[period].postTatSec += tatSec;
+                stats[period].postTatCount++;
+              }
+            }
+          };
+
+          updateStats('allTime');
+          if (completedAtDate >= startOfMonth) updateStats('monthly');
+          if (completedAtDate >= startOfWeek) updateStats('weekly');
+          if (completedAtDate >= startOfDay) updateStats('daily');
+          
+        } else {
           activeCount++;
           detailedTasks.push(assignment);
 
@@ -67,13 +105,19 @@ exports.getEditorWorkload = async (req, res, next) => {
               dueTodayCount++;
             }
           }
-        } else {
-          completedTasks.push(assignment);
         }
       });
 
-      // Average TAT in days (1 day = 86400 seconds)
-      const avgTatDays = tatCount > 0 ? (totalTatSeconds / tatCount / 86400).toFixed(1) : 0;
+      const formatStats = (period) => {
+        const p = stats[period];
+        return {
+          videosEdited: p.videoCount,
+          postsEdited: p.postCount,
+          // Calculate TAT in hours for precision
+          videoAvgTat: p.videoTatCount > 0 ? (p.videoTatSec / p.videoTatCount / 3600).toFixed(1) : 0,
+          postAvgTat: p.postTatCount > 0 ? (p.postTatSec / p.postTatCount / 3600).toFixed(1) : 0,
+        };
+      };
 
       // Sort completed tasks by completion date (newest first), limit to 10 for payload size
       completedTasks.sort((a, b) => new Date(b.completedAt || b.submittedAt || b.updatedAt) - new Date(a.completedAt || a.submittedAt || a.updatedAt));
@@ -83,7 +127,12 @@ exports.getEditorWorkload = async (req, res, next) => {
         activeTasks: activeCount,
         dueToday: dueTodayCount,
         overdue: overdueCount,
-        avgTatDays: parseFloat(avgTatDays),
+        stats: {
+          daily: formatStats('daily'),
+          weekly: formatStats('weekly'),
+          monthly: formatStats('monthly'),
+          allTime: formatStats('allTime')
+        },
         detailedTasks: detailedTasks,
         completedTasks: completedTasks.slice(0, 20) // send top 20 recent
       };
