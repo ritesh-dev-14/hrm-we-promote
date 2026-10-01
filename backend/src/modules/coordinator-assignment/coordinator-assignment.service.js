@@ -421,7 +421,10 @@ exports.getAssignmentsByCoordinator = async (
   } = filters;
 
   const where = {
-    createdById: user.id,
+    OR: [
+      { createdById: user.id },
+      { task: { is: { createdById: user.id } } },
+    ],
     ...(status && { status }),
   };
 
@@ -467,6 +470,81 @@ exports.getAssignmentsByCoordinator = async (
       take: parseInt(take),
       total,
       hasMore: parseInt(skip) + parseInt(take) < total,
+    },
+  };
+};
+
+exports.getTeamAssignments = async (user, filters = {}) => {
+  if (!(["COORDINATOR", "EA"].includes(user.role))) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const takeParam =
+    filters.take ||
+    filters.limit ||
+    filters.pageSize ||
+    (filters.all === "true" || filters.all === true ? 10000 : 10);
+  const skipParam =
+    filters.skip ||
+    (filters.page ? (parseInt(filters.page) - 1) * parseInt(takeParam) : 0);
+  const take = parseInt(takeParam);
+  const skip = parseInt(skipParam);
+  const where = {
+    assignedTo: {
+      role: { in: ["EMPLOYEE", "MANAGER", "HR"] },
+    },
+    OR: [
+      { createdBy: { role: { in: ["COORDINATOR", "EA"] } } },
+      {
+        task: {
+          createdBy: { role: { in: ["COORDINATOR", "EA"] } },
+        },
+      },
+    ],
+  };
+
+  const [assignments, total] = await Promise.all([
+    prisma.coordinatorAssignment.findMany({
+      where,
+      include: {
+        task: true,
+        assignedTo: true,
+      },
+      skip,
+      take,
+      orderBy: { assignedTime: "desc" },
+    }),
+    prisma.coordinatorAssignment.count({ where }),
+  ]);
+
+  return {
+    data: assignments.map((assignment) => ({
+      id: assignment.id,
+      taskId: assignment.taskId,
+      task: {
+        id: assignment.task.id,
+        projectName: assignment.task.projectName,
+        description: assignment.task.description,
+      },
+      assignedTo: {
+        id: assignment.assignedTo.id,
+        name: assignment.assignedTo.name,
+        email: assignment.assignedTo.email,
+        role: assignment.assignedTo.role,
+      },
+      assignedBy: assignment.assignedBy,
+      assignedTime: assignment.assignedTime,
+      completionDate: assignment.completionDate,
+      reason: assignment.reason,
+      status: assignment.status,
+      submittedAt: assignment.submittedAt,
+      completedAt: assignment.completedAt,
+    })),
+    pagination: {
+      skip,
+      take,
+      total,
+      hasMore: skip + take < total,
     },
   };
 };
@@ -1304,4 +1382,3 @@ exports.checkOverdueAssignments = async () => {
     message: `Overdue check complete. ${alertsSent} alert(s) sent.`,
   };
 };
-

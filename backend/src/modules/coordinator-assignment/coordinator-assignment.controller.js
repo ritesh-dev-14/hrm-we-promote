@@ -97,6 +97,19 @@ exports.getAssignmentsByCoordinator = async (req, res, next) => {
   }
 };
 
+exports.getTeamAssignments = async (req, res, next) => {
+  try {
+    const result = await service.getTeamAssignments(req.user, req.query);
+    res.json({
+      success: true,
+      data: result,
+      message: "Team assignments fetched successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 //
 // 🔥 GET ASSIGNMENTS ASSIGNED TO USER
 //
@@ -295,4 +308,3 @@ exports.triggerOverdueCheck = async (req, res, next) => {
     next(error);
   }
 };
-

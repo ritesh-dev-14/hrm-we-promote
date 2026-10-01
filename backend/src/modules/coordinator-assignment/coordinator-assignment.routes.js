@@ -78,6 +78,13 @@ router.get(
   controller.getAssignmentsByCoordinator
 );
 
+router.get(
+  "/team-assignments",
+  auth,
+  role("COORDINATOR", "EA"),
+  controller.getTeamAssignments
+);
+
 //
 // 🔥 GET ASSIGNMENTS ASSIGNED TO A USER
 // Get all tasks assigned to a specific user
