@@ -558,7 +558,9 @@ exports.getMyAssignmentSummary = async (user) => {
   const assignments = await prisma.coordinatorAssignment.findMany({
     where: {
       assignedTo: {
-        role: { in: ["EMPLOYEE", "MANAGER", "HR", "ADMIN"] },
+        role: {
+          in: ["EMPLOYEE", "MANAGER", "HR", "EA", "COORDINATOR", "ADMIN"],
+        },
       },
       OR: [
         { createdById: user.id },
@@ -585,6 +587,7 @@ exports.getMyAssignmentSummary = async (user) => {
         select: {
           id: true,
           projectName: true,
+          description: true,
         },
       },
     },
@@ -617,6 +620,7 @@ exports.getMyAssignmentSummary = async (user) => {
     recipient.tasks.push({
       id: assignment.id,
       title: assignment.task.projectName,
+      description: assignment.task.description,
       status,
       assignedTime: assignment.assignedTime,
       completionDate: assignment.completionDate,
