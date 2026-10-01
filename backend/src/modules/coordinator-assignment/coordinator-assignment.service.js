@@ -539,7 +539,7 @@ exports.getTeamAssignments = async (user, filters = {}) => {
       status: assignment.status,
       submittedAt: assignment.submittedAt,
       completedAt: assignment.completedAt,
-      canDelete: assignment.createdById === user.id || assignment.task.createdById === user.id,
+      canDelete: true,
     })),
     pagination: {
       skip,
@@ -559,8 +559,17 @@ exports.deleteAssignment = async (user, assignmentId) => {
     const assignment = await transaction.coordinatorAssignment.findUnique({
       where: { id: assignmentId },
       include: {
+        createdBy: {
+          select: { role: true },
+        },
+        assignedTo: {
+          select: { role: true },
+        },
         task: {
           include: {
+            createdBy: {
+              select: { role: true },
+            },
             _count: {
               select: {
                 assignments: true,
@@ -577,7 +586,20 @@ exports.deleteAssignment = async (user, assignmentId) => {
       throw new ApiError(404, "Assignment not found");
     }
 
-    if (assignment.createdById !== user.id && assignment.task.createdById !== user.id) {
+    const isCoordinatorAssignmentCreator = ["COORDINATOR", "EA"].includes(
+      assignment.createdBy.role
+    );
+    const isCoordinatorTaskCreator = ["COORDINATOR", "EA"].includes(
+      assignment.task.createdBy.role
+    );
+    const isAllowedAssignee = ["EMPLOYEE", "MANAGER", "HR"].includes(
+      assignment.assignedTo.role
+    );
+
+    if (
+      (!isCoordinatorAssignmentCreator && !isCoordinatorTaskCreator) ||
+      !isAllowedAssignee
+    ) {
       throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
     }
 
