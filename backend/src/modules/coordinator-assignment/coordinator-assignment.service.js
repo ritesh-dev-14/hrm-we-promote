@@ -539,6 +539,7 @@ exports.getTeamAssignments = async (user, filters = {}) => {
       status: assignment.status,
       submittedAt: assignment.submittedAt,
       completedAt: assignment.completedAt,
+      canDelete: assignment.createdById === user.id || assignment.task.createdById === user.id,
     })),
     pagination: {
       skip,
@@ -547,6 +548,57 @@ exports.getTeamAssignments = async (user, filters = {}) => {
       hasMore: skip + take < total,
     },
   };
+};
+
+exports.deleteAssignment = async (user, assignmentId) => {
+  if (!(["COORDINATOR", "EA"].includes(user.role))) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  return prisma.$transaction(async (transaction) => {
+    const assignment = await transaction.coordinatorAssignment.findUnique({
+      where: { id: assignmentId },
+      include: {
+        task: {
+          include: {
+            _count: {
+              select: {
+                assignments: true,
+                coordinatorAssignments: true,
+                items: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assignment) {
+      throw new ApiError(404, "Assignment not found");
+    }
+
+    if (assignment.createdById !== user.id && assignment.task.createdById !== user.id) {
+      throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+    }
+
+    await transaction.coordinatorAssignment.delete({
+      where: { id: assignmentId },
+    });
+
+    const canDeleteTask =
+      assignment.task.createdById === user.id &&
+      assignment.task._count.assignments === 0 &&
+      assignment.task._count.coordinatorAssignments === 1 &&
+      assignment.task._count.items === 0;
+
+    if (canDeleteTask) {
+      await transaction.task.delete({
+        where: { id: assignment.taskId },
+      });
+    }
+
+    return { deleted: true };
+  });
 };
 
 //

@@ -85,6 +85,13 @@ router.get(
   controller.getTeamAssignments
 );
 
+router.delete(
+  "/:assignmentId",
+  auth,
+  role("COORDINATOR", "EA"),
+  controller.deleteAssignment
+);
+
 //
 // 🔥 GET ASSIGNMENTS ASSIGNED TO A USER
 // Get all tasks assigned to a specific user

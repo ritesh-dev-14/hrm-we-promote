@@ -110,6 +110,22 @@ exports.getTeamAssignments = async (req, res, next) => {
   }
 };
 
+exports.deleteAssignment = async (req, res, next) => {
+  try {
+    const result = await service.deleteAssignment(
+      req.user,
+      req.params.assignmentId
+    );
+    res.json({
+      success: true,
+      data: result,
+      message: "Assignment deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 //
 // 🔥 GET ASSIGNMENTS ASSIGNED TO USER
 //
