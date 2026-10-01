@@ -85,6 +85,13 @@ router.get(
   controller.getTeamAssignments
 );
 
+router.get(
+  "/my-assignment-summary",
+  auth,
+  role("COORDINATOR", "EA"),
+  controller.getMyAssignmentSummary
+);
+
 router.delete(
   "/:assignmentId",
   auth,

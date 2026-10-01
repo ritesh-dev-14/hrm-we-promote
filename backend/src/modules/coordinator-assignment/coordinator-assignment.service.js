@@ -550,6 +550,98 @@ exports.getTeamAssignments = async (user, filters = {}) => {
   };
 };
 
+exports.getMyAssignmentSummary = async (user) => {
+  if (!(["COORDINATOR", "EA"].includes(user.role))) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const assignments = await prisma.coordinatorAssignment.findMany({
+    where: {
+      assignedTo: {
+        role: { in: ["EMPLOYEE", "MANAGER", "HR", "ADMIN"] },
+      },
+      OR: [
+        { createdById: user.id },
+        { task: { is: { createdById: user.id } } },
+      ],
+    },
+    select: {
+      id: true,
+      status: true,
+      assignedTime: true,
+      completionDate: true,
+      submittedAt: true,
+      completedAt: true,
+      reason: true,
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      task: {
+        select: {
+          id: true,
+          projectName: true,
+        },
+      },
+    },
+    orderBy: { assignedTime: "desc" },
+  });
+
+  const recipients = new Map();
+  for (const assignment of assignments) {
+    const recipientId = assignment.assignedTo.id;
+    if (!recipients.has(recipientId)) {
+      recipients.set(recipientId, {
+        user: assignment.assignedTo,
+        total: 0,
+        completed: 0,
+        submitted: 0,
+        inProgress: 0,
+        pending: 0,
+        tasks: [],
+      });
+    }
+
+    const recipient = recipients.get(recipientId);
+    const status = assignment.status;
+    recipient.total += 1;
+    if (["COMPLETED", "VERIFIED"].includes(status)) recipient.completed += 1;
+    else if (status === "SUBMITTED") recipient.submitted += 1;
+    else if (status === "IN_PROGRESS") recipient.inProgress += 1;
+    else recipient.pending += 1;
+
+    recipient.tasks.push({
+      id: assignment.id,
+      title: assignment.task.projectName,
+      status,
+      assignedTime: assignment.assignedTime,
+      completionDate: assignment.completionDate,
+      submittedAt: assignment.submittedAt,
+      completedAt: assignment.completedAt,
+      reason: assignment.reason,
+    });
+  }
+
+  const byRecipient = [...recipients.values()].sort(
+    (a, b) => a.user.name.localeCompare(b.user.name)
+  );
+
+  return {
+    total: assignments.length,
+    completed: assignments.filter((a) => ["COMPLETED", "VERIFIED"].includes(a.status)).length,
+    submitted: assignments.filter((a) => a.status === "SUBMITTED").length,
+    inProgress: assignments.filter((a) => a.status === "IN_PROGRESS").length,
+    pending: assignments.filter(
+      (a) => !["COMPLETED", "VERIFIED", "SUBMITTED", "IN_PROGRESS"].includes(a.status)
+    ).length,
+    recipients: byRecipient,
+  };
+};
+
 exports.deleteAssignment = async (user, assignmentId) => {
   if (!(["COORDINATOR", "EA"].includes(user.role))) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);

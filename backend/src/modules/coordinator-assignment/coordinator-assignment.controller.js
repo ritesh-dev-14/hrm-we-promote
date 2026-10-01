@@ -110,6 +110,19 @@ exports.getTeamAssignments = async (req, res, next) => {
   }
 };
 
+exports.getMyAssignmentSummary = async (req, res, next) => {
+  try {
+    const result = await service.getMyAssignmentSummary(req.user);
+    res.json({
+      success: true,
+      data: result,
+      message: "Assignment summary fetched successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.deleteAssignment = async (req, res, next) => {
   try {
     const result = await service.deleteAssignment(
