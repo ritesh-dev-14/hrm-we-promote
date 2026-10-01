@@ -137,6 +137,7 @@ exports.getAssignmentsByAssignedTo = async (
   try {
     const result =
       await service.getAssignmentsByAssignedTo(
+        req.user,
         req.params.userId,
         req.query
       );

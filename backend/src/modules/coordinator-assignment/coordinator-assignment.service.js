@@ -491,7 +491,7 @@ exports.getTeamAssignments = async (user, filters = {}) => {
   const skip = parseInt(skipParam);
   const where = {
     assignedTo: {
-      role: { in: ["EMPLOYEE", "MANAGER", "HR"] },
+      role: { in: ["EMPLOYEE", "MANAGER", "HR", "ADMIN"] },
     },
     OR: [
       { createdBy: { role: { in: ["COORDINATOR", "EA"] } } },
@@ -592,7 +592,7 @@ exports.deleteAssignment = async (user, assignmentId) => {
     const isCoordinatorTaskCreator = ["COORDINATOR", "EA"].includes(
       assignment.task.createdBy.role
     );
-    const isAllowedAssignee = ["EMPLOYEE", "MANAGER", "HR"].includes(
+    const isAllowedAssignee = ["EMPLOYEE", "MANAGER", "HR", "ADMIN"].includes(
       assignment.assignedTo.role
     );
 
@@ -627,9 +627,14 @@ exports.deleteAssignment = async (user, assignmentId) => {
 // 🔥 GET ASSIGNMENTS ASSIGNED TO A USER
 //
 exports.getAssignmentsByAssignedTo = async (
+  user,
   userId,
   filters = {}
 ) => {
+  if (user.id !== userId) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
   const takeParam =
     filters.take ||
     filters.limit ||
@@ -1079,7 +1084,7 @@ exports.getAllUsers = async (user) => {
   const users = await prisma.user.findMany({
     where: {
       role: {
-        in: ["EMPLOYEE", "MANAGER", "HR"],
+        in: ["EMPLOYEE", "MANAGER", "HR", "ADMIN"],
       },
     },
     select: {
