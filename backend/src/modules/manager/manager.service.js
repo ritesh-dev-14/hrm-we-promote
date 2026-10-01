@@ -141,7 +141,7 @@ const getDayBounds = (date = new Date()) => {
 exports.getManagerLogoutStatus = async (user) => {
   const { start, end } = getDayBounds();
 
-  // ─── 1. Pending EA-assigned tasks for today ───────────────────────────────
+  // ─── 1. Pending EA/Coordinator-assigned tasks for today ───────────────────
   const eaAssignments = await prisma.taskAssignment.findMany({
     where: {
       userId: user.id,
@@ -151,7 +151,7 @@ exports.getManagerLogoutStatus = async (user) => {
       },
       task: {
         createdBy: {
-          role: "EA",
+          role: { in: ["EA", "COORDINATOR"] },
         },
       },
     },
@@ -182,7 +182,7 @@ exports.getManagerLogoutStatus = async (user) => {
         lt: end,
       },
       createdBy: {
-        role: "EA",
+        role: { in: ["EA", "COORDINATOR"] },
       },
     },
     include: {
@@ -202,7 +202,7 @@ exports.getManagerLogoutStatus = async (user) => {
     },
   });
 
-  const DONE_STATUSES = ["SUBMITTED", "VERIFIED"];
+  const DONE_STATUSES = ["SUBMITTED", "VERIFIED", "COMPLETED"];
   const pendingEaTasks = [
     ...eaAssignments.map((assignment) => ({
       assignmentId: assignment.id,
