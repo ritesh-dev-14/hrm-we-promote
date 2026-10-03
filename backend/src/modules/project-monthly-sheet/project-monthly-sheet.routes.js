@@ -41,6 +41,13 @@ router.patch(
   controller.updateProjectMonthlySheet
 );
 
+router.delete(
+  "/:sheetId",
+  auth,
+  role("MANAGER"),
+  controller.deleteProjectMonthlySheet
+);
+
 router.patch(
   "/:sheetId/days/:dayId/upload-status",
   auth,

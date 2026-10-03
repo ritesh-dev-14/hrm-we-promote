@@ -77,6 +77,20 @@ exports.updateProjectMonthlySheet = async (req, res, next) => {
   }
 };
 
+exports.deleteProjectMonthlySheet = async (req, res, next) => {
+  try {
+    const data = await service.deleteProjectMonthlySheet(
+      req.user,
+      req.params.projectId,
+      req.params.sheetId
+    );
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.updateUploadStatus = async (req, res, next) => {
   try {
     const data = await service.updateUploadStatus(

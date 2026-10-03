@@ -464,6 +464,34 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
   return formatSheet(updatedSheet);
 };
 
+exports.deleteProjectMonthlySheet = async (user, projectId, sheetId) => {
+  if (user.role !== "MANAGER") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const { assignedManager } = await verifyProjectAccess(user, projectId);
+  if (!assignedManager) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const sheet = await prisma.projectMonthlySheet.findFirst({
+    where: { id: sheetId, projectId },
+    select: { id: true },
+  });
+  if (!sheet) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Monthly sheet not found.",
+    });
+  }
+
+  await prisma.projectMonthlySheet.delete({
+    where: { id: sheetId },
+  });
+
+  return { id: sheetId };
+};
+
 exports.updateUploadStatus = async (user, projectId, sheetId, dayId, body) => {
   // Allow MANAGER or HR to update
   if (!["MANAGER", "HR"].includes(user.role)) {
