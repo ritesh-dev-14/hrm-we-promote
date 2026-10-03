@@ -969,22 +969,24 @@ exports.updateAssignmentStatus = async (
   const validStatuses = [
     "IN_PROGRESS",
     "SUBMITTED",
-    "COMPLETED",
     "UNABLE_TO_SUBMIT",
-    "REJECTED",
   ];
 
   if (!validStatuses.includes(status)) {
     throw new ApiError(400, "Invalid status");
   }
 
+  if (assignment.status === "SUBMITTED") {
+    throw new ApiError(400, "This task is submitted and is waiting for EA approval.");
+  }
+  if (assignment.status === "COMPLETED") {
+    throw new ApiError(400, "This task has already been approved.");
+  }
+
   //
-  // ✅ REQUIRE REASON ONLY FOR UNABLE_TO_SUBMIT AND REJECTED
+  // ✅ REQUIRE REASON ONLY FOR UNABLE_TO_SUBMIT
   //
-  if (
-    (status === "UNABLE_TO_SUBMIT" || status === "REJECTED") &&
-    (!reason || reason.trim() === "")
-  ) {
+  if (status === "UNABLE_TO_SUBMIT" && (!reason || reason.trim() === "")) {
     throw new ApiError(
       400,
       `Reason is required for status: ${status}`
@@ -1004,11 +1006,6 @@ exports.updateAssignmentStatus = async (
     updateData.startedAt = new Date();
   } else if (status === "SUBMITTED" && !assignment.submittedAt) {
     updateData.submittedAt = new Date();
-  } else if (status === "COMPLETED" && !assignment.completedAt) {
-    updateData.completedAt = new Date();
-  } else if (status === "REJECTED" && !assignment.rejectedAt) {
-    updateData.rejectedAt = new Date();
-    updateData.rejectionReason = reason;
   }
 
   //
@@ -1030,9 +1027,7 @@ exports.updateAssignmentStatus = async (
   const statusMessage = {
     IN_PROGRESS: "started working on",
     SUBMITTED: "submitted",
-    COMPLETED: "completed",
     UNABLE_TO_SUBMIT: "marked as unable to submit",
-    REJECTED: "rejected",
   };
 
   await prisma.notification.create({

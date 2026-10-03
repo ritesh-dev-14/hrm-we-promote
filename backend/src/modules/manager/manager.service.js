@@ -202,7 +202,7 @@ exports.getManagerLogoutStatus = async (user) => {
     },
   });
 
-  const DONE_STATUSES = ["SUBMITTED", "VERIFIED", "COMPLETED"];
+  const DONE_STATUSES = ["VERIFIED", "COMPLETED"];
   const pendingEaTasks = [
     ...eaAssignments.map((assignment) => ({
       assignmentId: assignment.id,

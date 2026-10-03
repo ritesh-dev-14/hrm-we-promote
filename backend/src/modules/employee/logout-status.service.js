@@ -92,7 +92,7 @@ exports.getLogoutStatus = async (user) => {
     }));
 
   const pendingEaTasks = eaAssignments
-    .filter((assignment) => !["SUBMITTED", "COMPLETED"].includes(assignment.status))
+    .filter((assignment) => assignment.status !== "COMPLETED")
     .map((assignment) => ({
       assignmentId: assignment.id,
       taskId: assignment.task.id,

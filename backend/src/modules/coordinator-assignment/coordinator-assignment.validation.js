@@ -53,22 +53,19 @@ exports.createAssignmentSchema = Joi.object({
 //
 // 🔥 UPDATE ASSIGNMENT STATUS
 //
-// Status can be: IN_PROGRESS, SUBMITTED, COMPLETED, UNABLE_TO_SUBMIT, REJECTED
-// Reason is required for non-completion statuses
+// Assigned users can start, submit, or report inability; coordinator approval is separate.
 //
 exports.updateAssignmentStatusSchema = Joi.object({
   status: Joi.string()
     .valid(
       "IN_PROGRESS",
       "SUBMITTED",
-      "COMPLETED",
-      "UNABLE_TO_SUBMIT",
-      "REJECTED"
+      "UNABLE_TO_SUBMIT"
     )
     .required()
     .messages({
       "any.required": "Status is required",
-      "any.only": "Status must be IN_PROGRESS, SUBMITTED, COMPLETED, UNABLE_TO_SUBMIT, or REJECTED",
+      "any.only": "Status must be IN_PROGRESS, SUBMITTED, or UNABLE_TO_SUBMIT",
     }),
 
   reason: Joi.string()
