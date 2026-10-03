@@ -45,7 +45,7 @@ exports.assignShootTaskEmployeesSchema = Joi.object({
 
 exports.createShootTaskSchema = Joi.object({
   title: Joi.string().min(2).max(200).required(),
-  description: Joi.string().max(1000).allow("", null),
+  description: Joi.string().allow("", null),
   noOfPics: Joi.number().integer().min(0).required(),
   noOfReels: Joi.number().integer().min(0).required(),
   date: Joi.string().allow("", null),
@@ -56,7 +56,7 @@ exports.createShootTaskSchema = Joi.object({
 
 exports.updateShootTaskSchema = Joi.object({
   title: Joi.string().min(2).max(200),
-  description: Joi.string().max(1000).allow("", null),
+  description: Joi.string().allow("", null),
   noOfPics: Joi.number().integer().min(0),
   noOfReels: Joi.number().integer().min(0),
   date: Joi.string().allow("", null),
@@ -67,7 +67,7 @@ exports.updateShootTaskSchema = Joi.object({
 
 exports.createShootSubTaskSchema = Joi.object({
   title: Joi.string().min(1).max(200).required(),
-  description: Joi.string().max(1000).allow("", null).optional(),
+  description: Joi.string().allow("", null).optional(),
   type: Joi.string().uppercase().valid("PIC", "REEL", "IMAGE", "PHOTO", "VIDEO").required(),
   referenceLinks: Joi.array().items(Joi.string().allow("")).default([]).optional(),
   videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow("", null).optional(),
@@ -77,7 +77,7 @@ exports.createShootSubTaskSchema = Joi.object({
 
 exports.updateShootSubTaskSchema = Joi.object({
   title: Joi.string().min(1).max(200).optional(),
-  description: Joi.string().max(1000).allow("", null).optional(),
+  description: Joi.string().allow("", null).optional(),
   type: Joi.string().uppercase().valid("PIC", "REEL", "IMAGE", "PHOTO", "VIDEO").optional(),
   referenceLinks: Joi.array().items(Joi.string().allow("")).default([]).optional(),
   videoType: Joi.string().valid("HORIZONTAL", "VERTICAL").allow("", null).optional(),
@@ -99,4 +99,3 @@ exports.reviewShootSubTaskSchema = Joi.object({
     otherwise: Joi.optional().allow("", null),
   }),
 }).unknown(false);
-
