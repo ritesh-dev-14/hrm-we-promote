@@ -1057,9 +1057,30 @@ exports.removeShootWorkspaceMember = async (user, workspaceId, memberId) => {
 };
 
 exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
-  await verifyWorkspaceOwnership(user, workspaceId);
+  const workspace = await prisma.shootWorkspace.findUnique({
+    where: { id: workspaceId },
+    select: { createdById: true, name: true },
+  });
+  if (!workspace) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Shoot workspace not found.",
+    });
+  }
+  if (workspace.createdById !== user.id) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
 
-  const task = await prisma.shootTask.findFirst({ where: { id: taskId, workspaceId } });
+  const task = await prisma.shootTask.findFirst({
+    where: { id: taskId, workspaceId },
+    select: {
+      id: true,
+      title: true,
+      date: true,
+      location: true,
+      description: true,
+    },
+  });
   if (!task) {
     throw new ApiError(404, {
       code: ERRORS.TASK.NOT_FOUND.code,
@@ -1068,10 +1089,22 @@ exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
   }
 
   const employeeIds = [...new Set(body.employeeIds)];
-  const employees = await prisma.user.findMany({
-    where: { employeeId: { in: employeeIds }, role: "EMPLOYEE" },
-    select: assignedEmployeeSelect,
-  });
+  const [employees, existingAssignments, manager] = await Promise.all([
+    employeeIds.length
+      ? prisma.user.findMany({
+          where: { employeeId: { in: employeeIds }, role: "EMPLOYEE" },
+          select: assignedEmployeeSelect,
+        })
+      : [],
+    prisma.shootTaskAssignment.findMany({
+      where: { taskId },
+      select: { userId: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { name: true },
+    }),
+  ]);
   if (employees.length !== employeeIds.length) {
     throw new ApiError(400, {
       code: ERRORS.TASK.EMPLOYEE_NOT_FOUND.code,
@@ -1079,25 +1112,27 @@ exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
     });
   }
 
-  const existing = await prisma.shootTaskAssignment.findMany({
-    where: { taskId, userId: { in: employees.map((employee) => employee.id) } },
-  });
-  const existingIds = new Set(existing.map((assignment) => assignment.userId));
-  const newEmployees = employees.filter((employee) => !existingIds.has(employee.id));
+  const employeeUserIds = employees.map((employee) => employee.id);
+  const selectedUserIds = new Set(employeeUserIds);
+  const existingUserIds = new Set(existingAssignments.map(({ userId }) => userId));
+  const newEmployees = employees.filter((employee) => !existingUserIds.has(employee.id));
 
-  await prisma.shootTaskAssignment.createMany({
-    data: newEmployees.map((employee) => ({ taskId, userId: employee.id })),
-    skipDuplicates: true,
+  await prisma.$transaction(async (transaction) => {
+    if (employeeUserIds.length) {
+      await transaction.shootTaskAssignment.deleteMany({
+        where: { taskId, userId: { notIn: employeeUserIds } },
+      });
+      if (newEmployees.length) {
+        await transaction.shootTaskAssignment.createMany({
+          data: newEmployees.map((employee) => ({ taskId, userId: employee.id })),
+          skipDuplicates: true,
+        });
+      }
+    } else {
+      await transaction.shootTaskAssignment.deleteMany({ where: { taskId } });
+    }
   });
 
-  const workspace = await prisma.shootWorkspace.findUnique({
-    where: { id: workspaceId },
-    select: { name: true },
-  });
-  const manager = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { name: true },
-  });
   for (const employee of newEmployees) {
     if (employee.email) {
       sendShootTaskAssignedToEmployeeMail({
@@ -1116,11 +1151,19 @@ exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
     incrementUnread(employee.id, "shoots").catch(() => {});
   }
 
-  const updatedTask = await prisma.shootTask.findUnique({
-    where: { id: taskId },
-    include: shootTaskInclude,
+  const assignments = await prisma.shootTaskAssignment.findMany({
+    where: { taskId, userId: { in: [...selectedUserIds] } },
+    select: {
+      assignedAt: true,
+      user: { select: assignedEmployeeSelect },
+    },
   });
-  return formatShootTask(updatedTask);
+  return {
+    assignedEmployees: assignments.map((assignment) => ({
+      assignedAt: assignment.assignedAt,
+      ...assignment.user,
+    })),
+  };
 };
 
 exports.removeShootTaskEmployee = async (user, workspaceId, taskId, employeeId) => {

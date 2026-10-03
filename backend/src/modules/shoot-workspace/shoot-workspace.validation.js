@@ -40,7 +40,7 @@ exports.addWorkspaceMembersSchema = Joi.object({
 }).unknown(false);
 
 exports.assignShootTaskEmployeesSchema = Joi.object({
-  employeeIds: Joi.array().items(Joi.string().required()).min(1).required(),
+  employeeIds: Joi.array().items(Joi.string()).required(),
 }).unknown(false);
 
 exports.createShootTaskSchema = Joi.object({
