@@ -55,6 +55,7 @@ exports.getMyAssignedItems =
                       requirements: true,
                       startDate: true,
                       endDate: true,
+                      logo: true,
                       department: {
                         select: {
                           name: true,
@@ -165,6 +166,7 @@ exports.getMyAssignedItems =
                 requirements: a.taskItem.task.project.requirements,
                 startDate: a.taskItem.task.project.startDate,
                 endDate: a.taskItem.task.project.endDate,
+                logo: a.taskItem.task.project.logo,
                 department: a.taskItem.task.project.department,
               }
             : null,
