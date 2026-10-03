@@ -16,6 +16,26 @@ exports.createTask = async (user, body) => {
     );
   }
 
+  if (body.projectId) {
+    const existingTask = await prisma.task.findFirst({
+      where: {
+        createdById: user.id,
+        OR: [
+          { projectId: body.projectId },
+          {
+            projectId: null,
+            projectName: { equals: body.projectName.trim(), mode: "insensitive" },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (existingTask) {
+      throw new ApiError(409, "A production workspace already exists for this project.");
+    }
+  }
+
   //
   // ✅ MANAGER CAN CREATE TASK ONLY FOR HIMSELF
   //
