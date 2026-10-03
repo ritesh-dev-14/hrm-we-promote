@@ -275,6 +275,10 @@ exports.getAllUploadCalendarSheets = async (user) => {
     select: {
       id: true,
       projectId: true,
+      month: true,
+      year: true,
+      totalReels: true,
+      totalPosts: true,
       days: true,
       project: {
         select: {
