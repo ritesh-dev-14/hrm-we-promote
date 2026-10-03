@@ -570,6 +570,23 @@ exports.createShootWorkspace = async (user, body) => {
     }
   }
 
+  const existingWorkspace = await prisma.shootWorkspace.findFirst({
+    where: {
+      createdById: user.id,
+      OR: [
+        ...(body.projectId ? [{ projectId: body.projectId }] : []),
+        {
+          projectId: null,
+          name: { equals: body.brandName.trim(), mode: "insensitive" },
+        },
+      ],
+    },
+    select: { id: true },
+  });
+  if (existingWorkspace) {
+    throw new ApiError(409, "A shoot workspace already exists for this project.");
+  }
+
   const workspace = await prisma.shootWorkspace.create({
     data: {
       name: body.brandName,
