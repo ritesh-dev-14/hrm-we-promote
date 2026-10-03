@@ -56,6 +56,7 @@ exports.getMyAssignedItems =
                       startDate: true,
                       endDate: true,
                       logo: true,
+                      endScreenVideoUrl: true,
                       department: {
                         select: {
                           name: true,
@@ -167,6 +168,7 @@ exports.getMyAssignedItems =
                 startDate: a.taskItem.task.project.startDate,
                 endDate: a.taskItem.task.project.endDate,
                 logo: a.taskItem.task.project.logo,
+                endScreenVideoUrl: a.taskItem.task.project.endScreenVideoUrl,
                 department: a.taskItem.task.project.department,
               }
             : null,

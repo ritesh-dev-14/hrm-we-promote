@@ -123,6 +123,7 @@ const formatProject = (project) => {
     twitterEmail: project.twitterEmail,
     twitterPassword: project.twitterPassword,
     logo: project.logo,
+    endScreenVideoUrl: project.endScreenVideoUrl,
     reasons: project.reasons || [],
     projectStartDate: project.projectStartDate,
     // Web Development Department specific fields
@@ -1044,6 +1045,54 @@ exports.updateProject = async (user, projectId, body) => {
   }
 
   return formatted;
+};
+
+const assertCanUpdateProjectEndScreen = async (user, projectId) => {
+  if (user.role !== "MANAGER") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      department: { select: { name: true } },
+      assignments: {
+        where: { managerId: user.id },
+        select: { managerId: true },
+      },
+    },
+  });
+  if (!project) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Project not found.",
+    });
+  }
+  if (!project.assignments.length) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+  if (!project.department.name.toLowerCase().includes("social media")) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "End-screen videos can only be uploaded to Social Media projects.",
+    });
+  }
+
+  return project;
+};
+
+exports.assertCanUpdateProjectEndScreen = assertCanUpdateProjectEndScreen;
+
+exports.updateProjectEndScreen = async (user, projectId, endScreenVideoUrl) => {
+  await assertCanUpdateProjectEndScreen(user, projectId);
+
+  const updatedProject = await prisma.project.update({
+    where: { id: projectId },
+    data: { endScreenVideoUrl },
+    select: { id: true, endScreenVideoUrl: true },
+  });
+  return updatedProject;
 };
 
 exports.deleteProject = async (user, projectId) => {

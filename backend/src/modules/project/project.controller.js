@@ -130,6 +130,43 @@ exports.updateProject = async (req, res, next) => {
   }
 };
 
+exports.uploadProjectEndScreen = async (req, res, next) => {
+  try {
+    if (!req.file?.buffer) {
+      return next(
+        new ApiError(400, {
+          code: ERRORS.VALIDATION.INVALID_INPUT.code,
+          message: "Choose an end-screen video to upload.",
+        })
+      );
+    }
+    if (!req.file.mimetype?.startsWith("video/")) {
+      return next(
+        new ApiError(400, {
+          code: ERRORS.VALIDATION.INVALID_INPUT.code,
+          message: "The end-screen file must be a video.",
+        })
+      );
+    }
+
+    await service.assertCanUpdateProjectEndScreen(req.user, req.params.id);
+
+    const result = await cloudinary.uploadBuffer(req.file.buffer, {
+      folder: "projects/end-screens",
+      resource_type: "video",
+    });
+    const data = await service.updateProjectEndScreen(
+      req.user,
+      req.params.id,
+      result.secure_url
+    );
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.renewProject = async (req, res, next) => {
   try {
     const data = await service.renewProject(

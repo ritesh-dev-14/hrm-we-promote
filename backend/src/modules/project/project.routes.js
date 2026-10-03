@@ -48,6 +48,14 @@ router.patch(
 );
 
 router.patch(
+  "/:id/end-screen",
+  auth,
+  role("MANAGER"),
+  upload.single("endScreenVideo"),
+  controller.uploadProjectEndScreen
+);
+
+router.patch(
   "/:id/renew",
   auth,
   role("ADMIN", "HR", "EA", "COORDINATOR"),
