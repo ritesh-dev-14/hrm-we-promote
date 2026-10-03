@@ -6,11 +6,9 @@ const Joi = require("joi");
 exports.createAssignmentSchema = Joi.object({
   task: Joi.string()
     .min(3)
-    .max(200)
     .required()
     .messages({
       "string.min": "Task name must be at least 3 characters",
-      "string.max": "Task name cannot exceed 200 characters",
       "any.required": "Task name is required",
     }),
 
@@ -171,4 +169,3 @@ exports.reviewSubmissionSchema = Joi.object({
     otherwise: Joi.string().max(500).allow("", null).optional(),
   }),
 }).unknown(false);
-
