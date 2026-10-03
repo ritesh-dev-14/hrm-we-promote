@@ -60,22 +60,6 @@ const normalize = (type, report, submitterField) => ({
   ),
 });
 
-const removeDuplicateMarketingReports = (reports) => {
-  const uniqueReports = new Map();
-
-  for (const report of reports) {
-    const day = new Date(report.date).toISOString().slice(0, 10);
-    const key = [report.projectId, report.managerId, report.campaignId || "", day].join("|");
-    const existing = uniqueReports.get(key);
-
-    if (!existing || new Date(report.createdAt) > new Date(existing.createdAt)) {
-      uniqueReports.set(key, report);
-    }
-  }
-
-  return [...uniqueReports.values()];
-};
-
 exports.getDepartmentReports = async (user, query = {}) => {
   if (!VIEW_ROLES.includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
@@ -104,11 +88,7 @@ exports.getDepartmentReports = async (user, query = {}) => {
       orderBy: { date: "desc" },
       include: { project: projectInclude, manager: { select: submitterSelect } },
     });
-    reports.push(
-      ...removeDuplicateMarketingReports(marketingReports).map((report) =>
-        normalize("marketing", report, "manager")
-      )
-    );
+    reports.push(...marketingReports.map((report) => normalize("marketing", report, "manager")));
   }
 
   if (selectedDepartments.includes("seo")) {
