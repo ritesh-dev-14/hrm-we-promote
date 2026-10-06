@@ -1788,6 +1788,10 @@ exports.updateShootSubTask = async (user, workspaceId, taskId, subtaskId, body) 
     }
   }
 
+  const normalizedType = body.type !== undefined
+    ? normalizeShootSubtaskType(body.type)
+    : undefined;
+
   const updatedSubtask = await prisma.shootSubTask.update({
     where: { id: subtaskId },
     data: {
