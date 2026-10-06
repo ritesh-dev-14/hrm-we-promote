@@ -14,6 +14,17 @@ const isTodayInIST = (date) => {
   return d.toLocaleDateString("en-IN", opts) === today.toLocaleDateString("en-IN", opts);
 };
 
+const getTodayStartInIST = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const dateParts = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return new Date(Date.UTC(Number(dateParts.year), Number(dateParts.month) - 1, Number(dateParts.day)));
+};
+
 /**
  * Notify ALL users about a today's upload sourced from the Content Calendar.
  */
@@ -107,6 +118,7 @@ const formatDay = (day) => ({
   description: day.description,
   uploadStatus: day.uploadStatus || "PENDING",
   uploadRejectReason: day.uploadRejectReason,
+  uploadRetryDate: day.uploadRetryDate,
   createdAt: day.createdAt,
 });
 
@@ -538,9 +550,35 @@ exports.updateUploadStatus = async (user, projectId, sheetId, dayId, body) => {
     }
   }
 
-  const updatedDay = await prisma.projectMonthlySheetDay.update({
-    where: { id: dayId },
-    data: updateData,
+  const updatedDay = await prisma.$transaction(async (tx) => {
+    const currentDay = await tx.projectMonthlySheetDay.findFirst({
+      where: { id: dayId, sheetId, sheet: { projectId } },
+    });
+
+    if (!currentDay) {
+      throw new ApiError(404, {
+        code: ERRORS.VALIDATION.INVALID_INPUT.code,
+        message: "Monthly sheet day not found.",
+      });
+    }
+
+    if (body.uploadStatus === "REJECTED") {
+      const retryDate = new Date(currentDay.uploadRetryDate || currentDay.date);
+      retryDate.setUTCHours(0, 0, 0, 0);
+      const today = getTodayStartInIST();
+      if (retryDate < today) {
+        retryDate.setTime(today.getTime());
+      }
+      retryDate.setUTCDate(retryDate.getUTCDate() + 1);
+      updateData.uploadRetryDate = retryDate;
+    } else {
+      updateData.uploadRetryDate = null;
+    }
+
+    return tx.projectMonthlySheetDay.update({
+      where: { id: dayId },
+      data: updateData,
+    });
   });
 
   return formatDay(updatedDay);

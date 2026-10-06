@@ -667,6 +667,7 @@ model ProjectMonthlySheetDay {
   description        String?
   uploadStatus       UploadStatus @default(PENDING)
   uploadRejectReason String?
+  uploadRetryDate    DateTime?
   createdAt          DateTime     @default(now())
 
   sheet         ProjectMonthlySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
