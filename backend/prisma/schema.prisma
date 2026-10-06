@@ -414,6 +414,7 @@ model MarketingReport {
   clientName           String?
   clientContactNumber  String?
   videoLink            String?
+  videoLinks           Json?
   areaName             String?
   isAdRunning          Boolean?
   todayReachObtained   Int?

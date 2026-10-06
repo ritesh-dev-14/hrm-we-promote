@@ -366,9 +366,14 @@ exports.buildMarketingReportMessage = ({ projectName, clientName, report, date }
     if (report.leadObtained !== null && report.leadObtained !== undefined) {
       msg += `🎯 *Leads Obtained:* ${report.leadObtained}\n`;
     }
-    if (report.videoLink) {
-      msg += `🔗 *Campaign Link:* ${report.videoLink}\n`;
-    }
+    const videoLinks = Array.isArray(report.videoLinks)
+      ? report.videoLinks
+      : report.videoLink
+        ? [report.videoLink]
+        : [];
+    videoLinks.forEach((link, index) => {
+      msg += `🔗 *Campaign Link${videoLinks.length > 1 ? ` ${index + 1}` : ''}:* ${link}\n`;
+    });
     if (report.campaignStartDate || report.campaignEndDate) {
       const fmt = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' }) : '?';
       msg += `📆 *Campaign Period:* ${fmt(report.campaignStartDate)} – ${fmt(report.campaignEndDate)}\n`;
@@ -434,4 +439,3 @@ exports.buildSocialMediaReportMessage = ({ projectName, clientName, contentCalen
 
   return msg.trim();
 };
-

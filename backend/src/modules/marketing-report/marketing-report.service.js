@@ -2,6 +2,16 @@ const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
 
+const getVideoLinks = (body) => {
+  if (Array.isArray(body.videoLinks)) {
+    return body.videoLinks
+      .filter((link) => typeof link === "string")
+      .map((link) => link.trim())
+      .filter(Boolean);
+  }
+  return body.videoLink ? [String(body.videoLink).trim()].filter(Boolean) : [];
+};
+
 const formatReport = (report) => ({
   id: report.id,
   projectId: report.projectId,
@@ -10,6 +20,11 @@ const formatReport = (report) => ({
   clientName: report.clientName,
   clientContactNumber: report.clientContactNumber,
   videoLink: report.videoLink,
+  videoLinks: Array.isArray(report.videoLinks)
+    ? report.videoLinks
+    : report.videoLink
+      ? [report.videoLink]
+      : [],
   areaName: report.areaName,
   isAdRunning: report.isAdRunning,
   todayReachObtained: report.todayReachObtained,
@@ -137,6 +152,7 @@ exports.createMarketingReport = async (user, body) => {
     isAdRunning = body.isAdRunning === true || body.isAdRunning === "true" || body.isAdRunning === "yes";
   }
 
+  const videoLinks = getVideoLinks(body);
   let leadSentToClient = null;
   if (body.leadSentToClient !== undefined && body.leadSentToClient !== null && body.leadSentToClient !== "") {
     const value = String(body.leadSentToClient).trim().toLowerCase();
@@ -153,7 +169,8 @@ exports.createMarketingReport = async (user, body) => {
       managerId: user.id,
       clientName: body.clientName || null,
       clientContactNumber: body.clientContactNumber || null,
-      videoLink: body.videoLink || null,
+      videoLink: videoLinks[0] || null,
+      videoLinks,
       areaName: body.areaName || null,
       isAdRunning,
       todayReachObtained: body.todayReachObtained != null && body.todayReachObtained !== "" ? parseInt(body.todayReachObtained, 10) : null,
@@ -301,7 +318,11 @@ exports.updateMarketingReport = async (user, reportId, body) => {
   const data = {};
   if (body.clientName !== undefined) data.clientName = body.clientName || null;
   if (body.clientContactNumber !== undefined) data.clientContactNumber = body.clientContactNumber || null;
-  if (body.videoLink !== undefined) data.videoLink = body.videoLink || null;
+  if (body.videoLinks !== undefined || body.videoLink !== undefined) {
+    const videoLinks = getVideoLinks(body);
+    data.videoLinks = videoLinks;
+    data.videoLink = videoLinks[0] || null;
+  }
   if (body.areaName !== undefined) data.areaName = body.areaName || null;
   if (body.isAdRunning !== undefined && body.isAdRunning !== null && body.isAdRunning !== "") {
     data.isAdRunning = body.isAdRunning === true || body.isAdRunning === "true" || body.isAdRunning === "yes";
