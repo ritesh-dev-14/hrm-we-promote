@@ -788,12 +788,12 @@ exports.updateEmployee = async (employeeId, body) => {
       }
     }
 
-    if (shouldUpdateManagers) {
+    if (shouldUpdateManagers || body.role === "MANAGER") {
       await tx.userManager.deleteMany({
         where: { employeeId: employee.id },
       });
 
-      if (managerIds.length > 0) {
+      if (shouldUpdateManagers && managerIds.length > 0) {
         await tx.userManager.createMany({
           data: managerIds.map((managerId) => ({
             employeeId: employee.id,
