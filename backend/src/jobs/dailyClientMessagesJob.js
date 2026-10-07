@@ -6,7 +6,7 @@ const dailyReportService = require('../modules/daily-report/daily-report.service
 
 /**
  * Daily client messaging job
- * Runs at 5:10 PM IST
+ * Runs at 10:55 AM IST
  * 
  * Flow:
  * 1. Fetch all Social Media projects with phone numbers
@@ -25,9 +25,9 @@ let jobInstance = null;
  */
 exports.initializeDailyMessagingJob = () => {
   try {
-    // 5:10 PM IST = 17:10
+    // 10:55 AM IST = 10:55
     // Cron format: minute hour day-of-month month day-of-week.
-    jobInstance = cron.schedule('10 17 * * *', async () => {
+    jobInstance = cron.schedule('55 10 * * *', async () => {
       console.log('🚀 ⏰ Starting daily client report dispatch at', new Date().toISOString());
       try {
         await runDailyMessagingJob();
@@ -40,7 +40,7 @@ exports.initializeDailyMessagingJob = () => {
       timezone: 'Asia/Kolkata', // IST timezone
     });
 
-    console.log('✅ Daily client messaging job initialized (runs at 5:10 PM IST)');
+    console.log('✅ Daily client messaging job initialized (runs at 10:55 AM IST)');
     return jobInstance;
   } catch (error) {
     console.error('Failed to initialize daily messaging job:', error);
@@ -524,6 +524,6 @@ exports.getJobStatus = () => {
     isRunning: jobInstance !== null,
     nextExecution: jobInstance ? 'Check logs for exact time' : 'Job not initialized',
     timezone: 'Asia/Kolkata (IST)',
-    scheduledTime: '5:10 PM IST daily',
+    scheduledTime: '10:55 AM IST daily',
   };
 };
