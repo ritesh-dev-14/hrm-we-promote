@@ -61,9 +61,9 @@ const notifyAllUsersAboutMonthlySheetDay = async (project, day) => {
           entityId: day.id,
         },
       });
-    } catch (err) {}
+    } catch (err) { }
 
-    incrementUnread(targetUser.id, "projects").catch(() => {});
+    incrementUnread(targetUser.id, "projects").catch(() => { });
 
     if (global.io) {
       global.io.to(`user-${targetUser.id}`).emit("today-upload-popup", {
@@ -92,7 +92,7 @@ const notifyAllUsersAboutMonthlySheetDay = async (project, day) => {
           items,
           applicationUrl: process.env.APP_URL || "http://localhost:5173",
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }
 };
@@ -393,7 +393,7 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
       const dateKey = inputDate.toISOString().split("T")[0];
 
       const existingDay = (dayInput.id && existingDaysByIdMap.get(dayInput.id)) ||
-                          existingDaysByDateMap.get(dateKey);
+        existingDaysByDateMap.get(dateKey);
 
       // Preserve submission links from shoot subtask approvals / existing day data
       let submissionLinksToKeep = existingDay ? (existingDay.submissionLinks || []) : [];
@@ -469,7 +469,7 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
       const dKey = new Date(d.date).toISOString().split("T")[0];
       return inputDates.includes(dKey) && isTodayInIST(d.date);
     });
-    
+
     for (const d of updatedTodayDays) {
       notifyAllUsersAboutMonthlySheetDay(project, d).catch((err) =>
         console.error("[MonthlySheet] Notification error:", err.message)
@@ -516,7 +516,7 @@ exports.updateUploadStatus = async (user, projectId, sheetId, dayId, body) => {
 
   // Verify project access
   const { project, assignedManager } = await verifyProjectAccess(user, projectId);
-  
+
   if (user.role === "MANAGER" && !assignedManager) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
