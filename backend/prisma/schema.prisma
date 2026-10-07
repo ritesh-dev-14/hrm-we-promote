@@ -1066,6 +1066,8 @@ model User {
   createdById                 String?
   createdAt                   DateTime                       @default(now())
   departmentId                String?
+  dailyVideoTarget            Int                            @default(0)
+  dailyPostTarget             Int                            @default(0)
   attendances                 Attendance[]
   employeeCoverages           EmployeeTaskCoverage[]         @relation("EmployeeCoverage")
   managerCoverages            EmployeeTaskCoverage[]         @relation("ManagerCoverage")

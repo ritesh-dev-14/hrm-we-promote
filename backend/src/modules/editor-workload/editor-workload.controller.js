@@ -12,6 +12,8 @@ exports.getEditorWorkload = async (req, res, next) => {
         id: true,
         name: true,
         employeeId: true,
+        dailyVideoTarget: true,
+        dailyPostTarget: true,
       }
     });
 
@@ -41,10 +43,10 @@ exports.getEditorWorkload = async (req, res, next) => {
       const completedTasks = [];
 
       const stats = {
-        daily: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0 },
-        weekly: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0 },
-        monthly: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0 },
-        allTime: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0 }
+        daily: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0, videoHitDays: 0, postHitDays: 0, workingDays: 1 },
+        weekly: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0, videoHitDays: 0, postHitDays: 0, workingDays: 1 },
+        monthly: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0, videoHitDays: 0, postHitDays: 0, workingDays: 1 },
+        allTime: { videoCount: 0, postCount: 0, videoTatSec: 0, postTatSec: 0, videoTatCount: 0, postTatCount: 0, videoHitDays: 0, postHitDays: 0, workingDays: 1 }
       };
 
       const now = new Date();
@@ -54,6 +56,11 @@ exports.getEditorWorkload = async (req, res, next) => {
       const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
       
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      stats.weekly.workingDays = dayOfWeek;
+      stats.monthly.workingDays = now.getDate();
+
+      const dailyCompletionMap = {};
 
       assignments.forEach(assignment => {
         const isCompleted = ["SUBMITTED", "VERIFIED", "COMPLETED"].includes(assignment.status);
@@ -70,6 +77,13 @@ exports.getEditorWorkload = async (req, res, next) => {
           }
 
           const mediaType = assignment.taskItem?.mediaType;
+
+          const dateKey = completedAtDate.toISOString().split('T')[0];
+          if (!dailyCompletionMap[dateKey]) {
+            dailyCompletionMap[dateKey] = { videoCount: 0, postCount: 0, date: completedAtDate };
+          }
+          if (mediaType === 'VIDEO') dailyCompletionMap[dateKey].videoCount++;
+          if (mediaType === 'PIC') dailyCompletionMap[dateKey].postCount++;
 
           const updateStats = (period) => {
             if (mediaType === 'VIDEO') {
@@ -108,6 +122,24 @@ exports.getEditorWorkload = async (req, res, next) => {
         }
       });
 
+      const dailyVideoTarget = employee.dailyVideoTarget || 0;
+      const dailyPostTarget = employee.dailyPostTarget || 0;
+
+      Object.values(dailyCompletionMap).forEach(day => {
+        const isVideoHit = dailyVideoTarget > 0 && day.videoCount >= dailyVideoTarget;
+        const isPostHit = dailyPostTarget > 0 && day.postCount >= dailyPostTarget;
+
+        const updateHitStats = (period) => {
+          if (isVideoHit) stats[period].videoHitDays++;
+          if (isPostHit) stats[period].postHitDays++;
+        };
+
+        updateHitStats('allTime');
+        if (day.date >= startOfMonth) updateHitStats('monthly');
+        if (day.date >= startOfWeek) updateHitStats('weekly');
+        if (day.date >= startOfDay) updateHitStats('daily');
+      });
+
       const formatStats = (period) => {
         const p = stats[period];
         return {
@@ -116,6 +148,9 @@ exports.getEditorWorkload = async (req, res, next) => {
           // Calculate TAT in hours for precision
           videoAvgTat: p.videoTatCount > 0 ? (p.videoTatSec / p.videoTatCount / 3600).toFixed(1) : 0,
           postAvgTat: p.postTatCount > 0 ? (p.postTatSec / p.postTatCount / 3600).toFixed(1) : 0,
+          videoHitDays: p.videoHitDays,
+          postHitDays: p.postHitDays,
+          workingDays: p.workingDays,
         };
       };
 
@@ -142,6 +177,30 @@ exports.getEditorWorkload = async (req, res, next) => {
     const activeEditors = workloads.filter(w => w.activeTasks > 0 || w.completedTasks.length > 0 || w.detailedTasks.length > 0);
 
     res.json({ success: true, data: activeEditors });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Update Editor Targets
+ */
+exports.updateEditorTargets = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { dailyVideoTarget, dailyPostTarget } = req.body;
+
+    const updateData = {};
+    if (dailyVideoTarget !== undefined) updateData.dailyVideoTarget = parseInt(dailyVideoTarget) || 0;
+    if (dailyPostTarget !== undefined) updateData.dailyPostTarget = parseInt(dailyPostTarget) || 0;
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: { id: true, name: true, dailyVideoTarget: true, dailyPostTarget: true }
+    });
+
+    res.json({ success: true, data: user, message: "Targets updated successfully" });
   } catch (err) {
     next(err);
   }
