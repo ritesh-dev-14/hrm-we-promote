@@ -72,6 +72,9 @@ exports.stopDailyMessagingJob = () => {
  *   Social Media: project.phone
  */
 async function runDailyMessagingJob() {
+  console.log('🚫 Temporarily disabled automatic report message send to client due to template remake.');
+  return { disabled: true };
+
   const startTime = Date.now();
   const jobStats = {
     totalMessages: 0,
