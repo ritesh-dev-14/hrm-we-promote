@@ -13,15 +13,15 @@ const setupDailyCheckJob = () => {
   // Run at 12:59 AM every day
   cron.schedule("59 0 * * *", async () => {
     try {
-      console.log("\n🌙 ========== DAILY CHECK JOB STARTED ==========");
+
       await escalationService.checkMissingTaskAssignments();
-      console.log("✅ ========== DAILY CHECK JOB COMPLETED ==========\n");
+
     } catch (error) {
       console.error("❌ Daily check job failed:", error);
     }
   });
 
-  console.log("📅 Daily check job scheduled at 12:59 AM");
+
 };
 
 //
@@ -32,7 +32,7 @@ const setupFirstReminderJob = (io) => {
   // Run at 13:00 (1:00 PM) every day
   cron.schedule("0 13 * * *", async () => {
     try {
-      console.log("\n⏰ ========== FIRST REMINDER JOB STARTED (1:00 PM) ==========");
+
 
       const escalations = await escalationService.getPendingEscalations();
 
@@ -56,13 +56,13 @@ const setupFirstReminderJob = (io) => {
         }
       }
 
-      console.log("✅ ========== FIRST REMINDER JOB COMPLETED ==========\n");
+
     } catch (error) {
       console.error("❌ First reminder job failed:", error);
     }
   });
 
-  console.log("⏰ First reminder job scheduled at 1:00 PM");
+
 };
 
 //
@@ -73,7 +73,7 @@ const setupSecondReminderJob = (io) => {
   // Run at 14:00 (2:00 PM) every day
   cron.schedule("0 14 * * *", async () => {
     try {
-      console.log("\n⏰ ========== SECOND REMINDER JOB STARTED (2:00 PM) ==========");
+
 
       const escalations = await escalationService.getPendingEscalations();
 
@@ -100,13 +100,13 @@ const setupSecondReminderJob = (io) => {
         }
       }
 
-      console.log("✅ ========== SECOND REMINDER JOB COMPLETED ==========\n");
+
     } catch (error) {
       console.error("❌ Second reminder job failed:", error);
     }
   });
 
-  console.log("⏰ Second reminder job scheduled at 2:00 PM");
+
 };
 
 //
@@ -117,7 +117,7 @@ const setupThirdReminderJob = (io) => {
   // Run at 14:30 (2:30 PM) every day
   cron.schedule("30 14 * * *", async () => {
     try {
-      console.log("\n⏰ ========== THIRD REMINDER JOB STARTED (2:30 PM) ==========");
+
 
       const escalations = await escalationService.getPendingEscalations();
 
@@ -144,13 +144,13 @@ const setupThirdReminderJob = (io) => {
         }
       }
 
-      console.log("✅ ========== THIRD REMINDER JOB COMPLETED ==========\n");
+
     } catch (error) {
       console.error("❌ Third reminder job failed:", error);
     }
   });
 
-  console.log("⏰ Third reminder job scheduled at 2:30 PM");
+
 };
 
 //
@@ -161,7 +161,7 @@ const setupHRescalationJob = (io) => {
   // Run at 15:00 (3:00 PM) every day
   cron.schedule("0 15 * * *", async () => {
     try {
-      console.log("\n📞 ========== HR ESCALATION JOB STARTED (3:00 PM) ==========");
+
 
       const escalations = await escalationService.getPendingEscalations();
 
@@ -191,13 +191,13 @@ const setupHRescalationJob = (io) => {
         }
       }
 
-      console.log("✅ ========== HR ESCALATION JOB COMPLETED ==========\n");
+
     } catch (error) {
       console.error("❌ HR escalation job failed:", error);
     }
   });
 
-  console.log("📞 HR escalation job scheduled at 3:00 PM");
+
 };
 
 //
@@ -208,9 +208,7 @@ const setupAdminEscalationJob = (io) => {
   // Run at 16:00 (4:00 PM) every day
   cron.schedule("0 16 * * *", async () => {
     try {
-      console.log(
-        "\n⚡ ========== ADMIN ESCALATION JOB STARTED (4:00 PM) =========="
-      );
+      
 
       const escalations = await escalationService.getPendingEscalations();
 
@@ -239,13 +237,13 @@ const setupAdminEscalationJob = (io) => {
         }
       }
 
-      console.log("✅ ========== ADMIN ESCALATION JOB COMPLETED ==========\n");
+
     } catch (error) {
       console.error("❌ Admin escalation job failed:", error);
     }
   });
 
-  console.log("⚡ Admin escalation job scheduled at 4:00 PM");
+
 };
 
 //
@@ -256,9 +254,7 @@ const setupFinalEscalationJob = (io) => {
   // Run at 18:00 (6:00 PM) every day
   cron.schedule("0 18 * * *", async () => {
     try {
-      console.log(
-        "\n🚨 ========== FINAL ESCALATION JOB STARTED (6:00 PM) =========="
-      );
+      
 
       const escalations = await escalationService.getPendingEscalations();
 
@@ -286,22 +282,20 @@ const setupFinalEscalationJob = (io) => {
         }
       }
 
-      console.log("✅ ========== FINAL ESCALATION JOB COMPLETED ==========\n");
+
     } catch (error) {
       console.error("❌ Final escalation job failed:", error);
     }
   });
 
-  console.log("🚨 Final escalation job scheduled at 6:00 PM");
+
 };
 
 //
 // 🔥 INITIALIZE ALL JOBS
 //
 const setupEscalationJobs = (io) => {
-  console.log(
-    "\n================ SETTING UP ESCALATION JOBS ================\n"
-  );
+  
 
   setupDailyCheckJob();
   setupFirstReminderJob(io);
@@ -311,9 +305,7 @@ const setupEscalationJobs = (io) => {
   setupAdminEscalationJob(io);
   setupFinalEscalationJob(io);
 
-  console.log(
-    "\n================ ALL ESCALATION JOBS CONFIGURED ================\n"
-  );
+  
 };
 
 module.exports = { setupEscalationJobs };

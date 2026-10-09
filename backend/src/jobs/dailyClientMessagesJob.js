@@ -28,7 +28,7 @@ exports.initializeDailyMessagingJob = () => {
     // 8:00 PM IST = 20:00
     // Cron format: minute hour day-of-month month day-of-week.
     jobInstance = cron.schedule('0 20 * * *', async () => {
-      console.log('🚀 ⏰ Starting daily client report dispatch at', new Date().toISOString());
+
       try {
         await runDailyMessagingJob();
       } catch (error) {
@@ -40,7 +40,7 @@ exports.initializeDailyMessagingJob = () => {
       timezone: 'Asia/Kolkata', // IST timezone
     });
 
-    console.log('✅ Daily client messaging job initialized (runs at 8:00 PM IST)');
+
     return jobInstance;
   } catch (error) {
     console.error('Failed to initialize daily messaging job:', error);
@@ -56,7 +56,7 @@ exports.stopDailyMessagingJob = () => {
     jobInstance.stop();
     jobInstance.destroy();
     jobInstance = null;
-    console.log('⏹️ Daily messaging job stopped');
+
   }
 };
 
@@ -72,7 +72,7 @@ exports.stopDailyMessagingJob = () => {
  *   Social Media: project.phone
  */
 async function runDailyMessagingJob() {
-  console.log('🚫 Temporarily disabled automatic report message send to client due to template remake.');
+
   return { disabled: true };
 
   const startTime = Date.now();
@@ -91,7 +91,7 @@ async function runDailyMessagingJob() {
     const today = new Date();
 
     // ── Fetch today's full daily report ──────────────────────────────────
-    console.log('📋 Fetching today\'s daily report data...');
+
     const dailyReport = await dailyReportService.getDailyReport(
       { id: 'system', role: 'ADMIN' },
       { date: today.toISOString().split('T')[0], department: 'all' }
@@ -113,18 +113,18 @@ async function runDailyMessagingJob() {
     };
 
     // ── 1. SEO reports ───────────────────────────────────────────────────
-    console.log(`\n🌐 Processing SEO reports (${dailyReport.seo.length})...`);
+
     for (const proj of dailyReport.seo) {
       // Skip if no report data exists
       if (!proj.report?.hasReport) {
-        console.log(`⏭️  Skipping ${proj.projectName} - No SEO report data`);
+
         jobStats.skipped++;
         continue;
       }
 
       const phone = proj.report?.clientContactNumber;
       if (!phone) { 
-        console.log(`⏭️  Skipping ${proj.projectName} - No phone number`);
+
         jobStats.skipped++; 
         continue; 
       }
@@ -138,7 +138,7 @@ async function runDailyMessagingJob() {
 
       // Skip if message is empty
       if (!message || message.trim() === '') {
-        console.log(`⏭️  Skipping ${proj.projectName} - Empty message`);
+
         jobStats.skipped++;
         continue;
       }
@@ -148,22 +148,22 @@ async function runDailyMessagingJob() {
       group.messages.push(message);
       group.projectIds.push(proj.projectId);
       group.reports.seo.push({ project: proj, report: proj.report });
-      console.log(`✅ Added SEO report to queue for ${phone}`);
+
     }
 
     // ── 2. Marketing reports ─────────────────────────────────────────────
-    console.log(`\n📣 Processing Marketing reports (${dailyReport.marketing.length})...`);
+
     for (const proj of dailyReport.marketing) {
       // Skip if no report data exists
       if (!proj.report?.hasReport) {
-        console.log(`⏭️  Skipping ${proj.projectName} - No marketing report data`);
+
         jobStats.skipped++;
         continue;
       }
 
       const phone = proj.report?.clientContactNumber;
       if (!phone) { 
-        console.log(`⏭️  Skipping ${proj.projectName} - No phone number`);
+
         jobStats.skipped++; 
         continue; 
       }
@@ -177,7 +177,7 @@ async function runDailyMessagingJob() {
 
       // Skip if message is empty
       if (!message || message.trim() === '') {
-        console.log(`⏭️  Skipping ${proj.projectName} - Empty message`);
+
         jobStats.skipped++;
         continue;
       }
@@ -187,22 +187,22 @@ async function runDailyMessagingJob() {
       group.messages.push(message);
       group.projectIds.push(proj.projectId);
       group.reports.marketing.push({ project: proj, report: proj.report });
-      console.log(`✅ Added Marketing report to queue for ${phone}`);
+
     }
 
     // ── 3. Social Media projects (use project.phone) ─────────────────────
-    console.log(`\n📱 Processing Social Media projects (${dailyReport.socialMedia.length})...`);
+
     for (const proj of dailyReport.socialMedia) {
       // Skip if no uploads or content calendar data exists
       if (!proj.uploads || proj.uploads.length === 0) {
-        console.log(`⏭️  Skipping ${proj.projectName} - No uploads data`);
+
         jobStats.skipped++;
         continue;
       }
 
       const phone = proj.clientContactNumber;
       if (!phone) { 
-        console.log(`⏭️  Skipping ${proj.projectName} - No phone number`);
+
         jobStats.skipped++; 
         continue; 
       }
@@ -217,7 +217,7 @@ async function runDailyMessagingJob() {
 
       // Skip if message is empty
       if (!message || message.trim() === '') {
-        console.log(`⏭️  Skipping ${proj.projectName} - Empty message`);
+
         jobStats.skipped++;
         continue;
       }
@@ -227,11 +227,11 @@ async function runDailyMessagingJob() {
       group.messages.push(message);
       group.projectIds.push(proj.projectId);
       group.reports.socialMedia.push({ project: proj });
-      console.log(`✅ Added Social Media report to queue for ${phone}`);
+
     }
 
     // ── Send consolidated messages by phone number ────────────────────────
-    console.log(`\n📤 Sending consolidated messages...`);
+
     for (const [phone, data] of Object.entries(messagesByPhone)) {
       const formatted = whatsappService.formatPhoneNumber(phone);
       if (!formatted) {
@@ -245,7 +245,7 @@ async function runDailyMessagingJob() {
       const templateParameters = buildApprovedTemplateParameters(data, today);
 
       jobStats.totalMessages++;
-      console.log(`📤 Sending consolidated message to ${formatted}`);
+
 
       const clientName = data.reports.socialMedia[0]?.project?.clientName ||
         data.reports.marketing[0]?.project?.clientName ||
@@ -270,7 +270,7 @@ async function runDailyMessagingJob() {
 
       if (result.success) {
         jobStats.messagesSent++;
-        console.log(`✅ Sent consolidated message to ${formatted} (ID: ${result.messageId})`);
+
       } else {
         jobStats.messagesFailed++;
         console.error(`❌ Failed to send to ${formatted}: ${result.error}`);
@@ -285,25 +285,23 @@ async function runDailyMessagingJob() {
 
   // ── Summary ─────────────────────────────────────────────────────────────
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-  console.log('\n' + '═'.repeat(55));
-  console.log('📊 DAILY CLIENT REPORT JOB SUMMARY');
-  console.log('═'.repeat(55));
-  console.log(`⏱️  Duration:          ${duration}s`);
-  console.log(`📬 Total Dispatched:  ${jobStats.totalMessages}`);
-  console.log(`✅ Sent:              ${jobStats.messagesSent}`);
-  console.log(`❌ Failed:            ${jobStats.messagesFailed}`);
-  console.log(`⏭️  Skipped (no phone): ${jobStats.skipped}`);
+
+
+
+
+
+
+
+
   if (jobStats.errors.length > 0) {
-    console.log(`\n⚠️  Errors:`);
-    jobStats.errors.forEach(e => console.log(`   - ${e.label || e.type}: ${e.error}`));
   }
-  console.log('═'.repeat(55) + '\n');
+
 
   // Weekly cleanup
   if (shouldCleanupMessages()) {
-    console.log('🗑️  Cleaning up old messages...');
+
     const deleted = await messageLoggingService.deleteOldMessages(90);
-    console.log(`✅ Deleted ${deleted} old messages`);
+
   }
 
   return jobStats;
@@ -375,18 +373,18 @@ function buildConsolidatedClientMessage(data, today) {
       const reachMatch = msg.match(/(?:👁️?\s*)?Reach\s*:\s*(\d+)/i);
       if (reachMatch) {
         adsInfo.reach = reachMatch[1];
-        console.log(`✅ Extracted Reach: ${reachMatch[1]}`);
+
       } else {
-        console.log(`⚠️  Reach not found in: ${msg.substring(0, 100)}`);
+
       }
       
       // Extract leads - more flexible pattern to handle "Leads Obtained:"
       const leadsMatch = msg.match(/(?:🎯?\s*)?Leads\s+Obtained\s*:\s*(\d+)/i) || msg.match(/(?:🎯?\s*)?Leads\s*:\s*(\d+)/i);
       if (leadsMatch) {
         adsInfo.leads = leadsMatch[1];
-        console.log(`✅ Extracted Leads: ${leadsMatch[1]}`);
+
       } else {
-        console.log(`⚠️  Leads not found in: ${msg.substring(0, 100)}`);
+
       }
     } else if (msg.includes('SEO') || msg.includes('🔍') || msg.includes('🌐')) {
       hasSEO = true;
@@ -398,7 +396,7 @@ function buildConsolidatedClientMessage(data, today) {
       const rankingMatch = msg.match(/(?:Current\s+)?Ranking[:\s]+#?(\d+)/i);
       if (rankingMatch) {
         seoInfo.ranking = `#${rankingMatch[1]}`;
-        console.log(`✅ Extracted Ranking: #${rankingMatch[1]}`);
+
       }
       
       seoInfo.lastChecked = dateStr;
@@ -509,7 +507,7 @@ function shouldCleanupMessages() {
  * Manual trigger for testing - allows immediate job execution
  */
 exports.triggerMessagingJobManually = async () => {
-  console.log('🔄 Manually triggering daily messaging job...');
+
   try {
     const stats = await runDailyMessagingJob();
     return stats;

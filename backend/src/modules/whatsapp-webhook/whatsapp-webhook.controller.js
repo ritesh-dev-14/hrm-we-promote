@@ -17,13 +17,7 @@ const verifySignature = (req) => {
 
 const handleIncomingMessage = (message) => {
   const text = message.text?.body || "";
-  console.log("Incoming WhatsApp message:", {
-    from: message.from,
-    messageId: message.id,
-    messageType: message.type,
-    messageText: text,
-    timestamp: message.timestamp,
-  });
+  
 };
 
 const handleStatus = async (status) => {

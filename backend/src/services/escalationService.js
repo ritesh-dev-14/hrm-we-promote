@@ -90,7 +90,7 @@ const getOrCreateEscalation = async (
 // 🔥 CHECK FOR MISSING TASK ASSIGNMENTS - NEXT 1 DAY & 4 DAYS
 //
 const checkMissingTaskAssignments = async () => {
-  console.log("🔍 Checking for missing task assignments...");
+
 
   const today = new Date();
   const tomorrow = addDays(today, 1);
@@ -121,7 +121,7 @@ const checkMissingTaskAssignments = async () => {
     },
   });
 
-  console.log(`Found ${managers.length} managers to check`);
+
 
   for (const manager of managers) {
     // Check next day (tomorrow)
@@ -139,7 +139,7 @@ const checkMissingTaskAssignments = async () => {
     );
   }
 
-  console.log("✅ Task assignment check completed");
+
 };
 
 //
@@ -162,9 +162,7 @@ const checkTasksForDate = async (manager, date, escalationType) => {
         escalationType
       );
 
-      console.log(
-        `⚠️  Missing task for ${employee.name} (${manager.name}) on ${date.toDateString()}`
-      );
+      
     }
   }
 };

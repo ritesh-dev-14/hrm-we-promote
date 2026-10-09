@@ -11,9 +11,7 @@ const autoResolveEscalation = async (
   taskDate
 ) => {
   try {
-    console.log(
-      `🔄 Auto-resolving escalations for employee ${employeeId} on ${taskDate}`
-    );
+    
 
     // Check both escalation types
     const escalationTypes = [
@@ -29,7 +27,7 @@ const autoResolveEscalation = async (
       );
     }
 
-    console.log(`✅ Escalations auto-resolved for ${employeeId}`);
+
   } catch (error) {
     console.error("❌ Error auto-resolving escalations:", error);
     // Don't throw - this should not break task assignment
@@ -66,9 +64,7 @@ const resolveAllEscalationsForDate = async (
     }
 
     if (relevantEscalations.length > 0) {
-      console.log(
-        `✅ Resolved ${relevantEscalations.length} escalations`
-      );
+      
     }
   } catch (error) {
     console.error("❌ Error resolving escalations:", error);

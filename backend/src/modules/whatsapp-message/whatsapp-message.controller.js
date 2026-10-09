@@ -284,7 +284,7 @@ exports.triggerJobManually = async (req, res, next) => {
       });
     }
 
-    console.log(`🔄 Manual job trigger by ${req.user.name} (${req.user.role})`);
+
 
     // Trigger the job
     const stats = await dailyMessagingJob.triggerMessagingJobManually();

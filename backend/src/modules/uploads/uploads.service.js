@@ -91,7 +91,7 @@ const notifyAllUsersAboutUpload = async (upload) => {
     }
   }
 
-  console.log(`[Uploads] Notified ${allUsers.length} users about today's upload: "${upload.projectName}"`);
+
 };
 
 /**

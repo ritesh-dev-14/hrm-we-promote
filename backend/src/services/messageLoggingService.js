@@ -59,7 +59,7 @@ exports.logMessage = async (messageData) => {
       },
     });
 
-    console.log(`WhatsApp message logged: ID=${message.id}, Status=${status}, Project=${projectId}`);
+
     return message;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -129,7 +129,7 @@ exports.updateMessageStatus = async (
       },
     });
 
-    console.log(`WhatsApp message status updated: ID=${messageId}, Status=${status}`);
+
     return updated;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -473,7 +473,7 @@ exports.deleteOldMessages = async (daysOld = 90) => {
       },
     });
 
-    console.log(`Deleted ${result.count} old WhatsApp messages`);
+
     return result.count;
   } catch (error) {
     console.error('Error in deleteOldMessages:', error);

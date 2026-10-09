@@ -11,7 +11,7 @@ exports.initializeWeeklyVoiceReportJob = () => {
   try {
     // Run at 09:00 AM every Saturday
     jobInstance = cron.schedule('0 9 * * 6', async () => {
-      console.log('🚀 ⏰ Starting Weekly Voice Report reminder job at', new Date().toISOString());
+
       try {
         await runWeeklyVoiceReportJob();
       } catch (error) {
@@ -22,7 +22,7 @@ exports.initializeWeeklyVoiceReportJob = () => {
       timezone: 'Asia/Kolkata', // IST timezone
     });
 
-    console.log('✅ Weekly Voice Report reminder job initialized (runs at 9:00 AM IST on Saturdays)');
+
     return jobInstance;
   } catch (error) {
     console.error('Failed to initialize Weekly Voice Report job:', error);
@@ -90,5 +90,5 @@ const runWeeklyVoiceReportJob = async () => {
     }
   }
 
-  console.log(`✅ Weekly Voice Report reminder job completed for ${users.length} users.`);
+
 };

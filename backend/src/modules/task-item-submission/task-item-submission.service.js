@@ -316,10 +316,7 @@ exports.submitTaskItem =
       });
 
     if (!assignment) {
-      console.log(
-        "DEBUG - Submit: Assignment not found. ID:",
-        assignmentId
-      );
+      
 
       throw new ApiError(
         404,
@@ -333,12 +330,7 @@ exports.submitTaskItem =
     if (
       assignment.userId !== user.id
     ) {
-      console.log(
-        "DEBUG - Submit: User mismatch. Assignment userId:",
-        assignment.userId,
-        "| User id:",
-        user.id
-      );
+      
 
       throw new ApiError(
         403,
@@ -720,7 +712,7 @@ exports.verifySubmission =
                 totalPostsUploaded: !isReel ? monthlySheet.totalPostsUploaded + 1 : monthlySheet.totalPostsUploaded,
               }
             });
-            console.log(`[MonthlySheet] Auto-incremented stats for project: ${projectName}`);
+
           }
         }
       }
@@ -1231,10 +1223,7 @@ exports.unableToSubmit =
       });
 
     if (!assignment) {
-      console.log(
-        "DEBUG - Assignment not found. ID:",
-        assignmentId
-      );
+      
 
       throw new ApiError(
         404,
@@ -1248,12 +1237,7 @@ exports.unableToSubmit =
     if (
       assignment.userId !== user.id
     ) {
-      console.log(
-        "DEBUG - Assignment userId:",
-        assignment.userId,
-        "| User id:",
-        user.id
-      );
+      
 
       throw new ApiError(
         403,

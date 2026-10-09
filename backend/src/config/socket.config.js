@@ -19,7 +19,7 @@ const setupSocketIO = (server) => {
   // 🔥 SOCKET CONNECTION
   //
   io.on("connection", (socket) => {
-    console.log(`📱 User connected: ${socket.id}`);
+
 
     //
     // 🔥 JOIN USER ROOM - So we can send specific notifications
@@ -27,7 +27,7 @@ const setupSocketIO = (server) => {
     socket.on("join-user", (data) => {
       const { userId } = data;
       socket.join(`user-${userId}`);
-      console.log(`✅ User ${userId} joined their notification room`);
+
     });
 
     //
@@ -36,7 +36,7 @@ const setupSocketIO = (server) => {
     socket.on("leave-user", (data) => {
       const { userId } = data;
       socket.leave(`user-${userId}`);
-      console.log(`❌ User ${userId} left their notification room`);
+
     });
 
     //
@@ -51,7 +51,7 @@ const setupSocketIO = (server) => {
         level: data.level || "info",
         timestamp: new Date(),
       });
-      console.log(`📢 Task reminder sent to manager ${managerId}`);
+
     });
 
     //
@@ -67,7 +67,7 @@ const setupSocketIO = (server) => {
         managerId: data.managerId,
         timestamp: new Date(),
       });
-      console.log(`📢 HR escalation sent to HR user ${hrId}`);
+
     });
 
     //
@@ -83,7 +83,7 @@ const setupSocketIO = (server) => {
         managerId: data.managerId,
         timestamp: new Date(),
       });
-      console.log(`📢 Admin escalation sent to Admin user ${adminId}`);
+
     });
 
     //
@@ -100,16 +100,14 @@ const setupSocketIO = (server) => {
         recipientRole: data.recipientRole,
         timestamp: new Date(),
       });
-      console.log(
-        `📢 Final escalation sent to ${data.recipientRole} user ${recipientId}`
-      );
+      
     });
 
     //
     // 🔥 DISCONNECT
     //
     socket.on("disconnect", () => {
-      console.log(`📴 User disconnected: ${socket.id}`);
+
     });
 
     socket.on("error", (error) => {
@@ -129,7 +127,7 @@ const notifyUser = (io, userId, notificationType, data) => {
     timestamp: new Date(),
   });
 
-  console.log(`🔔 Notification sent to user ${userId}: ${notificationType}`);
+
 };
 
 //
@@ -142,7 +140,7 @@ const notifyRole = (io, role, notificationType, data) => {
     timestamp: new Date(),
   });
 
-  console.log(`🔔 Notification sent to all ${role}s: ${notificationType}`);
+
 };
 
 module.exports = {

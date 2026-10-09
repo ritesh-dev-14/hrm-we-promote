@@ -55,7 +55,7 @@ const sendManagerReminder = async (
       html: emailTemplate,
     });
 
-    console.log(`📧 Email sent to ${manager.email} (Reminder #${reminderCount})`);
+
 
     // 2. Create In-App Notification
     const notification = await createNotification(manager.id, {
@@ -66,7 +66,7 @@ const sendManagerReminder = async (
       entityId: manager.id,
     });
 
-    console.log(`🔔 In-app notification created for ${manager.name}`);
+
 
     // 3. Emit WebSocket Event (Pop-up)
     if (io) {
@@ -78,7 +78,7 @@ const sendManagerReminder = async (
         level: reminderCount === 3 ? "warning" : "info",
       });
 
-      console.log(`📢 WebSocket pop-up sent to ${manager.name}`);
+
     }
 
     return { success: true, notification };
@@ -121,7 +121,7 @@ const sendHREscalation = async (manager, employee, date, io) => {
         html: emailTemplate,
       });
 
-      console.log(`📧 HR email sent to ${hrUser.email}`);
+
 
       // 2. Create In-App Notification
       await createNotification(hrUser.id, {
@@ -132,7 +132,7 @@ const sendHREscalation = async (manager, employee, date, io) => {
         entityId: manager.id,
       });
 
-      console.log(`🔔 HR notification created for ${hrUser.name}`);
+
 
       // 3. Emit WebSocket Event
       if (io) {
@@ -145,7 +145,7 @@ const sendHREscalation = async (manager, employee, date, io) => {
           level: "danger",
         });
 
-        console.log(`📢 HR WebSocket pop-up sent`);
+
       }
     }
 
@@ -189,7 +189,7 @@ const sendAdminEscalation = async (manager, employee, date, io) => {
         html: emailTemplate,
       });
 
-      console.log(`📧 Admin email sent to ${adminUser.email}`);
+
 
       // 2. Create In-App Notification
       await createNotification(adminUser.id, {
@@ -200,7 +200,7 @@ const sendAdminEscalation = async (manager, employee, date, io) => {
         entityId: manager.id,
       });
 
-      console.log(`🔔 Admin notification created for ${adminUser.name}`);
+
 
       // 3. Emit WebSocket Event
       if (io) {
@@ -213,7 +213,7 @@ const sendAdminEscalation = async (manager, employee, date, io) => {
           level: "critical",
         });
 
-        console.log(`📢 Admin WebSocket pop-up sent`);
+
       }
     }
 
@@ -257,7 +257,7 @@ const sendFinalEscalation = async (manager, employee, date, io) => {
         html: emailTemplate,
       });
 
-      console.log(`📧 Final escalation email sent to ${recipient.email}`);
+
 
       // 2. Create In-App Notification
       await createNotification(recipient.id, {
@@ -268,9 +268,7 @@ const sendFinalEscalation = async (manager, employee, date, io) => {
         entityId: manager.id,
       });
 
-      console.log(
-        `🔔 Final escalation notification created for ${recipient.name}`
-      );
+      
 
       // 3. Emit WebSocket Event
       if (io) {
@@ -284,7 +282,7 @@ const sendFinalEscalation = async (manager, employee, date, io) => {
           level: "critical",
         });
 
-        console.log(`📢 Final escalation WebSocket pop-up sent`);
+
       }
     }
 
