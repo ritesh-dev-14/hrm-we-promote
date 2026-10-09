@@ -1203,22 +1203,28 @@ exports.getAllUsers = async (user) => {
 };
 
 //
-// 🔥 SEND FOLLOW-UP MESSAGE (Coordinator -> Assigned User)
+// 🔥 SEND FOLLOW-UP MESSAGE (Any participant — Employee, HR, Manager, Coordinator)
 //
 exports.sendFollowUpMessage = async (user, assignmentId, body) => {
   const { message } = body;
 
-  if (!(["COORDINATOR", "EA"].includes(user.role))) {
-    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
-  }
-
   const assignment = await prisma.coordinatorAssignment.findUnique({
     where: { id: assignmentId },
-    include: { assignedTo: true, task: true },
+    include: { assignedTo: true, task: true, createdBy: true },
   });
 
   if (!assignment) {
     throw new ApiError(404, "Assignment not found");
+  }
+
+  // Any participant (coordinator, assigned user, or admin/hr/manager) can send
+  const isParticipant =
+    user.id === assignment.assignedToId ||
+    user.id === assignment.createdById ||
+    ["ADMIN", "HR", "MANAGER"].includes(user.role);
+
+  if (!isParticipant) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
   // Create follow-up message
@@ -1232,28 +1238,38 @@ exports.sendFollowUpMessage = async (user, assignmentId, body) => {
     },
   });
 
-  // Notify assigned user
-  await prisma.notification.create({
-    data: {
-      userId: assignment.assignedToId,
-      title: "Follow-up from Coordinator",
-      message: `${user.name} sent a follow-up on task: ${assignment.taskId}`,
-      type: "GENERAL",
-      level: "INFO",
-      entityId: assignmentId,
-    },
-  });
+  // Notify the other party
+  const notifyUserId =
+    user.id === assignment.assignedToId
+      ? assignment.createdById
+      : assignment.assignedToId;
 
-  await sendBestEffortMail(
-    () => mailService.sendCoordinatorFollowUpMail({
-      email: assignment.assignedTo.email,
-      employeeName: assignment.assignedTo.name,
-      coordinatorName: user.name,
-      taskTitle: assignment.task?.projectName || `Task ${assignment.taskId}`,
-      message,
-    }),
-    `follow-up ${followUp.id}`
-  );
+  if (notifyUserId) {
+    await prisma.notification.create({
+      data: {
+        userId: notifyUserId,
+        title: "New Follow-up Message",
+        message: `${user.name} sent a follow-up on task: ${assignment.task?.projectName || assignment.taskId}`,
+        type: "GENERAL",
+        level: "INFO",
+        entityId: assignmentId,
+      },
+    });
+  }
+
+  // Send email if coordinator sent it
+  if (["COORDINATOR", "EA"].includes(user.role) && assignment.assignedTo) {
+    await sendBestEffortMail(
+      () => mailService.sendCoordinatorFollowUpMail({
+        email: assignment.assignedTo.email,
+        employeeName: assignment.assignedTo.name,
+        coordinatorName: user.name,
+        taskTitle: assignment.task?.projectName || `Task ${assignment.taskId}`,
+        message,
+      }),
+      `follow-up ${followUp.id}`
+    );
+  }
 
   return {
     id: followUp.id,
@@ -1281,8 +1297,13 @@ exports.replyToFollowUp = async (user, assignmentId, body) => {
     throw new ApiError(404, "Assignment not found");
   }
 
-  // Only the assigned user can reply
-  if (user.id !== assignment.assignedToId) {
+  // Any participant can reply
+  const canReply =
+    user.id === assignment.assignedToId ||
+    user.id === assignment.createdById ||
+    ["ADMIN", "HR", "MANAGER"].includes(user.role);
+
+  if (!canReply) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 

@@ -110,10 +110,10 @@ router.get(
 );
 
 // Follow-up messaging endpoints (must come before "/:assignmentId")
+// All authenticated users can send follow-up messages (not just COORDINATOR/EA)
 router.post(
   "/:assignmentId/follow-up",
   auth,
-  role("COORDINATOR", "EA"),
   validate(sendFollowUpMessageSchema),
   controller.sendFollowUpMessage
 );
