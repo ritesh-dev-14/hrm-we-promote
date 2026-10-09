@@ -177,6 +177,92 @@ exports.createAssignment = async (user, body) => {
 };
 
 
+// ─────────────────────────────────────────────
+// ✏️  UPDATE COORDINATOR ASSIGNMENT
+// COORDINATOR / EA can edit: task title, assigned-to user,
+// completion date, and assignedBy label.
+// ─────────────────────────────────────────────
+exports.updateAssignment = async (user, assignmentId, body) => {
+  if (!["COORDINATOR", "EA"].includes(user.role)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  // Load the existing assignment
+  const existing = await prisma.coordinatorAssignment.findUnique({
+    where: { id: assignmentId },
+    include: { task: true, assignedTo: true },
+  });
+
+  if (!existing) {
+    throw new ApiError(404, "Assignment not found");
+  }
+
+  // Build update payloads
+  const assignmentUpdate = {};
+  const taskUpdate = {};
+
+  if (body.task !== undefined) {
+    taskUpdate.projectName = body.task;
+    taskUpdate.description = body.task;
+  }
+  if (body.completionDate !== undefined) {
+    assignmentUpdate.completionDate = new Date(body.completionDate);
+    taskUpdate.endDate = new Date(body.completionDate);
+  }
+  if (body.assignedBy !== undefined) {
+    assignmentUpdate.assignedBy = body.assignedBy;
+  }
+  if (body.assignedToId !== undefined && body.assignedToId !== existing.assignedToId) {
+    const newUser = await prisma.user.findUnique({ where: { id: body.assignedToId } });
+    if (!newUser) throw new ApiError(400, "Assigned user not found");
+    assignmentUpdate.assignedToId = body.assignedToId;
+    assignmentUpdate.employeeNumber = newUser.employeeId || "";
+    assignmentUpdate.employeeEmail = newUser.email || "";
+  }
+
+  // Update task record
+  if (Object.keys(taskUpdate).length > 0) {
+    await prisma.task.update({ where: { id: existing.taskId }, data: taskUpdate });
+  }
+
+  // Update assignment record
+  const updated = await prisma.coordinatorAssignment.update({
+    where: { id: assignmentId },
+    data: assignmentUpdate,
+    include: {
+      task: true,
+      assignedTo: true,
+      createdBy: true,
+    },
+  });
+
+  return {
+    id: updated.id,
+    taskId: updated.taskId,
+    task: {
+      id: updated.task.id,
+      projectName: updated.task.projectName,
+      description: updated.task.description,
+    },
+    assignedTo: {
+      id: updated.assignedTo.id,
+      name: updated.assignedTo.name,
+      email: updated.assignedTo.email,
+      employeeId: updated.assignedTo.employeeId,
+      role: updated.assignedTo.role,
+    },
+    assignedBy: updated.assignedBy,
+    assignedTime: updated.assignedTime,
+    completionDate: updated.completionDate,
+    status: updated.status,
+    submittedAt: updated.submittedAt,
+    completedAt: updated.completedAt,
+    reason: updated.reason,
+    ...(updated.createdBy ? { createdBy: { id: updated.createdBy.id, name: updated.createdBy.name } } : {}),
+  };
+};
+
+
 exports.createCoordinatorTask = async (user, body) => {
   //
   // ✅ VERIFY USER IS AUTHENTICATED (Any role can create)

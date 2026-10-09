@@ -153,6 +153,17 @@ router.get(
 );
 
 //
+// ✏️  UPDATE / EDIT COORDINATOR ASSIGNMENT
+// Only COORDINATOR / EA can edit an existing assignment
+//
+router.patch(
+  "/:assignmentId",
+  auth,
+  role("COORDINATOR", "EA"),
+  controller.updateAssignment
+);
+
+//
 // 🔥 GET SINGLE ASSIGNMENT
 // Get assignment details
 //

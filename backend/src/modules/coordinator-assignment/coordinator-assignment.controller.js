@@ -338,3 +338,24 @@ exports.triggerOverdueCheck = async (req, res, next) => {
     next(error);
   }
 };
+
+//
+// ✏️  UPDATE COORDINATOR ASSIGNMENT
+// COORDINATOR / EA can edit task title, assignee, completion date, assignedBy
+//
+exports.updateAssignment = async (req, res, next) => {
+  try {
+    const result = await service.updateAssignment(
+      req.user,
+      req.params.assignmentId,
+      req.body
+    );
+    res.json({
+      success: true,
+      data: result,
+      message: "Assignment updated successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
