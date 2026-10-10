@@ -67,7 +67,7 @@ router.patch(
   "/:id/tier",
   auth,
   role("ADMIN", "HR", "EA"),
-  controller.updateClientTier
+  controller.updateClientPriority
 );
 
 router.delete(

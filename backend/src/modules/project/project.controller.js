@@ -197,9 +197,9 @@ exports.deleteProject = async (req, res, next) => {
   }
 };
 
-exports.updateClientTier = async (req, res, next) => {
+exports.updateClientPriority = async (req, res, next) => {
   try {
-    const data = await service.updateClientTier(
+    const data = await service.updateClientPriority(
       req.user,
       req.params.id,
       req.body

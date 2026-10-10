@@ -138,7 +138,6 @@ const formatProject = (project) => {
     seoName: project.seoName,
     seoContact: project.seoContact,
     // Client classification
-    clientTier: project.clientTier || null,
     clientPriority: project.clientPriority || null,
     status: project.status,
     createdBy: {
@@ -378,7 +377,6 @@ exports.createProject = async (user, body) => {
       seoName: body.seoName || null,
       seoContact: body.seoContact || null,
       // Client classification
-      clientTier: body.clientTier || null,
       clientPriority: body.clientPriority || null,
       createdById: user.id,
       assignments: {
@@ -1201,22 +1199,14 @@ exports.renewProject = async (user, projectId, body) => {
 };
 
 // ── Allowed enum values ──────────────────────────────────────────────────────
-const VALID_TIERS = ["STRATEGIC", "PREMIUM", "GROWTH", "STANDARD"];
 const VALID_PRIORITIES = ["P1", "P2", "P3", "P4"];
 
-exports.updateClientTier = async (user, projectId, body) => {
+exports.updateClientPriority = async (user, projectId, body) => {
   if (!["ADMIN", "HR", "EA"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
-  const { clientTier, clientPriority } = body;
-
-  if (clientTier && !VALID_TIERS.includes(clientTier)) {
-    throw new ApiError(400, {
-      code: ERRORS.VALIDATION.INVALID_INPUT.code,
-      message: `Invalid clientTier. Must be one of: ${VALID_TIERS.join(", ")}.`,
-    });
-  }
+  const { clientPriority } = body;
 
   if (clientPriority && !VALID_PRIORITIES.includes(clientPriority)) {
     throw new ApiError(400, {
@@ -1234,7 +1224,6 @@ exports.updateClientTier = async (user, projectId, body) => {
   }
 
   const data = {};
-  if (clientTier !== undefined) data.clientTier = clientTier || null;
   if (clientPriority !== undefined) data.clientPriority = clientPriority || null;
 
   const updated = await prisma.project.update({
