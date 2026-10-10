@@ -435,7 +435,7 @@ exports.createProject = async (user, body) => {
 };
 
 exports.getProjects = async (user, query = {}) => {
-  const { page = 1, limit = 15, search = "", department = "", status = "" } = query;
+  const { page = 1, limit = 15, search = "", department = "", status = "", isRunning } = query;
 
   const take = Math.min(Number(limit), 100);
   const skip = (Math.max(Number(page), 1) - 1) * take;
@@ -460,6 +460,7 @@ exports.getProjects = async (user, query = {}) => {
     } : {}),
     ...(department ? { department: { name: { contains: department, mode: "insensitive" } } } : {}),
     ...(status ? { status } : {}),
+    ...(isRunning !== undefined ? { isRunning: isRunning === "true" || isRunning === true } : {}),
   };
 
   const [projects, total] = await Promise.all([
@@ -507,7 +508,7 @@ exports.getAssignedProjects = async (user, query = {}) => {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
-  const { page = 1, limit = 15, search = "", status = "" } = query;
+  const { page = 1, limit = 15, search = "", status = "", isRunning } = query;
   const take = Math.min(Number(limit), 100);
   const skip = (Math.max(Number(page), 1) - 1) * take;
 
@@ -520,6 +521,7 @@ exports.getAssignedProjects = async (user, query = {}) => {
       ],
     } : {}),
     ...(status ? { status } : {}),
+    ...(isRunning !== undefined ? { isRunning: isRunning === "true" || isRunning === true } : {}),
   };
 
   const [projects, total] = await Promise.all([
