@@ -185,6 +185,7 @@ enum ProjectStatus {
   ONGOING
   SUBMITTED
   VERIFIED
+  PAUSED
 }
 
 enum MarketingReportApprovalStatus {
