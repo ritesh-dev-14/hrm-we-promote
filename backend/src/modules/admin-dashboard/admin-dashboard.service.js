@@ -80,6 +80,7 @@ exports.getControlTowerStats = async () => {
     totalMonthlySpent += spent;
     const project = marketingProjects.find(p => p.id === r.projectId);
     return {
+      projectId: r.projectId,
       projectName: project ? project.projectName : 'Unknown',
       clientName: project ? project.clientName : '',
       amount: spent
