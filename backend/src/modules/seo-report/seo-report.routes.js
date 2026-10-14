@@ -16,6 +16,8 @@ router.post(
   controller.createSeoReport
 );
 
+router.get("/submitted-projects", auth, role("ADMIN"), controller.getSubmittedProjectIds);
+
 // Get all SEO reports for a project (?projectId=...)
 router.get("/", auth, role("ADMIN", "HR", "EA", "MANAGER"), controller.getSeoReports);
 

@@ -14,6 +14,35 @@ const isTodayInIST = (date) => {
   return d.toLocaleDateString("en-IN", opts) === today.toLocaleDateString("en-IN", opts);
 };
 
+exports.getSubmittedProjectIds = async (user, query = {}) => {
+  if (user.role !== "ADMIN") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const from = new Date(query.from);
+  const to = new Date(query.to);
+  if (!query.from || !query.to || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from >= to) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Valid from and to date boundaries are required.",
+    });
+  }
+
+  const submittedProjects = await prisma.projectMonthlySheet.findMany({
+    where: {
+      OR: [
+        { createdAt: { gte: from, lt: to } },
+        { updatedAt: { gte: from, lt: to } },
+      ],
+      createdBy: { role: "MANAGER" },
+    },
+    distinct: ["projectId"],
+    select: { projectId: true },
+  });
+
+  return submittedProjects.map(({ projectId }) => projectId);
+};
+
 const getTodayStartInIST = () => {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Kolkata",

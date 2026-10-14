@@ -25,6 +25,15 @@ exports.getSeoReports = async (req, res, next) => {
   }
 };
 
+exports.getSubmittedProjectIds = async (req, res, next) => {
+  try {
+    const data = await service.getSubmittedProjectIds(req.user, req.query);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getSeoReportById = async (req, res, next) => {
   try {
     const data = await service.getSeoReportById(req.user, req.params.id);

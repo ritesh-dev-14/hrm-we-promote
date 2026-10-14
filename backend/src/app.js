@@ -29,6 +29,12 @@ app.get(
   require("./middlewares/role.middleware")("HR", "ADMIN", "EA", "COORDINATOR"),
   require("./modules/hr/hr.controller").getManagers
 );
+app.get(
+  "/api/projects/monthly-sheets/submitted-projects",
+  require("./middlewares/auth.middleware"),
+  require("./middlewares/role.middleware")("ADMIN"),
+  require("./modules/project-monthly-sheet/project-monthly-sheet.controller").getSubmittedProjectIds,
+);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/manager/tasks", require("./modules/task/task.routes"));
 app.use("/api/employee", require("./modules/employee/employee.routes"));

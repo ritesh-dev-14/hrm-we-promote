@@ -206,6 +206,29 @@ exports.getSeoReports = async (user, projectId) => {
   return reports.map(formatReport);
 };
 
+exports.getSubmittedProjectIds = async (user, query = {}) => {
+  if (user.role !== "ADMIN") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const from = new Date(query.from);
+  const to = new Date(query.to);
+  if (!query.from || !query.to || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from >= to) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Valid from and to date boundaries are required.",
+    });
+  }
+
+  const submittedProjects = await prisma.seoReport.findMany({
+    where: { createdAt: { gte: from, lt: to } },
+    distinct: ["projectId"],
+    select: { projectId: true },
+  });
+
+  return submittedProjects.map(({ projectId }) => projectId);
+};
+
 exports.getSeoReportById = async (user, reportId) => {
   if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);

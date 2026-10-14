@@ -1,5 +1,14 @@
 const service = require("./project-monthly-sheet.service");
 
+exports.getSubmittedProjectIds = async (req, res, next) => {
+  try {
+    const data = await service.getSubmittedProjectIds(req.user, req.query);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getAllUploadCalendarSheets = async (req, res, next) => {
   try {
     const data = await service.getAllUploadCalendarSheets(req.user);
