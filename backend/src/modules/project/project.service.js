@@ -445,7 +445,7 @@ exports.getProjects = async (user, query = {}) => {
       ? { assignments: { some: { managerId: user.id } } }
       : undefined;
 
-  if (!roleFilter && !["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE"].includes(user.role)) {
+  if (!roleFilter && !["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE", "QA"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -605,7 +605,7 @@ exports.getProjectById = async (user, projectId) => {
     if (!assigned) {
       throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
     }
-  } else if (!["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE"].includes(user.role)) {
+  } else if (!["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE", "QA"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 

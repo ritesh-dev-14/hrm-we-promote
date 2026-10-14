@@ -5,7 +5,7 @@ const mailService = require("../mail/mail.service");
 const { incrementUnread } = require("../../services/sidebarUnread.service");
 
 // All roles that should receive upload notifications
-const NOTIFIABLE_ROLES = ["EMPLOYEE", "MANAGER", "ADMIN", "HR", "COORDINATOR", "EA"];
+const NOTIFIABLE_ROLES = ["EMPLOYEE", "MANAGER", "ADMIN", "HR", "COORDINATOR", "EA", "QA"];
 
 const isTodayInIST = (date) => {
   const d = new Date(date);
@@ -268,7 +268,7 @@ exports.getProjectMonthlySheets = async (user, projectId) => {
 };
 
 exports.getAllUploadCalendarSheets = async (user) => {
-  const allowedRoles = ["ADMIN", "HR", "EA", "MANAGER", "EMPLOYEE", "COORDINATOR"];
+  const allowedRoles = ["ADMIN", "HR", "EA", "MANAGER", "EMPLOYEE", "COORDINATOR", "QA"];
   if (!user?.role || !allowedRoles.includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }

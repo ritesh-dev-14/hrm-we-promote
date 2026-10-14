@@ -7,7 +7,7 @@ const { incrementUnread } = require("../../services/sidebarUnread.service");
 const canManageUploads = (role) => ["HR", "MANAGER"].includes((role || "").toUpperCase());
 
 // All roles that should receive upload notifications
-const NOTIFIABLE_ROLES = ["EMPLOYEE", "MANAGER", "ADMIN", "HR", "COORDINATOR", "EA"];
+const NOTIFIABLE_ROLES = ["EMPLOYEE", "MANAGER", "ADMIN", "HR", "COORDINATOR", "EA", "QA"];
 
 /**
  * Notify ALL users (every role) about a today's upload.
@@ -147,7 +147,7 @@ exports.getAllUploads = async (user, query = {}) => {
     throw new ApiError(401, ERRORS.AUTH.UNAUTHORIZED);
   }
 
-  const allowed = ["HR", "MANAGER", "EMPLOYEE", "COORDINATOR", "EA", "ADMIN"];
+  const allowed = ["HR", "MANAGER", "EMPLOYEE", "COORDINATOR", "EA", "ADMIN", "QA"];
   if (!allowed.includes((user.role || "").toUpperCase())) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
@@ -187,7 +187,7 @@ exports.getUploadById = async (user, id) => {
     });
   }
 
-  if (!canManageUploads(user.role) && !["EMPLOYEE", "COORDINATOR", "EA"].includes((user.role || "").toUpperCase())) {
+  if (!canManageUploads(user.role) && !["EMPLOYEE", "COORDINATOR", "EA", "QA"].includes((user.role || "").toUpperCase())) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
