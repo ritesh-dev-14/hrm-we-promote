@@ -2,10 +2,10 @@ const service = require("./weekly-voice-report.service");
 
 exports.submitReport = async (req, res, next) => {
   try {
-    const data = await service.submitReport(req.user, req.body, req.file);
+    const data = await service.submitReport(req.user, req.body, req.files, req.file);
     res.status(201).json({
       success: true,
-      message: "Weekly voice report submitted successfully",
+      message: "Weekly report submitted successfully",
       data,
     });
   } catch (error) {

@@ -1,28 +1,91 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
-
 const cloudinary = require("../../utils/cloudinary");
 
-exports.submitReport = async (user, body, file) => {
-  const { department, clients, weekNumber, year } = body;
+exports.submitReport = async (user, body, files, singleFile) => {
+  const { department, clients, weekNumber, year, reportType: requestedReportType } = body;
   
-  if (!file || !department || !weekNumber || !year) {
-    throw new ApiError(400, "Missing required fields or audio file");
+  if (!department || !weekNumber || !year) {
+    throw new ApiError(400, "Missing required fields (department, weekNumber, year)");
   }
 
-  const uploadResult = await cloudinary.uploadBuffer(file.buffer, {
-    folder: "weekly_voice_reports",
-    resource_type: "video" // Cloudinary uses 'video' for audio files too
-  });
+  // Extract audio file if provided
+  const audioFile =
+    singleFile ||
+    files?.audio?.[0] ||
+    (Array.isArray(files)
+      ? files.find((f) => f.fieldname === "audio" || f.mimetype.startsWith("audio/"))
+      : null);
+
+  // Extract screenshot files if provided
+  let screenshotFiles = [];
+  if (files?.screenshots) {
+    screenshotFiles = Array.isArray(files.screenshots) ? files.screenshots : [files.screenshots];
+  } else if (Array.isArray(files)) {
+    screenshotFiles = files.filter(
+      (f) =>
+        f.fieldname === "screenshots" ||
+        f.fieldname === "screenshots[]" ||
+        f.mimetype.startsWith("image/")
+    );
+  }
+
+  // Determine report type
+  let reportType = requestedReportType;
+  if (!reportType) {
+    if (audioFile) {
+      reportType = "VOICE";
+    } else if (screenshotFiles.length > 0) {
+      reportType = "SCREENSHOTS";
+    } else {
+      throw new ApiError(400, "Please provide either a voice recording or conversation screenshots.");
+    }
+  }
+
+  let audioUrl = null;
+  let screenshotUrls = [];
+
+  if (reportType === "VOICE") {
+    if (!audioFile) {
+      throw new ApiError(400, "Please upload a voice recording audio file.");
+    }
+    const uploadResult = await cloudinary.uploadBuffer(audioFile.buffer, {
+      folder: "weekly_voice_reports",
+      resource_type: "video" // Cloudinary uses 'video' for audio files
+    });
+    audioUrl = uploadResult.secure_url;
+  } else if (reportType === "SCREENSHOTS") {
+    if (!screenshotFiles || screenshotFiles.length === 0) {
+      throw new ApiError(400, "Please upload at least one conversation screenshot.");
+    }
+    const uploadPromises = screenshotFiles.map((file) =>
+      cloudinary.uploadBuffer(file.buffer, {
+        folder: "weekly_voice_reports/screenshots",
+        resource_type: "image"
+      })
+    );
+    const results = await Promise.all(uploadPromises);
+    screenshotUrls = results.map((r) => r.secure_url);
+  } else {
+    throw new ApiError(400, "Invalid report type. Expected 'VOICE' or 'SCREENSHOTS'.");
+  }
+
+  const parsedClients = clients
+    ? typeof clients === "string"
+      ? JSON.parse(clients)
+      : clients
+    : [];
 
   const report = await prisma.weeklyVoiceReport.create({
     data: {
       managerId: user.id,
       department,
-      audioUrl: uploadResult.secure_url,
+      reportType,
+      audioUrl,
+      screenshots: screenshotUrls.length > 0 ? screenshotUrls : null,
       weekNumber: parseInt(weekNumber),
       year: parseInt(year),
-      clients: clients ? JSON.parse(clients) : []
+      clients: parsedClients
     }
   });
 
@@ -41,19 +104,25 @@ exports.getActiveClients = async (user) => {
 };
 
 exports.getMyReports = async (user, query) => {
+  const { weekNumber, year } = query || {};
+  const where = { managerId: user.id };
+  if (weekNumber) where.weekNumber = parseInt(weekNumber);
+  if (year) where.year = parseInt(year);
+
   return prisma.weeklyVoiceReport.findMany({
-    where: { managerId: user.id },
+    where,
     orderBy: { createdAt: 'desc' }
   });
 };
 
 exports.getAllReports = async (query) => {
-  const { department, weekNumber, year } = query;
+  const { department, weekNumber, year, reportType } = query;
   const where = {};
   
   if (department) where.department = department;
   if (weekNumber) where.weekNumber = parseInt(weekNumber);
   if (year) where.year = parseInt(year);
+  if (reportType) where.reportType = reportType;
 
   return prisma.weeklyVoiceReport.findMany({
     where,
