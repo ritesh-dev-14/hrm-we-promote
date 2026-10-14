@@ -3,7 +3,7 @@ const ApiError = require("../../utils/ApiError");
 const cloudinary = require("../../utils/cloudinary");
 
 exports.submitReport = async (user, body, files, singleFile) => {
-  const { department, clients, weekNumber, year, reportType: requestedReportType } = body;
+  const { department, clients, weekNumber, year, reportType: requestedReportType, reason } = body;
   
   if (!department || !weekNumber || !year) {
     throw new ApiError(400, "Missing required fields (department, weekNumber, year)");
@@ -38,14 +38,18 @@ exports.submitReport = async (user, body, files, singleFile) => {
     } else if (screenshotFiles.length > 0) {
       reportType = "SCREENSHOTS";
     } else {
-      throw new ApiError(400, "Please provide either a voice recording or conversation screenshots.");
+      throw new ApiError(400, "Please provide either a voice recording, conversation screenshots, or reason why unable to submit.");
     }
   }
 
   let audioUrl = null;
   let screenshotUrls = [];
 
-  if (reportType === "VOICE") {
+  if (reportType === "UNABLE_TO_SUBMIT") {
+    if (!reason || !reason.trim()) {
+      throw new ApiError(400, "Please provide a reason explaining why you are unable to submit the report.");
+    }
+  } else if (reportType === "VOICE") {
     if (!audioFile) {
       throw new ApiError(400, "Please upload a voice recording audio file.");
     }
@@ -67,14 +71,61 @@ exports.submitReport = async (user, body, files, singleFile) => {
     const results = await Promise.all(uploadPromises);
     screenshotUrls = results.map((r) => r.secure_url);
   } else {
-    throw new ApiError(400, "Invalid report type. Expected 'VOICE' or 'SCREENSHOTS'.");
+    throw new ApiError(400, "Invalid report type. Expected 'VOICE', 'SCREENSHOTS', or 'UNABLE_TO_SUBMIT'.");
   }
 
-  const parsedClients = clients
+  const rawClients = clients
     ? typeof clients === "string"
       ? JSON.parse(clients)
       : clients
     : [];
+
+  const parsedClients = rawClients.map((c) => ({
+    ...c,
+    ...(reason && reason.trim() ? { reason: reason.trim() } : {})
+  }));
+
+  // Check if an existing report for this manager, weekNumber, year, and client exists (Revision / Re-submit)
+  const targetClientId = parsedClients[0]?.id;
+  let existingReport = null;
+
+  if (targetClientId) {
+    const candidateReports = await prisma.weeklyVoiceReport.findMany({
+      where: {
+        managerId: user.id,
+        weekNumber: parseInt(weekNumber),
+        year: parseInt(year)
+      }
+    });
+
+    existingReport = candidateReports.find((r) => {
+      const cls = Array.isArray(r.clients)
+        ? r.clients
+        : typeof r.clients === "string"
+        ? JSON.parse(r.clients)
+        : [];
+      return cls.some((c) => String(c.id) === String(targetClientId));
+    });
+  }
+
+  if (existingReport) {
+    return prisma.weeklyVoiceReport.update({
+      where: { id: existingReport.id },
+      data: {
+        department,
+        reportType,
+        audioUrl: reportType === "VOICE" ? audioUrl : null,
+        screenshots: reportType === "SCREENSHOTS" && screenshotUrls.length > 0 ? screenshotUrls : null,
+        status: reportType === "UNABLE_TO_SUBMIT" ? "Unable to Submit" : "Submitted",
+        qaStatus: "PENDING", // Resets QA review back to PENDING so QA reviews the updated submission!
+        qaFeedback: null,    // Clears the revision feedback
+        qaReviewedAt: null,
+        qaReviewerId: null,
+        clients: parsedClients,
+        updatedAt: new Date()
+      }
+    });
+  }
 
   const report = await prisma.weeklyVoiceReport.create({
     data: {
@@ -83,6 +134,8 @@ exports.submitReport = async (user, body, files, singleFile) => {
       reportType,
       audioUrl,
       screenshots: screenshotUrls.length > 0 ? screenshotUrls : null,
+      status: reportType === "UNABLE_TO_SUBMIT" ? "Unable to Submit" : "Submitted",
+      qaStatus: "PENDING",
       weekNumber: parseInt(weekNumber),
       year: parseInt(year),
       clients: parsedClients
@@ -258,7 +311,7 @@ exports.getQAMetaAdsTracking = async (query) => {
         : [];
 
       clientList.forEach((cl) => {
-        if (cl?.id) {
+        if (cl?.id && !submittedProjectIds.has(String(cl.id))) {
           submittedProjectIds.add(String(cl.id));
           const projectMatch = activeProjects.find((p) => String(p.id) === String(cl.id));
           submittedProjects.push({
@@ -270,11 +323,12 @@ exports.getQAMetaAdsTracking = async (query) => {
             audioUrl: report.audioUrl,
             screenshots: report.screenshots || [],
             status: report.status,
+            reason: cl.reason || (report.reportType === "UNABLE_TO_SUBMIT" ? report.status : null),
             qaStatus: report.qaStatus || "PENDING",
             qaFeedback: report.qaFeedback,
             qaReviewedAt: report.qaReviewedAt,
             qaReviewer: report.qaReviewer,
-            submittedAt: report.createdAt,
+            submittedAt: report.updatedAt || report.createdAt,
             manager: report.manager
           });
         }
@@ -306,7 +360,8 @@ exports.getQAMetaAdsTracking = async (query) => {
         unsubmittedCount: unsubmittedProjects.length,
         approvedCount: submittedProjects.filter((sp) => sp.qaStatus === "APPROVED").length,
         rejectedCount: submittedProjects.filter((sp) => sp.qaStatus === "REJECTED").length,
-        pendingReviewCount: submittedProjects.filter((sp) => sp.qaStatus === "PENDING").length
+        pendingReviewCount: submittedProjects.filter((sp) => sp.qaStatus === "PENDING").length,
+        unableToSubmitCount: submittedProjects.filter((sp) => sp.reportType === "UNABLE_TO_SUBMIT" || sp.status === "Unable to Submit").length
       },
       submittedProjects,
       unsubmittedProjects
