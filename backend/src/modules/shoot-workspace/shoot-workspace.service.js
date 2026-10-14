@@ -602,11 +602,25 @@ exports.createShootWorkspace = async (user, body) => {
   return formatWorkspace(workspace, user);
 };
 
-exports.getShootWorkspaces = async (user) => {
+exports.getShootWorkspaces = async (user, query = {}) => {
   const userRole = (user.role || "").toUpperCase();
+  const projectFilter = query.projectId
+    ? {
+        OR: [
+          { projectId: String(query.projectId) },
+          ...(query.projectName
+            ? [{
+                projectId: null,
+                name: { contains: String(query.projectName), mode: "insensitive" },
+              }]
+            : []),
+        ],
+      }
+    : {};
 
   if (["ADMIN", "HR"].includes(userRole)) {
     const workspaces = await prisma.shootWorkspace.findMany({
+      where: projectFilter,
       include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
       orderBy: { createdAt: "desc" },
     });
@@ -615,7 +629,7 @@ exports.getShootWorkspaces = async (user) => {
 
   if (userRole === "MANAGER") {
     const workspaces = await prisma.shootWorkspace.findMany({
-      where: { createdById: user.id },
+      where: { createdById: user.id, ...projectFilter },
       include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
       orderBy: { createdAt: "desc" },
     });
@@ -623,7 +637,10 @@ exports.getShootWorkspaces = async (user) => {
   }
 
   const workspaces = await prisma.shootWorkspace.findMany({
-    where: { tasks: { some: { assignments: { some: { userId: user.id } } } } },
+    where: {
+      ...projectFilter,
+      tasks: { some: { assignments: { some: { userId: user.id } } } },
+    },
     include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
     orderBy: { createdAt: "desc" },
   });

@@ -11,7 +11,7 @@ exports.createShootWorkspace = async (req, res, next) => {
 
 exports.getShootWorkspaces = async (req, res, next) => {
   try {
-    const data = await service.getShootWorkspaces(req.user);
+    const data = await service.getShootWorkspaces(req.user, req.query);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
