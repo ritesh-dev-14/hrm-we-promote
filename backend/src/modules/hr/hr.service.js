@@ -215,7 +215,8 @@ exports.getManager = async (employeeId) => {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
-  if (manager.role !== "MANAGER") {
+  const allowedManagerRoles = ["MANAGER", "EMPLOYEE", "QA", "EA", "COORDINATOR"];
+  if (!allowedManagerRoles.includes(manager.role)) {
     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 
@@ -231,7 +232,8 @@ exports.updateManager = async (employeeId, body) => {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
-  if (manager.role !== "MANAGER") {
+  const allowedManagerRoles = ["MANAGER", "EMPLOYEE", "QA", "EA", "COORDINATOR"];
+  if (!allowedManagerRoles.includes(manager.role)) {
     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 
@@ -281,6 +283,21 @@ exports.updateManager = async (employeeId, body) => {
         })),
         skipDuplicates: true,
       });
+    }
+
+    if (body.role && body.role !== "MANAGER") {
+      if (body.role === "EMPLOYEE" && Array.isArray(body.managerIds) && body.managerIds.length > 0) {
+        await tx.userManager.deleteMany({
+          where: { employeeId: manager.id },
+        });
+        await tx.userManager.createMany({
+          data: body.managerIds.map((managerId) => ({
+            employeeId: manager.id,
+            managerId,
+          })),
+          skipDuplicates: true,
+        });
+      }
     }
 
     return tx.user.update({
@@ -619,7 +636,9 @@ exports.createEmployee = async (user, body) => {
 exports.getEmployees = async (user) => {
   const employees = await prisma.user.findMany({
     where: {
-      role: "EMPLOYEE",
+      role: {
+        in: ["EMPLOYEE", "QA", "EA", "COORDINATOR"],
+      },
     },
     select: {
       id: true,
@@ -710,7 +729,8 @@ exports.updateEmployee = async (employeeId, body) => {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
-  if (employee.role !== "EMPLOYEE") {
+  const allowedStaffRoles = ["EMPLOYEE", "QA", "EA", "COORDINATOR", "MANAGER"];
+  if (!allowedStaffRoles.includes(employee.role)) {
     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 

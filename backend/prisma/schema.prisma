@@ -29,6 +29,7 @@ enum Role {
   MANAGER
   EMPLOYEE
   COORDINATOR
+  QA
 }
 
 enum AttendanceStatus {
@@ -1110,27 +1111,34 @@ model User {
   assignedMetaAdsTasks        MetaAdsTask[]                  @relation("AssignedMetaAdsTasks")
   whatsappMessages            WhatsappMessage[]              @relation("ManagerWhatsappMessages")
   weeklyVoiceReports          WeeklyVoiceReport[]            @relation("ManagerWeeklyVoiceReports")
+  reviewedWeeklyReports       WeeklyVoiceReport[]            @relation("QAWeeklyVoiceReports")
 }
 
 model WeeklyVoiceReport {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   managerId     String
   department    String
   clients       Json?
-  reportType    String   @default("VOICE")
+  reportType    String    @default("VOICE")
   audioUrl      String?
   screenshots   Json?
-  reportDate    DateTime @default(now())
+  reportDate    DateTime  @default(now())
   weekNumber    Int
   year          Int
-  status        String   @default("Submitted")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  status        String    @default("Submitted")
+  qaStatus      String    @default("PENDING")
+  qaFeedback    String?
+  qaReviewedAt  DateTime?
+  qaReviewerId  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  manager       User     @relation("ManagerWeeklyVoiceReports", fields: [managerId], references: [id])
+  manager       User      @relation("ManagerWeeklyVoiceReports", fields: [managerId], references: [id])
+  qaReviewer    User?     @relation("QAWeeklyVoiceReports", fields: [qaReviewerId], references: [id])
 
   @@index([managerId])
   @@index([weekNumber, year])
+  @@index([qaStatus])
 }
 
 model UserDepartment {

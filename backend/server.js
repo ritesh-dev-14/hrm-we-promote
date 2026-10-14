@@ -6,6 +6,7 @@ const { initializeDailyMessagingJob } = require("./src/jobs/dailyClientMessagesJ
 const { initializeWeeklyVoiceReportJob } = require("./src/jobs/weeklyVoiceReportJob");
 const mailService = require("./src/modules/mail/mail.service");
 
+// Server configuration & port
 const PORT = process.env.PORT || 8000;
 
 // Create HTTP server for socket.io

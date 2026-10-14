@@ -48,3 +48,28 @@ exports.getAllReports = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getQAMetaAdsTracking = async (req, res, next) => {
+  try {
+    const data = await service.getQAMetaAdsTracking(req.query);
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.reviewReportByQA = async (req, res, next) => {
+  try {
+    const data = await service.reviewReportByQA(req.params.id, req.user, req.body);
+    res.json({
+      success: true,
+      message: `Report ${req.body.qaStatus?.toLowerCase() || "reviewed"} successfully`,
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

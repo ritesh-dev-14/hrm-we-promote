@@ -139,3 +139,225 @@ exports.getAllReports = async (query) => {
     orderBy: { createdAt: 'desc' }
   });
 };
+
+exports.getQAMetaAdsTracking = async (query) => {
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1; // 1-12
+
+  const year = query.year ? parseInt(query.year) : currentYear;
+  const month = query.month ? parseInt(query.month) : currentMonth;
+
+  // Month metadata
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const months = monthNames.map((name, idx) => ({
+    monthIndex: idx + 1,
+    name,
+    isCurrent: year === currentYear && idx + 1 === currentMonth
+  }));
+
+  // Calculate weeks for the selected month
+  const monthIndex = month - 1;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const startOfYear = new Date(year, 0, 1);
+
+  const getWeekNum = (date) => {
+    const days = Math.floor((date - startOfYear) / (24 * 60 * 60 * 1000));
+    return Math.max(1, Math.ceil(days / 7));
+  };
+
+  const weekChunks = [
+    { startDay: 1, endDay: 7, label: "Week 1" },
+    { startDay: 8, endDay: 14, label: "Week 2" },
+    { startDay: 15, endDay: 21, label: "Week 3" },
+    { startDay: 22, endDay: 28, label: "Week 4" },
+  ];
+  if (daysInMonth > 28) {
+    weekChunks.push({ startDay: 29, endDay: daysInMonth, label: "Week 5" });
+  }
+
+  // Get active Meta Ads projects
+  const activeProjects = await prisma.project.findMany({
+    where: {
+      OR: [
+        { isRunning: true },
+        { status: "ONGOING" }
+      ],
+      department: {
+        name: {
+          in: ["Marketing", "Marketing Department", "Meta Ads", "Meta Ads Department"]
+        }
+      }
+    },
+    include: {
+      assignments: {
+        include: {
+          manager: {
+            select: { id: true, name: true, email: true, employeeId: true }
+          }
+        }
+      }
+    },
+    orderBy: { projectName: "asc" }
+  });
+
+  // Calculate weekNumbers for each chunk
+  const weekNumbers = weekChunks.map((c) => {
+    const sampleDate = new Date(year, monthIndex, Math.min(c.startDay + 3, daysInMonth));
+    return getWeekNum(sampleDate);
+  });
+
+  // Fetch all reports for the target weeks in this year
+  const rawReports = await prisma.weeklyVoiceReport.findMany({
+    where: {
+      year,
+      weekNumber: { in: weekNumbers }
+    },
+    include: {
+      manager: {
+        select: { id: true, name: true, email: true, employeeId: true }
+      }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  // Fetch QA reviewers if any
+  const reviewerIds = [...new Set(rawReports.map((r) => r.qaReviewerId).filter(Boolean))];
+  const reviewers = reviewerIds.length > 0
+    ? await prisma.user.findMany({
+        where: { id: { in: reviewerIds } },
+        select: { id: true, name: true, email: true }
+      })
+    : [];
+  const reviewerMap = new Map(reviewers.map((u) => [u.id, u]));
+
+  const reports = rawReports.map((r) => ({
+    ...r,
+    qaReviewer: r.qaReviewerId ? reviewerMap.get(r.qaReviewerId) || null : null
+  }));
+
+  // Build weekly summaries
+  const weeks = weekChunks.map((c, idx) => {
+    const sampleDate = new Date(year, monthIndex, Math.min(c.startDay + 3, daysInMonth));
+    const weekNum = getWeekNum(sampleDate);
+
+    const weekReports = reports.filter((r) => r.weekNumber === weekNum);
+
+    // Map which projects are submitted in this week
+    const submittedProjects = [];
+    const submittedProjectIds = new Set();
+
+    weekReports.forEach((report) => {
+      const clientList = Array.isArray(report.clients)
+        ? report.clients
+        : typeof report.clients === "string"
+        ? JSON.parse(report.clients)
+        : [];
+
+      clientList.forEach((cl) => {
+        if (cl?.id) {
+          submittedProjectIds.add(String(cl.id));
+          const projectMatch = activeProjects.find((p) => String(p.id) === String(cl.id));
+          submittedProjects.push({
+            projectId: cl.id,
+            projectName: cl.name || projectMatch?.projectName || projectMatch?.clientName || "Unknown Project",
+            project: projectMatch || null,
+            reportId: report.id,
+            reportType: report.reportType,
+            audioUrl: report.audioUrl,
+            screenshots: report.screenshots || [],
+            status: report.status,
+            qaStatus: report.qaStatus || "PENDING",
+            qaFeedback: report.qaFeedback,
+            qaReviewedAt: report.qaReviewedAt,
+            qaReviewer: report.qaReviewer,
+            submittedAt: report.createdAt,
+            manager: report.manager
+          });
+        }
+      });
+    });
+
+    // Unsubmitted projects
+    const unsubmittedProjects = activeProjects
+      .filter((p) => !submittedProjectIds.has(String(p.id)))
+      .map((p) => ({
+        projectId: p.id,
+        projectName: p.projectName || p.clientName,
+        clientName: p.clientName,
+        status: p.status,
+        manager: p.assignments?.[0]?.manager || null
+      }));
+
+    return {
+      weekIndex: idx + 1,
+      weekLabel: c.label,
+      weekNumber: weekNum,
+      startDay: c.startDay,
+      endDay: c.endDay,
+      startDate: new Date(year, monthIndex, c.startDay).toISOString(),
+      endDate: new Date(year, monthIndex, c.endDay).toISOString(),
+      stats: {
+        totalProjects: activeProjects.length,
+        submittedCount: submittedProjects.length,
+        unsubmittedCount: unsubmittedProjects.length,
+        approvedCount: submittedProjects.filter((sp) => sp.qaStatus === "APPROVED").length,
+        rejectedCount: submittedProjects.filter((sp) => sp.qaStatus === "REJECTED").length,
+        pendingReviewCount: submittedProjects.filter((sp) => sp.qaStatus === "PENDING").length
+      },
+      submittedProjects,
+      unsubmittedProjects
+    };
+  });
+
+  return {
+    year,
+    selectedMonth: month,
+    monthName: monthNames[monthIndex],
+    months,
+    weeks,
+    totalActiveProjects: activeProjects.length
+  };
+};
+
+exports.reviewReportByQA = async (reportId, user, body) => {
+  const { qaStatus, qaFeedback } = body;
+  if (!["APPROVED", "REJECTED", "PENDING"].includes(qaStatus)) {
+    throw new ApiError(400, "qaStatus must be APPROVED, REJECTED, or PENDING");
+  }
+
+  const existing = await prisma.weeklyVoiceReport.findUnique({
+    where: { id: reportId }
+  });
+  if (!existing) {
+    throw new ApiError(404, "Weekly report not found");
+  }
+
+  const updated = await prisma.weeklyVoiceReport.update({
+    where: { id: reportId },
+    data: {
+      qaStatus,
+      qaFeedback: qaFeedback !== undefined ? qaFeedback : existing.qaFeedback,
+      qaReviewedAt: new Date(),
+      qaReviewerId: user.id
+    },
+    include: {
+      manager: {
+        select: { id: true, name: true, email: true, employeeId: true }
+      }
+    }
+  });
+
+  const reviewer = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, name: true, email: true }
+  });
+
+  return {
+    ...updated,
+    qaReviewer: reviewer || null
+  };
+};
