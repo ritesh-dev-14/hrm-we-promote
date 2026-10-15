@@ -1,0 +1,2 @@
+ALTER TABLE "SeoReport"
+ADD COLUMN IF NOT EXISTS "sheetUrl" TEXT;

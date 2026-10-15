@@ -468,6 +468,7 @@ exports.getProjectsOverview = async ({ startDate, endDate, type }) => {
         keywords:    r.keywords,
         rankingNo:   r.rankingNo,
         checkDate:   r.checkDate,
+        sheetUrl:    r.sheetUrl,
         remarks:     r.remarks,
         screenshotUrl: r.screenshotUrl,
         managerName: r.manager?.name,
@@ -482,4 +483,3 @@ exports.getProjectsOverview = async ({ startDate, endDate, type }) => {
 
   return result;
 };
-

@@ -154,6 +154,7 @@ async function getSeoReport(projects, startOfDay, endOfDay) {
         reportId: report?.id || null,
         keywords: report?.keywords || [],
         rankingNo: report?.rankingNo ?? null,
+        sheetUrl: report?.sheetUrl || null,
         checkDate: report?.checkDate || null,
         screenshotUrl: report?.screenshotUrl || null,
         remarks: report?.remarks || null,

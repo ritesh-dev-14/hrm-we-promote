@@ -12,6 +12,7 @@ const formatReport = (report) => ({
   keywords: report.keywords,
   rankingNo: report.rankingNo,
   checkDate: report.checkDate,
+  sheetUrl: report.sheetUrl,
   screenshotUrl: report.screenshotUrl,
   screenshotPublicId: report.screenshotPublicId,
   remarks: report.remarks,
@@ -54,11 +55,34 @@ exports.createSeoReport = async (user, body, file) => {
     !body.projectId ||
     !body.keywords ||
     !body.rankingNo ||
-    !body.checkDate
+    !body.checkDate ||
+    !body.sheetUrl
   ) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
-      message: "projectId, keywords, rankingNo, and checkDate are required.",
+      message: "projectId, keywords, rankingNo, checkDate, and sheetUrl are required.",
+    });
+  }
+
+  let sheetUrl;
+  if (typeof body.sheetUrl !== "string") {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "A valid online spreadsheet link is required.",
+    });
+  }
+  try {
+    sheetUrl = new URL(body.sheetUrl);
+  } catch {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "A valid online spreadsheet link is required.",
+    });
+  }
+  if (!["http:", "https:"].includes(sheetUrl.protocol)) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "The spreadsheet link must use HTTP or HTTPS.",
     });
   }
 
@@ -136,6 +160,7 @@ exports.createSeoReport = async (user, body, file) => {
       keywords,
       rankingNo: parseInt(body.rankingNo, 10),
       checkDate: new Date(body.checkDate),
+      sheetUrl: sheetUrl.toString(),
       screenshotUrl,
       screenshotPublicId,
       remarks: body.remarks || null,

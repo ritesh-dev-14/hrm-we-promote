@@ -679,6 +679,7 @@ model SeoReport {
   keywords            String[]
   rankingNo           Int
   checkDate           DateTime
+  sheetUrl            String?
   screenshotUrl       String
   screenshotPublicId  String?
   remarks             String?
