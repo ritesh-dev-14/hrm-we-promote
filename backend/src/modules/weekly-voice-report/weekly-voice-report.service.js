@@ -148,7 +148,13 @@ exports.submitReport = async (user, body, files, singleFile) => {
 exports.getActiveClients = async (user) => {
   const assignments = await prisma.projectAssignment.findMany({
     where: { managerId: user.id },
-    include: { project: true }
+    include: {
+      project: {
+        include: {
+          department: true,
+        },
+      },
+    },
   });
 
   return assignments

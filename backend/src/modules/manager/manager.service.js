@@ -307,7 +307,11 @@ exports.getManagerLogoutStatus = async (user) => {
         },
       },
       include: {
-        project: true
+        project: {
+          include: {
+            department: true
+          }
+        }
       }
     });
 
@@ -335,7 +339,9 @@ exports.getManagerLogoutStatus = async (user) => {
       .filter(pa => !submittedClientIds.has(String(pa.projectId)))
       .map(pa => ({
         projectId: pa.projectId,
-        projectName: pa.project.projectName || pa.project.clientName
+        projectName: pa.project.projectName || pa.project.clientName,
+        clientName: pa.project.clientName,
+        department: pa.project.department?.name || "Marketing",
       }));
   }
 
