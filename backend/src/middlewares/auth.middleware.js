@@ -31,6 +31,7 @@ module.exports = async (req, res, next) => {
       id: user.id,
       employeeId: user.employeeId,
       role: user.role,
+      roles: user.roles?.length ? user.roles : [user.role],
     };
 
     next();

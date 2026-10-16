@@ -21,6 +21,12 @@ const parseArrayField = (value) => {
   return [String(value)];
 };
 
+const getRoles = (role, roles) => {
+  const assignedRoles = parseArrayField(roles);
+  const primaryRole = role || assignedRoles[0];
+  return [...new Set([primaryRole, ...assignedRoles].filter(Boolean))];
+};
+
 const serializeEmployeeRecord = (record) => {
   const departments =
     record.userDepartments?.map((item) => item.department) || [];
@@ -29,6 +35,7 @@ const serializeEmployeeRecord = (record) => {
 
   return {
     ...record,
+    roles: record.roles?.length ? record.roles : [record.role],
     department: departments[0] || record.department || null,
     departments,
     manager: managers[0] || record.manager || null,
@@ -44,6 +51,7 @@ const serializeManagerRecord = (record) => {
 
   return {
     ...record,
+    roles: record.roles?.length ? record.roles : [record.role],
     department: departments[0] || record.department || null,
     departments,
     userDepartments: undefined,
@@ -93,6 +101,7 @@ exports.createManager = async (user, body) => {
       email: body.email,
       ...(hashed && { password: hashed }),
       role: "MANAGER",
+      roles: ["MANAGER"],
       position: body.position || null,
       ...(departmentRecords.length > 0 ? { department: { connect: { id: departmentRecords[0].id } } } : {}),
       probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : true,
@@ -104,6 +113,7 @@ exports.createManager = async (user, body) => {
       name: true,
       email: true,
       role: true,
+      roles: true,
       position: true,
       probationPeriod: true,
       createdAt: true,
@@ -137,6 +147,7 @@ exports.createManager = async (user, body) => {
       name: true,
       email: true,
       role: true,
+      roles: true,
       position: true,
       probationPeriod: true,
       createdAt: true,
@@ -159,7 +170,7 @@ exports.createManager = async (user, body) => {
 exports.getManagers = async (user) => {
   const managers = await prisma.user.findMany({
     where: {
-      role: "MANAGER",
+      OR: [{ role: "MANAGER" }, { roles: { has: "MANAGER" } }],
     },
     select: {
       id: true,
@@ -167,6 +178,7 @@ exports.getManagers = async (user) => {
       name: true,
       email: true,
       role: true,
+      roles: true,
       position: true,
       probationPeriod: true,
       createdAt: true,
@@ -195,6 +207,7 @@ exports.getManager = async (employeeId) => {
       name: true,
       email: true,
       role: true,
+      roles: true,
       position: true,
       probationPeriod: true,
       createdAt: true,
@@ -215,8 +228,8 @@ exports.getManager = async (employeeId) => {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
-  const allowedManagerRoles = ["MANAGER", "EMPLOYEE", "QA", "EA", "COORDINATOR"];
-  if (!allowedManagerRoles.includes(manager.role)) {
+  const allowedManagerRoles = ["MANAGER", "EMPLOYEE", "QA", "EA", "COORDINATOR", "HR"];
+  if (!allowedManagerRoles.includes(manager.role) && !manager.roles?.some((role) => allowedManagerRoles.includes(role))) {
     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 
@@ -232,8 +245,8 @@ exports.updateManager = async (employeeId, body) => {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
-  const allowedManagerRoles = ["MANAGER", "EMPLOYEE", "QA", "EA", "COORDINATOR"];
-  if (!allowedManagerRoles.includes(manager.role)) {
+  const allowedManagerRoles = ["MANAGER", "EMPLOYEE", "QA", "EA", "COORDINATOR", "HR"];
+  if (!allowedManagerRoles.includes(manager.role) && !manager.roles?.some((role) => allowedManagerRoles.includes(role))) {
     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
 
@@ -308,6 +321,9 @@ exports.updateManager = async (employeeId, body) => {
         position: body.position,
         probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : undefined,
         role: body.role,
+        ...((body.role !== undefined || body.roles !== undefined) && {
+          roles: getRoles(body.role || manager.role, body.roles || [body.role || manager.role]),
+        }),
         ...(newDepartmentId !== undefined ? { department: { connect: { id: newDepartmentId } } } : {}),
         ...(hashedPassword && { password: hashedPassword }),
       },
@@ -317,6 +333,7 @@ exports.updateManager = async (employeeId, body) => {
         name: true,
         email: true,
         role: true,
+        roles: true,
         position: true,
         probationPeriod: true,
         createdAt: true,
@@ -533,7 +550,7 @@ exports.createEmployee = async (user, body) => {
       throw new ApiError(404, ERRORS.HR.MANAGER_NOT_FOUND);
     }
 
-    if (manager.role !== "MANAGER") {
+    if (manager.role !== "MANAGER" && !manager.roles?.includes("MANAGER")) {
       throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
     }
   }
@@ -562,6 +579,7 @@ exports.createEmployee = async (user, body) => {
       email: body.email,
       ...(hashed && { password: hashed }),
       role: body.role,
+      roles: getRoles(body.role, body.roles || [body.role]),
       position: body.position,
       ...(departmentRecords.length > 0 ? { department: { connect: { id: departmentRecords[0].id } } } : {}),
       probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : true,
@@ -573,6 +591,7 @@ exports.createEmployee = async (user, body) => {
       name: true,
       email: true,
       role: true,
+      roles: true,
       position: true,
       probationPeriod: true,
       createdAt: true,
@@ -603,6 +622,7 @@ exports.createEmployee = async (user, body) => {
       name: true,
       email: true,
       role: true,
+      roles: true,
       position: true,
       probationPeriod: true,
       createdAt: true,
@@ -636,9 +656,10 @@ exports.createEmployee = async (user, body) => {
 exports.getEmployees = async (user) => {
   const employees = await prisma.user.findMany({
     where: {
-      role: {
-        in: ["EMPLOYEE", "QA", "EA", "COORDINATOR"],
-      },
+      OR: [
+        { role: { in: ["EMPLOYEE", "QA", "EA", "COORDINATOR"] } },
+        { roles: { hasSome: ["EMPLOYEE", "QA", "EA", "COORDINATOR"] } },
+      ],
     },
     select: {
       id: true,
@@ -646,6 +667,7 @@ exports.getEmployees = async (user) => {
       name: true,
       email: true,
       role: true,
+      roles: true,
       position: true,
       probationPeriod: true,
       createdAt: true,
@@ -685,6 +707,7 @@ exports.getEmployee = async (employeeId) => {
       name: true,
       email: true,
       role: true,
+      roles: true,
       position: true,
       probationPeriod: true,
       createdAt: true,
@@ -729,7 +752,7 @@ exports.updateEmployee = async (employeeId, body) => {
     throw new ApiError(404, ERRORS.USER.NOT_FOUND);
   }
 
-  const allowedStaffRoles = ["EMPLOYEE", "QA", "EA", "COORDINATOR", "MANAGER"];
+  const allowedStaffRoles = ["EMPLOYEE", "QA", "EA", "COORDINATOR", "MANAGER", "HR"];
   if (!allowedStaffRoles.includes(employee.role)) {
     throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
   }
@@ -757,7 +780,7 @@ exports.updateEmployee = async (employeeId, body) => {
       throw new ApiError(404, ERRORS.HR.MANAGER_NOT_FOUND);
     }
 
-    if (manager.role !== "MANAGER") {
+    if (manager.role !== "MANAGER" && !manager.roles?.includes("MANAGER")) {
       throw new ApiError(400, ERRORS.HR.INVALID_USER_TYPE);
     }
   }
@@ -832,6 +855,9 @@ exports.updateEmployee = async (employeeId, body) => {
         position: body.position,
         probationPeriod: body.probationPeriod !== undefined ? body.probationPeriod : undefined,
         role: body.role,
+        ...((body.role !== undefined || body.roles !== undefined) && {
+          roles: getRoles(body.role || employee.role, body.roles || [body.role || employee.role]),
+        }),
         ...(newDepartmentId !== undefined ? { department: { connect: { id: newDepartmentId } } } : {}),
         ...(hashedPassword && { password: hashedPassword }),
       },
@@ -841,6 +867,7 @@ exports.updateEmployee = async (employeeId, body) => {
         name: true,
         email: true,
         role: true,
+        roles: true,
         position: true,
         probationPeriod: true,
         createdAt: true,

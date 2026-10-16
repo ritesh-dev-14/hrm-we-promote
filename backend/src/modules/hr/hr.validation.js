@@ -44,6 +44,7 @@ exports.updateManagerSchema = Joi.object({
   position: Joi.string(),
 
   role: Joi.string().valid("MANAGER", "HR", "EMPLOYEE", "QA", "EA", "COORDINATOR"),
+  roles: Joi.array().items(Joi.string().valid("MANAGER", "HR", "EMPLOYEE", "QA", "EA", "COORDINATOR")).min(1),
   managerId: Joi.alternatives().try(Joi.string().uuid(), Joi.array().items(Joi.string().uuid()).min(1)),
   managerIds: Joi.alternatives().try(Joi.string().uuid(), Joi.array().items(Joi.string().uuid()).min(1)),
   probationPeriod: Joi.boolean(),
@@ -59,6 +60,7 @@ exports.createEmployeeSchema = Joi.object({
   role: Joi.string()
     .valid("EMPLOYEE", "QA", "EA", "COORDINATOR", "MANAGER", "HR")
     .default("EMPLOYEE"),
+  roles: Joi.array().items(Joi.string().valid("EMPLOYEE", "QA", "EA", "COORDINATOR", "MANAGER", "HR")).min(1),
 
   department: Joi.alternatives()
     .try(
@@ -126,6 +128,7 @@ exports.updateEmployeeSchema =
       "EA",
       "COORDINATOR"
     ),
+    roles: Joi.array().items(Joi.string().valid("EMPLOYEE", "MANAGER", "HR", "QA", "EA", "COORDINATOR")).min(1),
     probationPeriod: Joi.boolean(),
   });
 

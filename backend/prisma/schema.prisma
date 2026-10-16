@@ -1054,6 +1054,7 @@ model User {
   email                       String                         @unique
   password                    String
   role                        Role
+  roles                       Role[]                         @default([])
   position                    String?
   managerId                   String?
   probationPeriod             Boolean                        @default(true)

@@ -40,6 +40,7 @@ exports.login = async (data) => {
 
   // Expose all departments as a clean array for multi-department managers
   user.departments = allDepartments.length > 0 ? allDepartments : (user.department ? [user.department] : []);
+  user.roles = user.roles?.length ? user.roles : [user.role];
   
   // Clean up raw junction data
   delete user.userDepartments;
