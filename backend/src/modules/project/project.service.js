@@ -612,6 +612,72 @@ exports.getProjectById = async (user, projectId) => {
   return formatProject(project);
 };
 
+const assertPendingItemProjectAccess = async (user, projectId) => {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      assignments: { select: { managerId: true } },
+    },
+  });
+
+  if (!project) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Project not found.",
+    });
+  }
+
+  const userRoles = user.roles?.length ? user.roles : [user.role];
+  const isManager = userRoles.includes("MANAGER");
+  const isAdmin = userRoles.includes("ADMIN");
+  const canViewProject = userRoles.some((role) =>
+    ["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE", "QA"].includes(role)
+  );
+
+  if (!isManager && !canViewProject) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  if (!isAdmin && isManager && !project.assignments.some((item) => item.managerId === user.id)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  return project;
+};
+
+exports.getPendingItems = async (user, projectId) => {
+  await assertPendingItemProjectAccess(user, projectId);
+
+  return prisma.projectPendingItem.findMany({
+    where: { projectId },
+    orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+    include: {
+      createdBy: {
+        select: { id: true, name: true, employeeId: true },
+      },
+    },
+  });
+};
+
+exports.createPendingItem = async (user, projectId, body) => {
+  await assertPendingItemProjectAccess(user, projectId);
+
+  return prisma.projectPendingItem.create({
+    data: {
+      projectId,
+      createdById: user.id,
+      dueDate: new Date(body.dueDate),
+      note: body.note.trim(),
+    },
+    include: {
+      createdBy: {
+        select: { id: true, name: true, employeeId: true },
+      },
+    },
+  });
+};
+
 exports.updateProject = async (user, projectId, body) => {
   if (!["ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);

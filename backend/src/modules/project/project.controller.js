@@ -84,6 +84,24 @@ exports.getProjectById = async (req, res, next) => {
   }
 };
 
+exports.getPendingItems = async (req, res, next) => {
+  try {
+    const data = await service.getPendingItems(req.user, req.params.id);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.createPendingItem = async (req, res, next) => {
+  try {
+    const data = await service.createPendingItem(req.user, req.params.id, req.body);
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.updateProject = async (req, res, next) => {
   try {
     req.body = req.body || {};

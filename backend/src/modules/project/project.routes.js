@@ -13,6 +13,7 @@ const {
   updateProjectLogoSchema,
   renewProjectSchema,
 } = require("./project.validation");
+const { createPendingItemSchema } = require("./pending.validation");
 
 router.post(
   "/",
@@ -26,6 +27,16 @@ router.post(
 router.get("/", auth, controller.getProjects);
 
 router.get("/assigned", auth, role("MANAGER"), controller.getAssignedProjects);
+
+router.get("/:id/pending-items", auth, controller.getPendingItems);
+
+router.post(
+  "/:id/pending-items",
+  auth,
+  role("MANAGER", "ADMIN"),
+  validate(createPendingItemSchema),
+  controller.createPendingItem
+);
 
 router.get("/:id", auth, controller.getProjectById);
 

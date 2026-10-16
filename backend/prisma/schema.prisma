@@ -584,6 +584,7 @@ model Project {
   whatsappMessages           WhatsappMessage[]           @relation("ProjectWhatsappMessages")
   campaigns                  Campaign[]
   shootWorkspaces            ShootWorkspace[]
+  pendingItems               ProjectPendingItem[]
 }
 
 model ProjectAssignment {
@@ -619,6 +620,21 @@ model ProjectDailyReport {
 
   @@index([projectId])
   @@index([employeeId])
+}
+
+model ProjectPendingItem {
+  id          String   @id @default(uuid())
+  projectId   String
+  createdById String
+  dueDate     DateTime
+  note        String
+  createdAt   DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("CreatedProjectPendingItems", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([projectId, dueDate])
+  @@index([createdById])
 }
 
 model ProjectMonthlySheet {
@@ -1074,6 +1090,7 @@ model User {
   projectAssignments          ProjectAssignment[]            @relation("ProjectAssignmentManager")
   createdProjects             Project[]                      @relation("CreatedProjects")
   createdProjectMonthlySheets ProjectMonthlySheet[]          @relation("CreatedProjectMonthlySheets")
+  createdProjectPendingItems  ProjectPendingItem[]           @relation("CreatedProjectPendingItems")
   createdShootWorkspaces      ShootWorkspace[]               @relation("UserCreatedShootWorkspaces")
   createdShootTasks           ShootTask[]                    @relation("UserCreatedShootTasks")
   shootTaskAssignments        ShootTaskAssignment[]          @relation("UserShootTaskAssignments")
