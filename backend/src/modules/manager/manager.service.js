@@ -284,66 +284,81 @@ exports.getManagerLogoutStatus = async (user) => {
       unableToSubmitReason: pa.project.marketingReports[0]?.unableToSubmitReason || null,
     }));
 
-  // ─── 3. Weekly Voice Reports (Only on Saturday) ──────────────────────────
-  let pendingWeeklyVoiceReports = [];
-  const isSaturday = start.getDay() === 6; // 6 is Saturday
+  // ─── 3. Weekly Voice Reports (Weekly obligation for all active projects) ──
+  const getWeekNumber = (date = new Date()) => {
+    const startOfYear = new Date(date.getFullYear(), 0, 1);
+    const diffDays = Math.floor((date - startOfYear) / (24 * 60 * 60 * 1000));
+    return Math.floor(diffDays / 7) + 1;
+  };
 
-  if (isSaturday) {
-    const now = new Date();
-    const startDate = new Date(now.getFullYear(), 0, 1);
-    const days = Math.floor((now - startDate) / (24 * 60 * 60 * 1000));
-    const weekNumber = Math.ceil(days / 7);
-    const year = now.getFullYear();
+  const now = new Date();
+  const weekNumber = getWeekNumber(now);
+  const year = now.getFullYear();
 
-    // Get all active projects assigned to this manager
-    const activeProjectAssignments = await prisma.projectAssignment.findMany({
-      where: {
-        managerId: user.id,
-        project: {
-          OR: [
-            { isRunning: true },
-            { status: "ONGOING" }
-          ]
-        },
+  // Get all active projects assigned to this manager across all departments (Marketing, SEO, Social Media)
+  const activeProjectAssignments = await prisma.projectAssignment.findMany({
+    where: {
+      managerId: user.id,
+      project: {
+        OR: [
+          { isRunning: true },
+          { status: "ONGOING" }
+        ]
       },
-      include: {
-        project: {
-          include: {
-            department: true
-          }
+    },
+    include: {
+      project: {
+        include: {
+          department: true
         }
       }
-    });
+    }
+  });
 
-    // Find reports they have already submitted this week
-    const submittedReports = await prisma.weeklyVoiceReport.findMany({
-      where: {
-        managerId: user.id,
-        weekNumber,
-        year
-      }
-    });
+  // Find reports they have already submitted this week that are not rejected
+  const submittedReports = await prisma.weeklyVoiceReport.findMany({
+    where: {
+      managerId: user.id,
+      weekNumber,
+      year,
+      qaStatus: { not: "REJECTED" }
+    }
+  });
 
-    const submittedClientIds = new Set();
-    submittedReports.forEach(r => {
-      // Depending on how JSON is returned by Prisma (string vs object)
-      const clientsObj = typeof r.clients === 'string' ? JSON.parse(r.clients) : r.clients;
-      if (Array.isArray(clientsObj)) {
-        clientsObj.forEach(c => submittedClientIds.add(String(c.id)));
-      } else if (clientsObj && clientsObj.id) {
-        submittedClientIds.add(String(clientsObj.id));
-      }
-    });
+  const submittedClientIds = new Set();
+  submittedReports.forEach(r => {
+    // Depending on how JSON is returned by Prisma (string vs object)
+    const clientsObj = typeof r.clients === 'string' ? JSON.parse(r.clients) : r.clients;
+    if (Array.isArray(clientsObj)) {
+      clientsObj.forEach(c => {
+        if (c?.id) submittedClientIds.add(String(c.id));
+      });
+    } else if (clientsObj && clientsObj.id) {
+      submittedClientIds.add(String(clientsObj.id));
+    }
+  });
 
-    pendingWeeklyVoiceReports = activeProjectAssignments
-      .filter(pa => !submittedClientIds.has(String(pa.projectId)))
-      .map(pa => ({
-        projectId: pa.projectId,
-        projectName: pa.project.projectName || pa.project.clientName,
-        clientName: pa.project.clientName,
-        department: pa.project.department?.name || "Marketing",
-      }));
-  }
+  const normalizeDept = (deptName) => {
+    const lower = String(deptName || "").toLowerCase().trim();
+    if (lower.includes("seo")) return "SEO";
+    if (lower.includes("social") || lower.includes("smm")) return "Social Media";
+    return "Marketing";
+  };
+
+  const pendingWeeklyVoiceReports = activeProjectAssignments
+    .filter(pa => !submittedClientIds.has(String(pa.projectId)))
+    .map(pa => ({
+      projectId: pa.projectId,
+      projectName: pa.project.projectName || pa.project.clientName,
+      clientName: pa.project.clientName,
+      department: normalizeDept(pa.project.department?.name),
+      departmentName: pa.project.department?.name || "Marketing",
+      weekNumber,
+      year,
+      status: "PENDING",
+      workDate: now.toISOString(),
+      date: now.toISOString().slice(0, 10),
+    }));
 
   // ─── 4. Content Calendar Uploads (Pending Uploads for Today) ─────────────
   const uploadsSheets = await prisma.projectMonthlySheet.findMany({
