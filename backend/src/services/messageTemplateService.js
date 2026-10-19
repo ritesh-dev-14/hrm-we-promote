@@ -14,7 +14,7 @@ const { formatPhoneNumber } = require('./whatsappService');
  * @param {string} projectId
  * @param {Date}   date
  */
-exports.generateDailyClientMessage = async (projectId, date = new Date()) => {
+exports.generateDailyClientMessage = async (projectId, date = new Date(), { requireValidPhone = true } = {}) => {
   try {
     // ── 1. Fetch project ───────────────────────────────────────────────────────
     const project = await prisma.project.findUnique({
@@ -31,14 +31,6 @@ exports.generateDailyClientMessage = async (projectId, date = new Date()) => {
       });
     }
 
-    const clientPhoneNumber = formatPhoneNumber(project.phone);
-    if (!clientPhoneNumber) {
-      throw new ApiError(400, {
-        code: 'CLIENT_PHONE_MISSING',
-        message: `Client phone number is invalid or not configured for project: ${project.projectName}. Received: "${project.phone || ''}"`,
-      });
-    }
-
     // ── 2. Date helpers ────────────────────────────────────────────────────────
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
@@ -49,6 +41,24 @@ exports.generateDailyClientMessage = async (projectId, date = new Date()) => {
     const deptName = (project.department?.name || '').toLowerCase();
     const isSocialMedia = deptName.includes('social media');
     const isMarketing   = deptName.includes('marketing');
+    const isSeo = deptName.includes('seo');
+    const seoReport = isSeo
+      ? await prisma.seoReport.findFirst({
+        where: { projectId, clientContactNumber: { not: null } },
+        orderBy: { checkDate: 'desc' },
+        select: { clientContactNumber: true, checkDate: true },
+      })
+      : null;
+    const clientPhone = isSeo
+      ? seoReport?.clientContactNumber || project.phone
+      : project.phone;
+    const clientPhoneNumber = formatPhoneNumber(clientPhone);
+    if (requireValidPhone && !clientPhoneNumber) {
+      throw new ApiError(400, {
+        code: 'CLIENT_PHONE_MISSING',
+        message: `Client phone number is invalid or not configured for project: ${project.projectName}. Received: "${clientPhone || ''}"`,
+      });
+    }
 
     // ── 3. Fetch Social Media data ─────────────────────────────────────────────
     let monthlySheetDay = null;
@@ -91,23 +101,27 @@ exports.generateDailyClientMessage = async (projectId, date = new Date()) => {
       });
     }
 
+    const pendingItems = await prisma.projectPendingItem.findMany({
+      where: { projectId },
+      select: { dueDate: true, note: true },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+    });
+
     // ── 5. Build message ───────────────────────────────────────────────────────
     const messageBody = buildMessage({
       projectName:    project.projectName,
       clientName:     project.clientName || 'Valued Client',
-      departmentName: project.department?.name || '',
-      isSocialMedia,
       isMarketing,
-      monthlySheetDay,
-      todayUploads,
       marketingReport,
-      date,
+      pendingItems,
+      date: isSeo ? seoReport?.checkDate || date : date,
     });
 
     return {
       messageBody,
       projectId,
       clientPhoneNumber,
+      clientPhone: clientPhone || null,
       clientName:     project.clientName || project.projectName,
       departmentType: project.department?.name || 'UNKNOWN',
       templateType:   'DAILY_CLIENT_REPORT',
@@ -134,14 +148,10 @@ exports.generateDailyClientMessage = async (projectId, date = new Date()) => {
  * Build the full WhatsApp message string.
  */
 function buildMessage({
-  projectName,
   clientName,
-  departmentName,
-  isSocialMedia,
   isMarketing,
-  monthlySheetDay,
-  todayUploads,
   marketingReport,
+  pendingItems,
   date,
 }) {
   const divider = '━━━━━━━━━━━━━━━━━━━━';
@@ -153,25 +163,10 @@ function buildMessage({
 
   const lastUpdateDate = new Date(date);
   const dateStr = lastUpdateDate.toLocaleDateString('en-IN', {
-    day: '2-digit',
+    day: 'numeric',
     month: 'long',
     year: 'numeric'
   });
-
-  // Recent content
-  let recentContent = '';
-  if (todayUploads && todayUploads.length > 0) {
-    const allItems = todayUploads.flatMap(u => u.items || []);
-    if (allItems.length > 0) {
-      recentContent = allItems.map(item => `- ${item.dataType} ${item.platform ? `(${item.platform})` : ''}`).join('\n');
-    }
-  }
-
-  // Next expected
-  let nextExpected = '';
-  if (monthlySheetDay && monthlySheetDay.title) {
-    nextExpected = `- ${monthlySheetDay.title} (${monthlySheetDay.postType || 'Post'})`;
-  }
 
   let msg = `Hello ${clientName},
 
@@ -183,19 +178,18 @@ Leads Obtained: ${leads}
 
 ${divider}
 
-🌐 SEO REPORT
-
-Last Update: ${dateStr}
-Next Update: Monday
+🌐 SEO REPORT :${dateStr}
 
 ${divider}
-Recent content posted 
-${recentContent}
-
-next expected content posted 
-${nextExpected}
-
-pending task from your side
+📌 PENDING FROM YOUR SIDE
+${pendingItems.length
+    ? pendingItems.map((item) => `• ${new Date(item.dueDate).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    })} — ${item.note}`).join('\n')
+    : '• None'}
 
 ${divider}
 
@@ -222,25 +216,28 @@ function formatDate(date) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Get all projects that should receive WhatsApp messaging.
+ * Get all projects with client contacts configured for messaging.
  * @returns {Promise<Array>}
  */
-exports.getMessagingEnabledProjects = async () => {
+exports.getMessagingEnabledProjects = async (managerId = null) => {
   try {
     const projects = await prisma.project.findMany({
       where: {
-        phone: { not: null },
-        OR: [
+        AND: [
           {
-            department: {
-              name: { contains: 'social media', mode: 'insensitive' },
-            },
+            OR: [
+              { department: { name: { contains: 'social media', mode: 'insensitive' } } },
+              { department: { name: { contains: 'marketing', mode: 'insensitive' } } },
+              { department: { name: { contains: 'seo', mode: 'insensitive' } } },
+            ],
           },
           {
-            department: {
-              name: { contains: 'marketing', mode: 'insensitive' },
-            },
+            OR: [
+              { phone: { not: null } },
+              { seoReports: { some: { clientContactNumber: { not: null } } } },
+            ],
           },
+          ...(managerId ? [{ assignments: { some: { managerId } } }] : []),
         ],
       },
       include: {

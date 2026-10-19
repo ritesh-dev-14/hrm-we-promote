@@ -566,6 +566,7 @@ model Project {
   seoContact          String?
   gmbStatus           String?
   clientPriority      ClientPriority?
+  pendingClientTaskText String?
   createdById         String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

@@ -5,6 +5,205 @@ const dailyMessagingJob = require('../../jobs/dailyClientMessagesJob');
 const ApiError = require('../../utils/ApiError');
 const ERRORS = require('../../utils/errors');
 const prisma = require('../../config/prisma');
+const dailyReportService = require('../daily-report/daily-report.service');
+
+const normalizePhoneKey = (phone) => {
+  let digits = String(phone || '').replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.startsWith('91') && [12, 13].includes(digits.length)) digits = digits.slice(2);
+  if (digits.startsWith('0') && digits.length === 11) digits = digits.slice(1);
+  return digits;
+};
+
+function formatCombinedClientMessage(group, date) {
+  const divider = '━━━━━━━━━━━━━━━━━━━━';
+  const marketingReports = group.marketing.filter((entry) => entry.report.hasReport);
+  const totalSpend = marketingReports.reduce((sum, entry) => sum + Number(entry.report.todayAmountSpend || 0), 0);
+  const totalReach = marketingReports.reduce((sum, entry) => sum + Number(entry.report.todayReachObtained || 0), 0);
+  const totalLeads = marketingReports.reduce((sum, entry) => sum + Number(entry.report.leadObtained || 0), 0);
+  const dateText = new Date(date).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  });
+  const clientName = group.projects.find((project) => project.clientName)?.clientName ||
+    group.projects[0]?.projectName || 'Client';
+  const lines = [
+    `Hello ${clientName},`,
+    '',
+    'Here is your complete daily report from We Promote.',
+    '',
+    `Yesterday add spent: ₹${totalSpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `Reach: ${totalReach.toLocaleString('en-IN')}`,
+    `Leads Obtained: ${totalLeads.toLocaleString('en-IN')}`,
+    '',
+    divider,
+  ];
+
+  if (group.seo.length) {
+    lines.push('', `🌐 SEO REPORT :${dateText}`, '');
+    for (const { projectName, report } of group.seo) {
+      lines.push(`Project: ${projectName}`);
+      if (!report.hasReport) lines.push('No SEO report submitted today.');
+      else {
+        if (report.keywords?.length) lines.push(`Keywords: ${report.keywords.join(', ')}`);
+        if (report.rankingNo != null) lines.push(`Ranking: #${report.rankingNo}`);
+        if (report.remarks) lines.push(`Remarks: ${report.remarks}`);
+      }
+      lines.push('');
+    }
+    lines.push(divider);
+  }
+
+  if (group.marketing.length) {
+    lines.push('', '📊 META ADS REPORT', '');
+    for (const { projectName, report } of group.marketing) {
+      lines.push(`Project: ${projectName}`);
+      if (!report.hasReport) lines.push('No Meta Ads report submitted today.');
+      else {
+        if (report.typeOfAds) lines.push(`Platform: ${report.typeOfAds}`);
+        if (report.areaName) lines.push(`Target Area: ${report.areaName}`);
+        if (report.isAdRunning != null) lines.push(`Campaign Status: ${report.isAdRunning ? 'Running' : 'Not running'}`);
+        lines.push(`Spend: ₹${Number(report.todayAmountSpend || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        lines.push(`Reach: ${Number(report.todayReachObtained || 0).toLocaleString('en-IN')}`);
+        lines.push(`Leads: ${Number(report.leadObtained || 0).toLocaleString('en-IN')}`);
+      }
+      lines.push('');
+    }
+    lines.push(divider);
+  }
+
+  if (group.socialMedia.length) {
+    lines.push('', '📱 SOCIAL MEDIA REPORT', '');
+    for (const { projectName, contentCalendar, uploads } of group.socialMedia) {
+      lines.push(`Project: ${projectName}`);
+      if (contentCalendar.hasEntry) {
+        if (contentCalendar.contentType) lines.push(`Content Type: ${contentCalendar.contentType}`);
+        if (contentCalendar.title) lines.push(`Content: ${contentCalendar.title}`);
+        if (contentCalendar.uploadStatus) lines.push(`Status: ${contentCalendar.uploadStatus}`);
+      } else {
+        lines.push('No content scheduled today.');
+      }
+      const items = (uploads.records || []).flatMap((record) => record.items || []);
+      lines.push(items.length
+        ? `Recent content posted: ${items.map((item) => `${item.dataType}${item.platform ? ` (${item.platform})` : ''}`).join(', ')}`
+        : 'Recent content posted: None');
+      lines.push('');
+    }
+    lines.push(divider);
+  }
+
+  const pendingTasks = [...new Map(group.pendingItems.map((item) => [
+    `${item.dueDate.toISOString().slice(0, 10)}:${item.note.trim()}`,
+    `${new Date(item.dueDate).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    })} — ${item.note.trim()}`,
+  ])).values()];
+  lines.push('', '📌 PENDING FROM YOUR SIDE');
+  if (pendingTasks.length) {
+    pendingTasks.forEach((task) => lines.push(`• ${task}`));
+  } else {
+    lines.push('• None');
+  }
+  lines.push('', divider, '', 'Thank you for choosing We Promote');
+  return lines.join('\n');
+}
+
+/**
+ * GET /api/whatsapp-messages/previews
+ * Generate one client-ready message per normalized client phone number.
+ */
+exports.getMessagePreviews = async (req, res, next) => {
+  try {
+    const roles = (req.user.roles?.length ? req.user.roles : [req.user.role])
+      .map((role) => String(role).toUpperCase());
+    const role = roles.includes('ADMIN') ? 'ADMIN' : roles.includes('HR') ? 'HR' : 'MANAGER';
+    const today = new Date().toISOString().slice(0, 10);
+    const report = await dailyReportService.getDailyReport(
+      { ...req.user, role },
+      { date: today, department: 'all' }
+    );
+
+    const groups = new Map();
+    for (const [department, entries] of [
+      ['seo', report.seo],
+      ['marketing', report.marketing],
+      ['socialMedia', report.socialMedia],
+    ]) {
+      for (const entry of entries) {
+        const phone = entry.clientContactNumber || entry.report?.clientContactNumber || null;
+        const phoneKey = normalizePhoneKey(phone);
+        const groupId = phoneKey ? `phone:${phoneKey}` : `project:${entry.projectId}`;
+        if (!groups.has(groupId)) {
+          groups.set(groupId, {
+            groupId,
+            clientPhone: phone,
+            isClientPhoneValid: Boolean(whatsappService.formatPhoneNumber(phone)),
+            projects: [],
+            pendingItems: [],
+            managerNames: new Set(),
+            seo: [],
+            marketing: [],
+            socialMedia: [],
+          });
+        }
+        const group = groups.get(groupId);
+        if (!group.clientPhone && phone) group.clientPhone = phone;
+        group.isClientPhoneValid ||= Boolean(whatsappService.formatPhoneNumber(phone));
+        group.projects.push({
+          id: entry.projectId,
+          projectName: entry.projectName,
+          clientName: entry.clientName || entry.report?.clientName || null,
+        });
+        entry.managers.forEach((manager) => group.managerNames.add(manager));
+        group[department].push(entry);
+      }
+    }
+
+    const grouped = [...groups.values()];
+    const allProjectIds = [...new Set(grouped.flatMap((group) => group.projects.map((project) => project.id)))];
+    const pendingItems = allProjectIds.length
+      ? await prisma.projectPendingItem.findMany({
+        where: { projectId: { in: allProjectIds } },
+        select: { projectId: true, dueDate: true, note: true },
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+      })
+      : [];
+    const pendingItemsByProject = new Map();
+    pendingItems.forEach((item) => {
+      const items = pendingItemsByProject.get(item.projectId) || [];
+      items.push(item);
+      pendingItemsByProject.set(item.projectId, items);
+    });
+    const data = grouped.map((group) => {
+      group.projects.forEach((project) => {
+        group.pendingItems.push(...(pendingItemsByProject.get(project.id) || []));
+      });
+      const reportEntries = [...group.seo, ...group.marketing, ...group.socialMedia];
+      return {
+        groupId: group.groupId,
+        projectIds: [...new Set(group.projects.map((project) => project.id))],
+        projectNames: [...new Set(group.projects.map((project) => project.projectName))],
+        clientName: group.projects.find((project) => project.clientName)?.clientName ||
+          group.projects[0]?.projectName || 'Client',
+        clientPhone: group.clientPhone,
+        isClientPhoneValid: group.isClientPhoneValid,
+        departmentNames: [...new Set(reportEntries.map((entry) => entry.department))],
+        managerNames: [...group.managerNames],
+        projects: group.projects,
+        messageBody: formatCombinedClientMessage(group, today),
+      };
+    });
+
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
  * GET /api/whatsapp-messages

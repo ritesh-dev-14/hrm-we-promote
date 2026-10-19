@@ -147,6 +147,7 @@ async function getSeoReport(projects, startOfDay, endOfDay) {
       projectId: project.id,
       projectName: project.projectName,
       clientName: project.clientName || null,
+      clientContactNumber: report?.clientContactNumber || project.phone || null,
       department: project.department?.name || 'SEO',
       managers,
       report: {
@@ -194,6 +195,7 @@ async function getMarketingReport(projects, startOfDay, endOfDay) {
       projectId: project.id,
       projectName: project.projectName,
       clientName: project.clientName || null,
+      clientContactNumber: report?.clientContactNumber || project.phone || null,
       department: project.department?.name || 'Marketing',
       managers,
       report: {
