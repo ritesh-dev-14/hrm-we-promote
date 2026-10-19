@@ -93,6 +93,15 @@ exports.getPendingItems = async (req, res, next) => {
   }
 };
 
+exports.getAssignedClientPendingOverview = async (req, res, next) => {
+  try {
+    const data = await service.getAssignedClientPendingOverview(req.user, req.query.department);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createPendingItem = async (req, res, next) => {
   try {
     const data = await service.createPendingItem(req.user, req.params.id, req.body);

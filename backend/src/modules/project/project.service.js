@@ -504,7 +504,8 @@ exports.getProjects = async (user, query = {}) => {
 };
 
 exports.getAssignedProjects = async (user, query = {}) => {
-  if (user.role !== "MANAGER") {
+  const userRoles = user.roles?.length ? user.roles : [user.role];
+  if (!userRoles.includes("MANAGER")) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -657,6 +658,50 @@ exports.getPendingItems = async (user, projectId) => {
         select: { id: true, name: true, employeeId: true },
       },
     },
+  });
+};
+
+exports.getAssignedClientPendingOverview = async (user, department) => {
+  const userRoles = user.roles?.length ? user.roles : [user.role];
+  if (!userRoles.includes("MANAGER")) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const departmentFilters = {
+    seo: ["seo"],
+    marketing: ["marketing", "meta"],
+    social: ["social media", "social"],
+  };
+  const filters = departmentFilters[department];
+  if (!filters) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "department must be seo, marketing, or social.",
+    });
+  }
+
+  return prisma.project.findMany({
+    where: {
+      assignments: { some: { managerId: user.id } },
+      OR: filters.map((name) => ({
+        department: { name: { contains: name, mode: "insensitive" } },
+      })),
+    },
+    select: {
+      id: true,
+      projectName: true,
+      clientName: true,
+      department: { select: { name: true } },
+      pendingItems: {
+        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+        include: {
+          createdBy: {
+            select: { id: true, name: true, employeeId: true },
+          },
+        },
+      },
+    },
+    orderBy: { projectName: "asc" },
   });
 };
 

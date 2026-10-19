@@ -12,7 +12,7 @@ const {
 
 const router = express.Router();
 
-// Middleware: Authentication required for all routes
+// Middleware: Authentication required for all routesl̥
 router.use(authenticate);
 
 router.get('/previews', authorize('ADMIN', 'HR', 'MANAGER'), getMessagePreviews);
