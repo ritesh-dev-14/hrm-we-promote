@@ -705,6 +705,84 @@ exports.getAssignedClientPendingOverview = async (user, department) => {
   });
 };
 
+exports.getClientConversation = async (user, projectId) => {
+  const userRoles = user.roles?.length ? user.roles : [user.role];
+  if (!userRoles.includes("ADMIN")) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      department: { select: { id: true, name: true } },
+      pendingItems: {
+        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+        include: {
+          createdBy: { select: { id: true, name: true, employeeId: true } },
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Project not found.",
+    });
+  }
+
+  const departmentName = project.department.name.toLowerCase();
+  const voiceDepartment = departmentName.includes("seo")
+    ? "SEO"
+    : departmentName.includes("social") || departmentName.includes("smm")
+      ? "Social Media"
+      : departmentName.includes("marketing") || departmentName.includes("meta") || departmentName.includes("ads")
+        ? "Marketing"
+        : null;
+  const candidateReports = voiceDepartment
+    ? await prisma.weeklyVoiceReport.findMany({
+      where: {
+        department: voiceDepartment,
+        reportType: "VOICE",
+        audioUrl: { not: null },
+      },
+      include: {
+        manager: { select: { id: true, name: true, email: true, employeeId: true } },
+      },
+      orderBy: [{ year: "desc" }, { weekNumber: "desc" }, { createdAt: "desc" }],
+    })
+    : [];
+
+  const voiceReports = candidateReports.filter((report) => {
+    const clients = Array.isArray(report.clients)
+      ? report.clients
+      : typeof report.clients === "string"
+        ? JSON.parse(report.clients)
+        : [];
+    return clients.some((client) => String(client?.id) === String(projectId));
+  }).map((report) => ({
+    id: report.id,
+    audioUrl: report.audioUrl,
+    weekNumber: report.weekNumber,
+    year: report.year,
+    reportDate: report.reportDate,
+    submittedAt: report.updatedAt || report.createdAt,
+    status: report.status,
+    manager: report.manager,
+  }));
+
+  return {
+    project: {
+      id: project.id,
+      projectName: project.projectName,
+      clientName: project.clientName,
+      department: project.department,
+    },
+    voiceReports,
+    pendingItems: project.pendingItems,
+  };
+};
+
 exports.createPendingItem = async (user, projectId, body) => {
   await assertPendingItemProjectAccess(user, projectId);
 

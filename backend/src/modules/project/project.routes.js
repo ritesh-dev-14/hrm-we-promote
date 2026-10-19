@@ -30,6 +30,8 @@ router.get("/assigned", auth, role("MANAGER"), controller.getAssignedProjects);
 
 router.get("/client-pending", auth, role("MANAGER"), controller.getAssignedClientPendingOverview);
 
+router.get("/:id/client-conversation", auth, role("ADMIN"), controller.getClientConversation);
+
 router.get("/:id/pending-items", auth, controller.getPendingItems);
 
 router.post(
