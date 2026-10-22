@@ -38,16 +38,42 @@ async function computeProjectHealth(projectId) {
   let score = 100;
   const breakdown = {};
 
-  // ── 1. Overdue TaskItems ─────────────────────────────────────────
-  const overdueTaskItems = await prisma.taskItem.count({
-    where: {
-      task: { projectId },
-      dueDate: { lt: now },
-      status: {
-        notIn: ["COMPLETED", "VERIFIED", "UNABLE_TO_SUBMIT"],
+  const threeDaysAgo = new Date(now.getTime() - 3 * DAY_MS);
+  const [overdueTaskItems, pendingOldApprovals, lastMsg, project] = await Promise.all([
+    prisma.taskItem.count({
+      where: {
+        task: { projectId },
+        dueDate: { lt: now },
+        status: {
+          notIn: ["COMPLETED", "VERIFIED", "UNABLE_TO_SUBMIT"],
+        },
       },
-    },
-  });
+    }),
+    prisma.taskItem.count({
+      where: {
+        task: { projectId },
+        clientApproved: false,
+        status: "VERIFIED",
+        assignments: {
+          some: {
+            verifiedAt: { lt: threeDaysAgo },
+          },
+        },
+      },
+    }),
+    prisma.whatsappMessage.findFirst({
+      where: {
+        projectId,
+        status: { in: ["SENT", "DELIVERED", "READ"] },
+      },
+      orderBy: { sentAt: "desc" },
+      select: { sentAt: true },
+    }),
+    prisma.project.findUnique({
+      where: { id: projectId },
+      select: { renewalDate: true },
+    }),
+  ]);
 
   breakdown.overdueTaskItems = overdueTaskItems;
 
@@ -55,38 +81,12 @@ async function computeProjectHealth(projectId) {
   else if (overdueTaskItems >= 3) score -= 25;
   else if (overdueTaskItems >= 1) score -= 12;
 
-  // ── 2. Pending Client Approvals > 3 days ────────────────────────
-  const threeDaysAgo = new Date(now.getTime() - 3 * DAY_MS);
-
-  const pendingOldApprovals = await prisma.taskItem.count({
-    where: {
-      task: { projectId },
-      clientApproved: false,
-      status: "VERIFIED",
-      // items that were verified (sent to client) more than 3 days ago
-      assignments: {
-        some: {
-          verifiedAt: { lt: threeDaysAgo },
-        },
-      },
-    },
-  });
-
   breakdown.pendingOldApprovals = pendingOldApprovals;
 
   if (pendingOldApprovals >= 3) score -= 30;
   else if (pendingOldApprovals >= 1) score -= 15;
 
   // ── 3. Last Communication (WhatsApp) ────────────────────────────
-  const lastMsg = await prisma.whatsappMessage.findFirst({
-    where: {
-      projectId,
-      status: { in: ["SENT", "DELIVERED", "READ"] },
-    },
-    orderBy: { sentAt: "desc" },
-    select: { sentAt: true },
-  });
-
   const daysSinceLastComm = lastMsg?.sentAt
     ? daysBetween(new Date(lastMsg.sentAt), now)
     : 999; // never communicated
@@ -98,11 +98,6 @@ async function computeProjectHealth(projectId) {
   else if (daysSinceLastComm > 7) score -= 10;
 
   // ── 4. Renewal Status ───────────────────────────────────────────
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: { renewalDate: true },
-  });
-
   const daysUntilRenewal = project?.renewalDate
     ? daysBetween(now, new Date(project.renewalDate))
     : null;

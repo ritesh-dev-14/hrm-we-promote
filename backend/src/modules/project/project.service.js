@@ -463,7 +463,7 @@ exports.getProjects = async (user, query = {}) => {
     ...(isRunning !== undefined ? { isRunning: isRunning === "true" || isRunning === true } : {}),
   };
  
-  if (user.role === "MANAGER" && query.summary === "true") {
+  if (["ADMIN", "MANAGER"].includes(user.role) && query.summary === "true") {
     const [projects, total] = await Promise.all([
       prisma.project.findMany({
         where,
@@ -480,6 +480,7 @@ exports.getProjects = async (user, query = {}) => {
           area: true,
           fundsAddedBy: true,
           isRunning: true,
+          logo: true,
           status: true,
           department: {
             select: { id: true, name: true },

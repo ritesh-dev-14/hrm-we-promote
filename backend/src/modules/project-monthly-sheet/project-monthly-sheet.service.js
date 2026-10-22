@@ -296,7 +296,7 @@ exports.getProjectMonthlySheets = async (user, projectId) => {
   return sheets.map(formatSheet);
 };
 
-exports.getAllUploadCalendarSheets = async (user) => {
+exports.getAllUploadCalendarSheets = async (user, query = {}) => {
   const allowedRoles = ["ADMIN", "HR", "EA", "MANAGER", "EMPLOYEE", "COORDINATOR", "QA"];
   if (!user?.role || !allowedRoles.includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
@@ -305,6 +305,7 @@ exports.getAllUploadCalendarSheets = async (user) => {
   const projectAccess = user.role === "MANAGER"
     ? { assignments: { some: { managerId: user.id } } }
     : {};
+  const isSummary = query.summary === "true";
 
   const sheets = await prisma.projectMonthlySheet.findMany({
     where: {
@@ -320,7 +321,20 @@ exports.getAllUploadCalendarSheets = async (user) => {
       year: true,
       totalReels: true,
       totalPosts: true,
-      days: true,
+      days: isSummary
+        ? {
+            select: {
+              id: true,
+              date: true,
+              title: true,
+              reelType: true,
+              postType: true,
+              uploadStatus: true,
+              videoUploadLinks: true,
+              contentUploadLinks: true,
+            },
+          }
+        : true,
       project: {
         select: {
           projectName: true,

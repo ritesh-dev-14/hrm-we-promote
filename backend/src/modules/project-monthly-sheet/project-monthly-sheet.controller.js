@@ -11,7 +11,7 @@ exports.getSubmittedProjectIds = async (req, res, next) => {
 
 exports.getAllUploadCalendarSheets = async (req, res, next) => {
   try {
-    const data = await service.getAllUploadCalendarSheets(req.user);
+    const data = await service.getAllUploadCalendarSheets(req.user, req.query);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
