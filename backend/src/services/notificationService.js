@@ -1,5 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../config/prisma");
 const mailService = require("../modules/mail/mail.service");
 const managerTaskReminderTemplate = require("../modules/mail/templates/managerTaskReminder.template");
 const escalationAlertTemplate = require("../modules/mail/templates/escalationAlert.template");

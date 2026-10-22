@@ -1,10 +1,9 @@
 const express = require("express");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../../config/prisma");
 const escalationService = require("../../services/escalationService");
 const authMiddleware = require("../../middlewares/auth.middleware");
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 //
 // 🔥 GET ALL PENDING ESCALATIONS FOR CURRENT USER

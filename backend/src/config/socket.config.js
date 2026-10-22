@@ -1,8 +1,6 @@
 const { Server } = require("socket.io");
-const { PrismaClient } = require("@prisma/client");
 const { corsOptions } = require("./cors");
-
-const prisma = new PrismaClient();
+const prisma = require("./prisma");
 
 //
 // 🔥 SETUP SOCKET.IO FOR REAL-TIME NOTIFICATIONS

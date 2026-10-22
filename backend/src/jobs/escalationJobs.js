@@ -1,9 +1,7 @@
 const cron = require("node-cron");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../config/prisma");
 const escalationService = require("../services/escalationService");
 const notificationService = require("../services/notificationService");
-
-const prisma = new PrismaClient();
 
 //
 // 🔥 DAILY CHECK JOB - Runs at 12:59 AM
