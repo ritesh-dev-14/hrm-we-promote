@@ -6,6 +6,7 @@ exports.getControlTowerStats = async () => {
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
   const [
     overdueDeliverablesData,
@@ -70,9 +71,26 @@ exports.getControlTowerStats = async () => {
       select: { id: true, projectName: true, clientName: true, monthlyBudget: true },
     }),
     prisma.marketingReport.groupBy({
-      by: ["projectId"],
+      by: ["projectId", "date"],
       _sum: { todayAmountSpend: true },
-      where: { date: { gte: startOfMonth, lte: endOfMonth } },
+      where: {
+        date: { lt: startOfNextMonth },
+        project: {
+          status: "ONGOING",
+          department: {
+            name: {
+              in: [
+                "Social Media",
+                "Social Media Department",
+                "Marketing",
+                "Marketing Department",
+                "Meta Ads",
+                "Meta Ads Department",
+              ],
+            },
+          },
+        },
+      },
     }),
     prisma.user.findMany({
       where: {
@@ -122,19 +140,42 @@ exports.getControlTowerStats = async () => {
     };
   }).filter(p => p.amount > 0).sort((a, b) => b.amount - a.amount);
   
-  // ── Monthly Spent (MTD) ──
-  let totalMonthlySpent = 0;
-  const spentBreakdown = marketingReports.map(r => {
-    const spent = r._sum.todayAmountSpend || 0;
-    totalMonthlySpent += spent;
-    const project = marketingProjects.find(p => p.id === r.projectId);
+  const monthlySpendByProject = new Map();
+  marketingReports.forEach((report) => {
+    const date = new Date(report.date);
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const key = `${report.projectId}:${year}-${String(month).padStart(2, "0")}`;
+    const existing = monthlySpendByProject.get(key);
+    const amount = report._sum.todayAmountSpend || 0;
+    if (existing) {
+      existing.amount += amount;
+    } else {
+      monthlySpendByProject.set(key, { projectId: report.projectId, month, year, amount });
+    }
+  });
+  const monthlySpentBreakdown = [...monthlySpendByProject.values()];
+  const currentMonthSpend = monthlySpentBreakdown.filter(
+    (item) => item.year === now.getFullYear() && item.month === now.getMonth() + 1,
+  );
+  const totalMonthlySpent = currentMonthSpend.reduce((total, item) => total + item.amount, 0);
+  const spentBreakdown = currentMonthSpend.map((item) => {
+    const project = marketingProjects.find((candidate) => candidate.id === item.projectId);
     return {
-      projectId: r.projectId,
-      projectName: project ? project.projectName : 'Unknown',
-      clientName: project ? project.clientName : '',
-      amount: spent
+      projectId: item.projectId,
+      projectName: project ? project.projectName : "Unknown",
+      clientName: project ? project.clientName : "",
+      amount: item.amount,
     };
-  }).filter(p => p.amount > 0).sort((a, b) => b.amount - a.amount);
+  }).filter((item) => item.amount > 0).sort((a, b) => b.amount - a.amount);
+  const marketingProjectNames = new Map(marketingProjects.map((project) => [
+    project.id,
+    { projectName: project.projectName, clientName: project.clientName },
+  ]));
+  const monthlySpendBreakdown = monthlySpentBreakdown.map((item) => ({
+    ...item,
+    ...marketingProjectNames.get(item.projectId),
+  }));
 
   // ── 3. People (Editors) ──────────────────────────────────────────
   const editorsWithOverdue = editorsWithOverdueData.map(e => ({
@@ -160,7 +201,8 @@ exports.getControlTowerStats = async () => {
       totalMonthlyBudget,
       budgetBreakdown,
       totalMonthlySpent,
-      spentBreakdown
+      spentBreakdown,
+      monthlySpendBreakdown,
     },
     people: {
       editorsWithOverdueCount: editorsWithOverdue.length,
