@@ -462,6 +462,54 @@ exports.getProjects = async (user, query = {}) => {
     ...(status ? { status } : {}),
     ...(isRunning !== undefined ? { isRunning: isRunning === "true" || isRunning === true } : {}),
   };
+ 
+  if (user.role === "MANAGER" && query.summary === "true") {
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        where,
+        skip,
+        take,
+        select: {
+          id: true,
+          projectName: true,
+          clientName: true,
+          startDate: true,
+          endDate: true,
+          monthlyBudget: true,
+          objective: true,
+          area: true,
+          fundsAddedBy: true,
+          isRunning: true,
+          status: true,
+          department: {
+            select: { id: true, name: true },
+          },
+          createdBy: {
+            select: { id: true, employeeId: true, name: true },
+          },
+          assignments: {
+            select: {
+              manager: {
+                select: { id: true, name: true, employeeId: true },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.project.count({ where }),
+    ]);
+
+    return {
+      data: projects,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
+    };
+  }
 
   const [projects, total] = await Promise.all([
     prisma.project.findMany({
