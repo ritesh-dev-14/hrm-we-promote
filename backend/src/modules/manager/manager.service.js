@@ -426,109 +426,108 @@ exports.getManagerLogoutStatus = async (user) => {
 // 🔥 GET MANAGER DASHBOARD STATS
 //
 exports.getDashboardStats = async (user) => {
-  // Get all tasks (created by manager OR assigned to manager)
-  const tasks = await prisma.task.findMany({
-    where: {
-      OR: [
-        { createdById: user.id },
-        {
-          assignments: {
-            some: { userId: user.id },
+  const [tasks, employees] = await Promise.all([
+    prisma.task.findMany({
+      where: {
+        OR: [
+          { createdById: user.id },
+          {
+            assignments: {
+              some: { userId: user.id },
+            },
           },
-        },
-      ],
-    },
-    include: {
-      assignments: true,
-    },
-  });
+        ],
+      },
+      select: {
+        status: true,
+      },
+    }),
+    prisma.user.findMany({
+      where: {
+        role: "EMPLOYEE",
+        OR: [
+          { managerId: user.id },
+          {
+            employeeManagers: {
+              some: { managerId: user.id },
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        email: true,
+      },
+    }),
+  ]);
 
-  // Count tasks by status
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(
-    (t) => t.status === "COMPLETED"
-  ).length;
-  const inProgressTasks = tasks.filter(
-    (t) => t.status === "IN_PROGRESS"
-  ).length;
-  const draftTasks = tasks.filter(
-    (t) => t.status === "DRAFT"
-  ).length;
+  const completedTasks = tasks.filter((task) => task.status === "COMPLETED").length;
+  const inProgressTasks = tasks.filter((task) => task.status === "IN_PROGRESS").length;
+  const draftTasks = tasks.filter((task) => task.status === "DRAFT").length;
 
-  // Get employees under this manager
-  const employees = await prisma.user.findMany({
-    where: {
-      role: "EMPLOYEE",
-      OR: [
-        { managerId: user.id },
-        {
-          employeeManagers: {
-            some: { managerId: user.id },
+  const assignments = employees.length
+    ? await prisma.taskItemAssignment.findMany({
+        where: { userId: { in: employees.map((employee) => employee.id) } },
+        include: {
+          taskItem: {
+            select: {
+              title: true,
+              dueDate: true,
+            },
           },
         },
-      ],
-    },
-    select: {
-      id: true,
-      employeeId: true,
-      name: true,
-      email: true,
-    },
+      })
+    : [];
+
+  const assignmentsByEmployee = new Map(employees.map((employee) => [employee.id, []]));
+  assignments.forEach((assignment) => {
+    assignmentsByEmployee.get(assignment.userId)?.push(assignment);
   });
 
-  // For each employee, count their task assignments by status
-  const employeeStats = await Promise.all(
-    employees.map(async (emp) => {
-      const assignments = await prisma.taskItemAssignment.findMany({
-        where: { userId: emp.id },
-        include: { taskItem: true },
-      });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+  const employeeStats = employees.map((employee) => {
+    const employeeAssignments = assignmentsByEmployee.get(employee.id) || [];
+    let overdueTasksCount = 0;
+    let dueTodayTasksCount = 0;
 
-      let overdueTasks = [];
-      let dueTodayTasks = [];
+    employeeAssignments.forEach((assignment) => {
+      if (["COMPLETED", "VERIFIED"].includes(assignment.status) || !assignment.taskItem?.dueDate) {
+        return;
+      }
 
-      assignments.forEach((a) => {
-        if (['COMPLETED', 'VERIFIED'].includes(a.status)) return;
-        const dueDate = a.taskItem?.dueDate;
-        if (!dueDate) return;
+      const dueDate = new Date(assignment.taskItem.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-        const due = new Date(dueDate);
-        due.setHours(0, 0, 0, 0);
+      if (diffDays < 0) overdueTasksCount += 1;
+      if (diffDays === 0) dueTodayTasksCount += 1;
+    });
 
-        const diffTime = due.getTime() - today.getTime();
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) overdueTasks.push(a);
-        if (diffDays === 0) dueTodayTasks.push(a);
-      });
-
-      return {
-        id: emp.id,
-        employeeId: emp.employeeId,
-        name: emp.name,
-        email: emp.email,
-        totalTasksAssigned: assignments.length,
-        completedTasksCount: assignments.filter(
-          (a) => a.status === "COMPLETED" || a.status === "VERIFIED"
-        ).length,
-        inProgressTasksCount: assignments.filter(
-          (a) => a.status === "IN_PROGRESS" || a.status === "SUBMITTED"
-        ).length,
-        draftTasksCount: assignments.filter(
-          (a) => a.status === "ASSIGNED" || a.status === "PENDING" || a.status === "REJECTED" || a.status === "UNABLE_TO_SUBMIT"
-        ).length,
-        overdueTasksCount: overdueTasks.length,
-        dueTodayTasksCount: dueTodayTasks.length,
-        assignments: assignments.map(a => ({
-          ...a,
-          employee: { id: emp.id, name: emp.name }
-        }))
-      };
-    })
-  );
+    return {
+      ...employee,
+      totalTasksAssigned: employeeAssignments.length,
+      completedTasksCount: employeeAssignments.filter(
+        (assignment) => assignment.status === "COMPLETED" || assignment.status === "VERIFIED"
+      ).length,
+      inProgressTasksCount: employeeAssignments.filter(
+        (assignment) => assignment.status === "IN_PROGRESS" || assignment.status === "SUBMITTED"
+      ).length,
+      draftTasksCount: employeeAssignments.filter(
+        (assignment) => ["ASSIGNED", "PENDING", "REJECTED", "UNABLE_TO_SUBMIT"].includes(assignment.status)
+      ).length,
+      overdueTasksCount,
+      dueTodayTasksCount,
+      assignments: employeeAssignments.map((assignment) => ({
+        ...assignment,
+        employee: { id: employee.id, name: employee.name },
+      })),
+    };
+  });
 
   return {
     totalTasks,
