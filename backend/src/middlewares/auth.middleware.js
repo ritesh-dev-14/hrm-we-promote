@@ -18,9 +18,15 @@ module.exports = async (req, res, next) => {
     }
 
     const user = decoded.id
-      ? await prisma.user.findUnique({ where: { id: decoded.id } })
+      ? await prisma.user.findUnique({
+          where: { id: decoded.id },
+          select: { id: true, employeeId: true, role: true, roles: true },
+        })
       : decoded.employeeId
-        ? await prisma.user.findUnique({ where: { employeeId: decoded.employeeId } })
+        ? await prisma.user.findUnique({
+            where: { employeeId: decoded.employeeId },
+            select: { id: true, employeeId: true, role: true, roles: true },
+          })
         : null;
 
     if (!user) {

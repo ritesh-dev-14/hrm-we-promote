@@ -140,69 +140,160 @@ const getDayBounds = (date = new Date()) => {
 
 exports.getManagerLogoutStatus = async (user) => {
   const { start, end } = getDayBounds();
+  const DONE_STATUSES = ["VERIFIED", "COMPLETED"];
+  const getWeekNumber = (date = new Date()) => {
+    const startOfYear = new Date(date.getFullYear(), 0, 1);
+    const diffDays = Math.floor((date - startOfYear) / (24 * 60 * 60 * 1000));
+    return Math.floor(diffDays / 7) + 1;
+  };
+  const now = new Date();
+  const weekNumber = getWeekNumber(now);
+  const year = now.getFullYear();
 
-  // ─── 1. Pending EA/Coordinator-assigned tasks for today ───────────────────
-  const eaAssignments = await prisma.taskAssignment.findMany({
-    where: {
-      userId: user.id,
-      workDate: {
-        gte: start,
-        lt: end,
-      },
-      task: {
-        createdBy: {
-          role: { in: ["EA", "COORDINATOR"] },
+  // These checks do not depend on each other, so run their database reads together.
+  const [
+    eaAssignments,
+    eaCoordinatorAssignments,
+    projectAssignments,
+    activeProjectAssignments,
+    submittedReports,
+    uploadsSheets,
+  ] = await Promise.all([
+    prisma.taskAssignment.findMany({
+      where: {
+        userId: user.id,
+        workDate: { gte: start, lt: end },
+        status: { notIn: DONE_STATUSES },
+        task: {
+          createdBy: {
+            role: { in: ["EA", "COORDINATOR"] },
+          },
         },
       },
-    },
-    include: {
-      task: {
-        select: {
-          id: true,
-          projectName: true,
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              role: true,
+      select: {
+        id: true,
+        status: true,
+        workDate: true,
+        task: {
+          select: {
+            id: true,
+            projectName: true,
+            createdBy: {
+              select: { id: true, name: true, role: true },
             },
           },
         },
       },
-    },
-  });
-
-  // EA-created assignments use CoordinatorAssignment rather than the main
-  // TaskAssignment table. Include them in the same manager obligation list.
-  const eaCoordinatorAssignments = await prisma.coordinatorAssignment.findMany({
-    where: {
-      assignedToId: user.id,
-      completionDate: {
-        gte: start,
-        lt: end,
-      },
-      createdBy: {
-        role: { in: ["EA", "COORDINATOR"] },
-      },
-    },
-    include: {
-      task: {
-        select: {
-          id: true,
-          projectName: true,
+    }),
+    prisma.coordinatorAssignment.findMany({
+      where: {
+        assignedToId: user.id,
+        completionDate: { gte: start, lt: end },
+        status: { notIn: DONE_STATUSES },
+        createdBy: {
+          role: { in: ["EA", "COORDINATOR"] },
         },
       },
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-          role: true,
+      select: {
+        id: true,
+        status: true,
+        completionDate: true,
+        task: {
+          select: { id: true, projectName: true },
+        },
+        createdBy: {
+          select: { id: true, name: true, role: true },
         },
       },
-    },
-  });
+    }),
+    prisma.projectAssignment.findMany({
+      where: {
+        managerId: user.id,
+        project: {
+          department: {
+            name: { in: MARKETING_DEPARTMENTS },
+          },
+        },
+      },
+      select: {
+        project: {
+          select: {
+            id: true,
+            projectName: true,
+            clientName: true,
+            isRunning: true,
+            department: {
+              select: { id: true, name: true },
+            },
+            marketingReports: {
+              where: {
+                managerId: user.id,
+                date: { gte: start, lt: end },
+              },
+              select: {
+                id: true,
+                date: true,
+                approvalStatus: true,
+                unableToSubmitReason: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.projectAssignment.findMany({
+      where: {
+        managerId: user.id,
+        project: {
+          OR: [{ isRunning: true }, { status: "ONGOING" }],
+        },
+      },
+      select: {
+        projectId: true,
+        project: {
+          select: {
+            projectName: true,
+            clientName: true,
+            department: { select: { name: true } },
+          },
+        },
+      },
+    }),
+    prisma.weeklyVoiceReport.findMany({
+      where: {
+        managerId: user.id,
+        weekNumber,
+        year,
+        qaStatus: { not: "REJECTED" },
+      },
+      select: { clients: true },
+    }),
+    prisma.projectMonthlySheet.findMany({
+      where: {
+        project: {
+          assignments: { some: { managerId: user.id } },
+          department: {
+            name: { in: ["SEO", "Social Media", "Social Media Department"] },
+          },
+        },
+      },
+      select: {
+        id: true,
+        projectId: true,
+        days: {
+          where: {
+            date: { gte: start, lt: end },
+            uploadStatus: "PENDING",
+          },
+          select: { id: true, title: true },
+        },
+        project: {
+          select: { projectName: true, clientName: true },
+        },
+      },
+    }),
+  ]);
 
-  const DONE_STATUSES = ["VERIFIED", "COMPLETED"];
   const pendingEaTasks = [
     ...eaAssignments.map((assignment) => ({
       assignmentId: assignment.id,
@@ -224,50 +315,6 @@ exports.getManagerLogoutStatus = async (user) => {
     .filter((a) => !DONE_STATUSES.includes(a.status))
     .sort((a, b) => new Date(a.workDate) - new Date(b.workDate));
 
-  // ─── 2. Marketing projects assigned to this manager ──────────────────────
-  // Find all running Marketing Dept projects where manager is assigned
-  const projectAssignments = await prisma.projectAssignment.findMany({
-    where: {
-      managerId: user.id,
-      project: {
-        department: {
-          name: {
-            in: MARKETING_DEPARTMENTS,
-          },
-        },
-      },
-    },
-    include: {
-      project: {
-        select: {
-          id: true,
-          projectName: true,
-          clientName: true,
-          isRunning: true,
-          department: {
-            select: { id: true, name: true },
-          },
-          // Check today's marketing reports for this manager
-          marketingReports: {
-            where: {
-              managerId: user.id,
-              date: {
-                gte: start,
-                lt: end,
-              },
-            },
-            select: {
-              id: true,
-              date: true,
-              approvalStatus: true,
-              unableToSubmitReason: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
   const pendingMarketingReports = projectAssignments
     .filter((pa) => {
       const report = pa.project.marketingReports[0];
@@ -283,47 +330,6 @@ exports.getManagerLogoutStatus = async (user) => {
       reportStatus: pa.project.marketingReports[0]?.approvalStatus || "NOT_SUBMITTED",
       unableToSubmitReason: pa.project.marketingReports[0]?.unableToSubmitReason || null,
     }));
-
-  // ─── 3. Weekly Voice Reports (Weekly obligation for all active projects) ──
-  const getWeekNumber = (date = new Date()) => {
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const diffDays = Math.floor((date - startOfYear) / (24 * 60 * 60 * 1000));
-    return Math.floor(diffDays / 7) + 1;
-  };
-
-  const now = new Date();
-  const weekNumber = getWeekNumber(now);
-  const year = now.getFullYear();
-
-  // Get all active projects assigned to this manager across all departments (Marketing, SEO, Social Media)
-  const activeProjectAssignments = await prisma.projectAssignment.findMany({
-    where: {
-      managerId: user.id,
-      project: {
-        OR: [
-          { isRunning: true },
-          { status: "ONGOING" }
-        ]
-      },
-    },
-    include: {
-      project: {
-        include: {
-          department: true
-        }
-      }
-    }
-  });
-
-  // Find reports they have already submitted this week that are not rejected
-  const submittedReports = await prisma.weeklyVoiceReport.findMany({
-    where: {
-      managerId: user.id,
-      weekNumber,
-      year,
-      qaStatus: { not: "REJECTED" }
-    }
-  });
 
   const submittedClientIds = new Set();
   submittedReports.forEach(r => {
@@ -361,36 +367,6 @@ exports.getManagerLogoutStatus = async (user) => {
     }));
 
   // ─── 4. Content Calendar Uploads (Pending Uploads for Today) ─────────────
-  const uploadsSheets = await prisma.projectMonthlySheet.findMany({
-    where: {
-      project: {
-        assignments: {
-          some: { managerId: user.id }
-        },
-        department: { name: { in: ["SEO", "Social Media", "Social Media Department"] } }
-      }
-    },
-    include: {
-      days: {
-        where: {
-          date: {
-            gte: start,
-            lt: end,
-          },
-          OR: [
-            { uploadStatus: "PENDING" }
-          ]
-        }
-      },
-      project: {
-        select: {
-          projectName: true,
-          clientName: true,
-        }
-      }
-    }
-  });
-
   const pendingUploads = [];
   for (const sheet of uploadsSheets) {
     if (sheet.days && sheet.days.length > 0) {
