@@ -452,6 +452,7 @@ exports.getDashboardStats = async (user) => {
             select: {
               title: true,
               dueDate: true,
+              status: true,
             },
           },
         },
@@ -472,7 +473,9 @@ exports.getDashboardStats = async (user) => {
     let dueTodayTasksCount = 0;
 
     employeeAssignments.forEach((assignment) => {
-      if (["COMPLETED", "VERIFIED"].includes(assignment.status) || !assignment.taskItem?.dueDate) {
+      const isCompleted = ["COMPLETED", "VERIFIED"].includes(assignment.status)
+        || ["COMPLETED", "VERIFIED"].includes(assignment.taskItem?.status);
+      if (isCompleted || !assignment.taskItem?.dueDate) {
         return;
       }
 
@@ -488,7 +491,8 @@ exports.getDashboardStats = async (user) => {
       ...employee,
       totalTasksAssigned: employeeAssignments.length,
       completedTasksCount: employeeAssignments.filter(
-        (assignment) => assignment.status === "COMPLETED" || assignment.status === "VERIFIED"
+        (assignment) => ["COMPLETED", "VERIFIED"].includes(assignment.status)
+          || ["COMPLETED", "VERIFIED"].includes(assignment.taskItem?.status)
       ).length,
       inProgressTasksCount: employeeAssignments.filter(
         (assignment) => assignment.status === "IN_PROGRESS" || assignment.status === "SUBMITTED"
