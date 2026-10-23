@@ -56,7 +56,7 @@ router.get(
 router.get(
   "/:workspaceId/upload-feed",
   auth,
-  role("MANAGER"),
+  role("ADMIN", "HR", "MANAGER"),
   controller.getWorkspaceUploadFeed
 );
 

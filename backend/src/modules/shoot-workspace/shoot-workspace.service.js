@@ -813,7 +813,7 @@ const formatWorkspaceUploadFeed = (workspace, editorItems) => ({
 });
 
 exports.getWorkspaceUploadFeed = async (user, workspaceId) => {
-  const workspace = await verifyWorkspaceOwnership(user, workspaceId);
+  const workspace = await verifyWorkspaceAccess(user, workspaceId);
   const fullWorkspace = await prisma.shootWorkspace.findUnique({
     where: { id: workspace.id },
     include: {
