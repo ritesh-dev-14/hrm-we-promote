@@ -7,6 +7,11 @@ exports.getControlTowerStats = async () => {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
   const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const marketingDepartmentFilter = {
+    OR: ["performance", "marketing", "ads", "meta", "social"].map((keyword) => ({
+      name: { contains: keyword, mode: "insensitive" },
+    })),
+  };
 
   const [
     overdueDeliverablesData,
@@ -54,42 +59,16 @@ exports.getControlTowerStats = async () => {
     }),
     prisma.project.findMany({
       where: {
-        status: "ONGOING",
-        department: {
-          name: {
-            in: [
-              "Social Media",
-              "Social Media Department",
-              "Marketing",
-              "Marketing Department",
-              "Meta Ads",
-              "Meta Ads Department",
-            ],
-          },
-        },
+        department: marketingDepartmentFilter,
       },
-      select: { id: true, projectName: true, clientName: true, monthlyBudget: true },
+      select: { id: true, projectName: true, clientName: true, monthlyBudget: true, status: true },
     }),
     prisma.marketingReport.groupBy({
       by: ["projectId", "date"],
       _sum: { todayAmountSpend: true },
       where: {
         date: { lt: startOfNextMonth },
-        project: {
-          status: "ONGOING",
-          department: {
-            name: {
-              in: [
-                "Social Media",
-                "Social Media Department",
-                "Marketing",
-                "Marketing Department",
-                "Meta Ads",
-                "Meta Ads Department",
-              ],
-            },
-          },
-        },
+        project: { department: marketingDepartmentFilter },
       },
     }),
     prisma.user.findMany({
@@ -131,7 +110,7 @@ exports.getControlTowerStats = async () => {
   let totalMonthlyBudget = 0;
   const budgetBreakdown = marketingProjects.map(p => {
     const budget = p.monthlyBudget || 0;
-    totalMonthlyBudget += budget;
+    if (p.status === "ONGOING") totalMonthlyBudget += budget;
     return {
       projectId: p.id,
       projectName: p.projectName,
