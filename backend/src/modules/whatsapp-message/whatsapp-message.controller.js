@@ -173,21 +173,23 @@ exports.getMessagePreviews = async (req, res, next) => {
 
     const grouped = [...groups.values()];
     await Promise.all(grouped.map(async (group) => {
-      const contentDates = await dailyReportService.getSocialMediaContentDates(group.projects, today);
-      const socialMediaEntries = new Map(group.socialMedia.map((entry) => [entry.projectId, entry]));
-      group.socialMediaReports = group.projects.map((project) => {
-        const socialMediaEntry = socialMediaEntries.get(project.id);
-        const dates = contentDates.get(project.id);
+      const socialProjects = group.socialMedia.map((entry) => ({
+        id: entry.projectId,
+        projectName: entry.projectName,
+      }));
+      const contentDates = await dailyReportService.getSocialMediaContentDates(socialProjects, today);
+      group.socialMediaReports = group.socialMedia.map((socialMediaEntry) => {
+        const dates = contentDates.get(socialMediaEntry.projectId);
         return {
-          projectName: project.projectName,
+          projectName: socialMediaEntry.projectName,
           lastContentUploaded: dates?.lastContentUploaded || 'No content uploaded yet',
           nextExpectedUploadDate: dates?.nextExpectedUploadDate || 'Not scheduled',
           contentCalendar: {
-            ...(socialMediaEntry?.contentCalendar || {}),
+            ...socialMediaEntry.contentCalendar,
             lastContentUploaded: dates?.lastContentUploaded || 'No content uploaded yet',
             nextExpectedUploadDate: dates?.nextExpectedUploadDate || 'Not scheduled',
           },
-          uploads: socialMediaEntry?.uploads || { records: [] },
+          uploads: socialMediaEntry.uploads || { records: [] },
         };
       });
     }));
