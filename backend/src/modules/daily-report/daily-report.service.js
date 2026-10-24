@@ -8,14 +8,11 @@ const ERRORS = require('../../utils/errors');
  * Parse a date string or Date object into start/end of that day (IST-aware).
  */
 function getDayRange(date) {
-  const d = date ? new Date(date) : new Date();
-
-  // Use IST midnight for start/end
-  const startOfDay = new Date(d);
-  startOfDay.setHours(0, 0, 0, 0);
-
-  const endOfDay = new Date(d);
-  endOfDay.setHours(23, 59, 59, 999);
+  const dateKey = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? date
+    : getDateKeyInIST(date || new Date());
+  const startOfDay = new Date(`${dateKey}T00:00:00+05:30`);
+  const endOfDay = new Date(startOfDay.getTime() + 86400000 - 1);
 
   return { startOfDay, endOfDay };
 }
@@ -24,9 +21,114 @@ function getDayRange(date) {
  * Format a date as YYYY-MM-DD string.
  */
 function toDateString(date) {
-  const d = new Date(date);
-  return d.toISOString().split('T')[0];
+  return getDateKeyInIST(date);
 }
+
+function getDateKeyInIST(value) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(value));
+  const dateParts = Object.fromEntries(parts.map(({ type, value: partValue }) => [type, partValue]));
+  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+}
+
+function formatSocialDate(value) {
+  return value
+    ? new Date(value).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    })
+    : null;
+}
+
+exports.getSocialMediaContentDates = async (projects, referenceDate = new Date()) => {
+  if (!projects.length) return new Map();
+
+  const projectIds = projects.map((project) => project.id);
+  const projectNames = [...new Set(projects.map((project) => project.projectName).filter(Boolean))];
+  const referenceDateKey = getDateKeyInIST(referenceDate);
+
+  const [calendarDays, uploads] = await Promise.all([
+    prisma.projectMonthlySheetDay.findMany({
+      where: { sheet: { projectId: { in: projectIds } } },
+      select: {
+        date: true,
+        reelType: true,
+        postType: true,
+        videoType: true,
+        uploadStatus: true,
+        contentUploadLinks: true,
+        videoUploadLinks: true,
+        sheet: { select: { projectId: true } },
+      },
+      orderBy: { date: 'asc' },
+    }),
+    projectNames.length
+      ? prisma.upload.findMany({
+        where: {
+          projectName: { in: projectNames, mode: 'insensitive' },
+          OR: [
+            { totalUploads: { gt: 0 } },
+            { items: { some: {} } },
+          ],
+        },
+        select: { projectName: true, uploadDate: true },
+        orderBy: [{ uploadDate: 'desc' }, { createdAt: 'desc' }],
+      })
+      : [],
+  ]);
+
+  const projectIdByName = new Map(
+    projects.map((project) => [String(project.projectName || '').toLowerCase().trim(), project.id]),
+  );
+  const lastUploadDateByProject = new Map();
+  uploads.forEach((upload) => {
+    const projectId = projectIdByName.get(String(upload.projectName || '').toLowerCase().trim());
+    if (projectId && !lastUploadDateByProject.has(projectId)) {
+      lastUploadDateByProject.set(projectId, upload.uploadDate);
+    }
+  });
+
+  const nextUploadDateByProject = new Map();
+  calendarDays.forEach((day) => {
+    const projectId = day.sheet.projectId;
+    const dayKey = getDateKeyInIST(day.date);
+    const hasCalendarContent = day.reelType || day.postType || day.videoType;
+    const hasUploadedLinks = [...(day.videoUploadLinks || []), ...(day.contentUploadLinks || [])]
+      .some((link) => String(link || '').trim());
+
+    if (day.uploadStatus === 'APPROVED' && hasUploadedLinks) {
+      const lastUploadDate = lastUploadDateByProject.get(projectId);
+      if (!lastUploadDate || dayKey > getDateKeyInIST(lastUploadDate)) {
+        lastUploadDateByProject.set(projectId, day.date);
+      }
+    }
+
+    if (
+      hasCalendarContent
+      && dayKey >= referenceDateKey
+      && day.uploadStatus !== 'APPROVED'
+      && !nextUploadDateByProject.has(projectId)
+    ) {
+      nextUploadDateByProject.set(projectId, day.date);
+    }
+  });
+
+  return new Map(projects.map((project) => {
+    const lastUploadDate = lastUploadDateByProject.get(project.id);
+    const nextUploadDate = nextUploadDateByProject.get(project.id);
+    return [project.id, {
+      lastContentUploaded: formatSocialDate(lastUploadDate) || 'No content uploaded yet',
+      nextExpectedUploadDate: formatSocialDate(nextUploadDate) || 'Not scheduled',
+      hasSocialMediaData: Boolean(lastUploadDate || nextUploadDate),
+    }];
+  }));
+};
 
 // ─── Social Media ──────────────────────────────────────────────────────────────
 
@@ -54,6 +156,7 @@ async function getSocialMediaReport(projects, startOfDay, endOfDay) {
     include: { items: true },
     orderBy: { createdAt: 'desc' },
   });
+  const contentDates = await exports.getSocialMediaContentDates(projects, startOfDay);
 
   // Index by projectId and projectName (lowercased)
   const sheetDayByProjectId = {};
@@ -101,6 +204,7 @@ async function getSocialMediaReport(projects, startOfDay, endOfDay) {
         contentUploadLinks: sheetDay?.contentUploadLinks || [],
         videoUploadLinks: sheetDay?.videoUploadLinks || [],
         rejectReason: sheetDay?.uploadRejectReason || null,
+        ...contentDates.get(project.id),
       },
       uploads: {
         hasUploads: matchedUploads.length > 0,

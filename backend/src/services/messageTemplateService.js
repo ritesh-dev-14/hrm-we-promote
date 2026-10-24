@@ -2,6 +2,7 @@ const prisma = require('../config/prisma');
 const ApiError = require('../utils/ApiError');
 const ERRORS = require('../utils/errors');
 const { formatPhoneNumber } = require('./whatsappService');
+const dailyReportService = require('../modules/daily-report/daily-report.service');
 
 /**
  * Generate daily client message with rich Social Media and/or Marketing data.
@@ -63,8 +64,15 @@ exports.generateDailyClientMessage = async (projectId, date = new Date(), { requ
     // ── 3. Fetch Social Media data ─────────────────────────────────────────────
     let monthlySheetDay = null;
     let todayUploads    = [];
+    let socialContentDates = null;
 
     if (isSocialMedia) {
+      const contentDates = await dailyReportService.getSocialMediaContentDates(
+        [{ id: project.id, projectName: project.projectName }],
+        date,
+      );
+      socialContentDates = contentDates.get(project.id);
+
       // 3a. Today's entry from the Content Calendar (ProjectMonthlySheetDay)
       monthlySheetDay = await prisma.projectMonthlySheetDay.findFirst({
         where: {
@@ -113,6 +121,8 @@ exports.generateDailyClientMessage = async (projectId, date = new Date(), { requ
       clientName:     project.clientName || 'Valued Client',
       isMarketing,
       marketingReport,
+      isSocialMedia,
+      socialContentDates,
       pendingItems,
       date: isSeo ? seoReport?.checkDate || date : date,
     });
@@ -151,6 +161,8 @@ function buildMessage({
   clientName,
   isMarketing,
   marketingReport,
+  isSocialMedia,
+  socialContentDates,
   pendingItems,
   date,
 }) {
@@ -178,9 +190,18 @@ Leads Obtained: ${leads}
 
 ${divider}
 
-🌐 SEO REPORT :${dateStr}
+${isSocialMedia ? `📱 SOCIAL MEDIA REPORT
+
+Last Content Uploaded: ${socialContentDates?.lastContentUploaded || 'No content uploaded yet'}
+Next Expected Upload Date: ${socialContentDates?.nextExpectedUploadDate || 'Not scheduled'}
 
 ${divider}
+
+` : `🌐 SEO REPORT :${dateStr}
+
+${divider}
+`}
+
 📌 PENDING FROM YOUR SIDE
 ${pendingItems.length
     ? pendingItems.map((item) => `• ${new Date(item.dueDate).toLocaleDateString('en-IN', {

@@ -74,22 +74,22 @@ function formatCombinedClientMessage(group, date) {
     lines.push(divider);
   }
 
-  if (group.socialMedia.length) {
+  if (group.socialMediaReports.length) {
     lines.push('', '📱 SOCIAL MEDIA REPORT', '');
-    for (const { projectName, contentCalendar, uploads } of group.socialMedia) {
+    for (const { projectName, contentCalendar, uploads } of group.socialMediaReports) {
       lines.push(`Project: ${projectName}`);
+      lines.push(`Last Content Uploaded: ${contentCalendar.lastContentUploaded || 'No content uploaded yet'}`);
+      lines.push(`Next Expected Upload Date: ${contentCalendar.nextExpectedUploadDate || 'Not scheduled'}`);
       if (contentCalendar.hasEntry) {
         if (contentCalendar.contentType) lines.push(`Content Type: ${contentCalendar.contentType}`);
         if (contentCalendar.title) lines.push(`Content: ${contentCalendar.title}`);
         if (contentCalendar.uploadStatus) lines.push(`Status: ${contentCalendar.uploadStatus}`);
-      } else {
-        lines.push('No content scheduled today.');
       }
       const items = (uploads.records || []).flatMap((record) => record.items || []);
-      lines.push(items.length
-        ? `Recent content posted: ${items.map((item) => `${item.dataType}${item.platform ? ` (${item.platform})` : ''}`).join(', ')}`
-        : 'Recent content posted: None');
-      lines.push('');
+      if (items.length) {
+        lines.push(`Recent content posted: ${items.map((item) => `${item.dataType}${item.platform ? ` (${item.platform})` : ''}`).join(', ')}`);
+      }
+      if (contentCalendar.hasEntry || items.length) lines.push('');
     }
     lines.push(divider);
   }
@@ -122,7 +122,14 @@ exports.getMessagePreviews = async (req, res, next) => {
     const roles = (req.user.roles?.length ? req.user.roles : [req.user.role])
       .map((role) => String(role).toUpperCase());
     const role = roles.includes('ADMIN') ? 'ADMIN' : roles.includes('HR') ? 'HR' : 'MANAGER';
-    const today = new Date().toISOString().slice(0, 10);
+    const dateParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const todayDateParts = Object.fromEntries(dateParts.map(({ type, value }) => [type, value]));
+    const today = `${todayDateParts.year}-${todayDateParts.month}-${todayDateParts.day}`;
     const report = await dailyReportService.getDailyReport(
       { ...req.user, role },
       { date: today, department: 'all' }
@@ -165,6 +172,25 @@ exports.getMessagePreviews = async (req, res, next) => {
     }
 
     const grouped = [...groups.values()];
+    await Promise.all(grouped.map(async (group) => {
+      const contentDates = await dailyReportService.getSocialMediaContentDates(group.projects, today);
+      const socialMediaEntries = new Map(group.socialMedia.map((entry) => [entry.projectId, entry]));
+      group.socialMediaReports = group.projects.map((project) => {
+        const socialMediaEntry = socialMediaEntries.get(project.id);
+        const dates = contentDates.get(project.id);
+        return {
+          projectName: project.projectName,
+          lastContentUploaded: dates?.lastContentUploaded || 'No content uploaded yet',
+          nextExpectedUploadDate: dates?.nextExpectedUploadDate || 'Not scheduled',
+          contentCalendar: {
+            ...(socialMediaEntry?.contentCalendar || {}),
+            lastContentUploaded: dates?.lastContentUploaded || 'No content uploaded yet',
+            nextExpectedUploadDate: dates?.nextExpectedUploadDate || 'Not scheduled',
+          },
+          uploads: socialMediaEntry?.uploads || { records: [] },
+        };
+      });
+    }));
     const allProjectIds = [...new Set(grouped.flatMap((group) => group.projects.map((project) => project.id)))];
     const pendingItems = allProjectIds.length
       ? await prisma.projectPendingItem.findMany({
@@ -195,6 +221,11 @@ exports.getMessagePreviews = async (req, res, next) => {
         departmentNames: [...new Set(reportEntries.map((entry) => entry.department))],
         managerNames: [...group.managerNames],
         projects: group.projects,
+        socialMediaReports: group.socialMediaReports.map(({ projectName, lastContentUploaded, nextExpectedUploadDate }) => ({
+          projectName,
+          lastContentUploaded,
+          nextExpectedUploadDate,
+        })),
         messageBody: formatCombinedClientMessage(group, today),
       };
     });
