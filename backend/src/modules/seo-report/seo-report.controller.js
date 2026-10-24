@@ -9,6 +9,15 @@ exports.createSeoReport = async (req, res, next) => {
   }
 };
 
+exports.updateSeoReport = async (req, res, next) => {
+  try {
+    const data = await service.updateSeoReport(req.user, req.params.id, req.body, req.file);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getSeoReports = async (req, res, next) => {
   try {
     const { projectId } = req.query;

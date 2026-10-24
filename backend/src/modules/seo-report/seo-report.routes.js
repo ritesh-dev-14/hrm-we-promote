@@ -16,6 +16,14 @@ router.post(
   controller.createSeoReport
 );
 
+router.patch(
+  "/:id",
+  auth,
+  role("MANAGER"),
+  upload.single("screenshot"),
+  controller.updateSeoReport
+);
+
 router.get("/submitted-projects", auth, role("ADMIN"), controller.getSubmittedProjectIds);
 
 // Get all SEO reports for a project (?projectId=...)
