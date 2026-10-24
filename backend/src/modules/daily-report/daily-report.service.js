@@ -64,6 +64,10 @@ exports.getSocialMediaContentDates = async (projects, referenceDate = new Date()
         uploadStatus: true,
         contentUploadLinks: true,
         videoUploadLinks: true,
+        uploadRetryDate: true,
+        title: true,
+        script: true,
+        description: true,
         sheet: { select: { projectId: true } },
       },
       orderBy: { date: 'asc' },
@@ -98,11 +102,16 @@ exports.getSocialMediaContentDates = async (projects, referenceDate = new Date()
   calendarDays.forEach((day) => {
     const projectId = day.sheet.projectId;
     const dayKey = getDateKeyInIST(day.date);
-    const hasCalendarContent = day.reelType || day.postType || day.videoType;
-    const hasUploadedLinks = [...(day.videoUploadLinks || []), ...(day.contentUploadLinks || [])]
-      .some((link) => String(link || '').trim());
+    const hasCalendarContent = [
+      day.reelType,
+      day.postType,
+      day.videoType,
+      day.title,
+      day.script,
+      day.description,
+    ].some((value) => String(value || '').trim());
 
-    if (day.uploadStatus === 'APPROVED' && hasUploadedLinks) {
+    if (day.uploadStatus === 'APPROVED') {
       const lastUploadDate = lastUploadDateByProject.get(projectId);
       if (!lastUploadDate || dayKey > getDateKeyInIST(lastUploadDate)) {
         lastUploadDateByProject.set(projectId, day.date);
@@ -111,11 +120,14 @@ exports.getSocialMediaContentDates = async (projects, referenceDate = new Date()
 
     if (
       hasCalendarContent
-      && dayKey >= referenceDateKey
+      && getDateKeyInIST(day.uploadStatus === 'REJECTED' && day.uploadRetryDate ? day.uploadRetryDate : day.date) >= referenceDateKey
       && day.uploadStatus !== 'APPROVED'
       && !nextUploadDateByProject.has(projectId)
     ) {
-      nextUploadDateByProject.set(projectId, day.date);
+      nextUploadDateByProject.set(
+        projectId,
+        day.uploadStatus === 'REJECTED' && day.uploadRetryDate ? day.uploadRetryDate : day.date,
+      );
     }
   });
 
