@@ -15,8 +15,6 @@ const normalizePhoneKey = (phone) => {
   return digits;
 };
 
-const normalizeClientName = (name) => String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
-
 const getDateKeyInIST = (date = new Date()) => {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
@@ -33,6 +31,62 @@ const shiftDateKey = (dateKey, days) => {
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
 };
+
+async function getSubmittedMarketingReports(dateKey, user) {
+  const startOfDay = new Date(`${dateKey}T00:00:00+05:30`);
+  const endOfDay = new Date(startOfDay.getTime() + 86400000 - 1);
+  const reports = await prisma.marketingReport.findMany({
+    where: {
+      date: { gte: startOfDay, lte: endOfDay },
+      ...(user.role === 'MANAGER'
+        ? { project: { assignments: { some: { managerId: user.id } } } }
+        : {}),
+    },
+    include: {
+      manager: { select: { id: true, name: true } },
+      project: {
+        select: {
+          id: true,
+          projectName: true,
+          clientName: true,
+          phone: true,
+          department: { select: { name: true } },
+          assignments: { select: { manager: { select: { name: true } } } },
+        },
+      },
+    },
+    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+  });
+
+  const latestReportsByProject = new Map();
+  for (const report of reports) {
+    if (latestReportsByProject.has(report.projectId)) continue;
+    latestReportsByProject.set(report.projectId, {
+      projectId: report.project.id,
+      projectName: report.project.projectName,
+      clientName: report.clientName || report.project.clientName || null,
+      clientContactNumber: report.clientContactNumber || report.project.phone || null,
+      department: 'Marketing',
+      managers: (report.project.assignments || []).map((assignment) => assignment.manager?.name).filter(Boolean),
+      report: {
+        hasReport: true,
+        reportId: report.id,
+        isAdRunning: report.isAdRunning,
+        typeOfAds: report.typeOfAds,
+        areaName: report.areaName,
+        todayReachObtained: report.todayReachObtained,
+        todayAmountSpend: report.todayAmountSpend,
+        leadObtained: report.leadObtained,
+        videoLink: report.videoLink,
+        reasonNotRunning: report.reasonNotRunning,
+        clientName: report.clientName,
+        clientContactNumber: report.clientContactNumber,
+        submittedBy: report.manager?.name || null,
+      },
+    });
+  }
+  return [...latestReportsByProject.values()];
+}
 
 function formatCombinedClientMessage(group, date) {
   const divider = '━━━━━━━━━━━━━━━━━━━━';
@@ -123,7 +177,7 @@ function formatCombinedClientMessage(group, date) {
 
 /**
  * GET /api/whatsapp-messages/previews
- * Generate one client-ready message per client.
+ * Generate one client-ready message per normalized client phone number.
  */
 exports.getMessagePreviews = async (req, res, next) => {
   try {
@@ -133,11 +187,16 @@ exports.getMessagePreviews = async (req, res, next) => {
     const today = getDateKeyInIST();
     const yesterday = shiftDateKey(today, -1);
     const reportUser = { ...req.user, role };
-    const [report, yesterdayMarketingReport] = await Promise.all([
+    const [report, yesterdayMarketingReport, submittedMarketingReports] = await Promise.all([
       dailyReportService.getDailyReport(reportUser, { date: today, department: 'all' }),
       dailyReportService.getDailyReport(reportUser, { date: yesterday, department: 'marketing' }),
+      getSubmittedMarketingReports(yesterday, reportUser),
     ]);
-    report.marketing = yesterdayMarketingReport.marketing;
+    const marketingByProjectId = new Map(
+      yesterdayMarketingReport.marketing.map((entry) => [entry.projectId, entry])
+    );
+    submittedMarketingReports.forEach((entry) => marketingByProjectId.set(entry.projectId, entry));
+    report.marketing = [...marketingByProjectId.values()];
 
     const groups = new Map();
     for (const [department, entries] of [
@@ -148,17 +207,10 @@ exports.getMessagePreviews = async (req, res, next) => {
       for (const entry of entries) {
         const phone = entry.clientContactNumber || entry.report?.clientContactNumber || null;
         const phoneKey = normalizePhoneKey(phone);
-        const clientName = entry.clientName || entry.report?.clientName || entry.projectName || '';
-        const clientNameKey = normalizeClientName(clientName);
-        const groupId = clientNameKey
-          ? `client:${clientNameKey}`
-          : phoneKey
-            ? `phone:${phoneKey}`
-            : `project:${entry.projectId}`;
+        const groupId = phoneKey ? `phone:${phoneKey}` : `project:${entry.projectId}`;
         if (!groups.has(groupId)) {
           groups.set(groupId, {
             groupId,
-            clientName,
             clientPhone: phone,
             isClientPhoneValid: Boolean(whatsappService.formatPhoneNumber(phone)),
             projects: [],
