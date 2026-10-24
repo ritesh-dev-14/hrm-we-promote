@@ -129,30 +129,11 @@ function formatCombinedClientMessage(group, date) {
     lines.push(divider);
   }
 
-  if (group.marketing.length) {
-    lines.push('', '📊 META ADS REPORT', '');
-    for (const { projectName, report } of group.marketing) {
-      lines.push(`Project: ${projectName}`);
-      if (!report.hasReport) lines.push('No Meta Ads report submitted today.');
-      else {
-        if (report.typeOfAds) lines.push(`Platform: ${report.typeOfAds}`);
-        if (report.areaName) lines.push(`Target Area: ${report.areaName}`);
-        if (report.isAdRunning != null) lines.push(`Campaign Status: ${report.isAdRunning ? 'Running' : 'Not running'}`);
-        lines.push(`Spend: ₹${Number(report.todayAmountSpend || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-        lines.push(`Reach: ${Number(report.todayReachObtained || 0).toLocaleString('en-IN')}`);
-        lines.push(`Leads: ${Number(report.leadObtained || 0).toLocaleString('en-IN')}`);
-      }
-      lines.push('');
-    }
-    lines.push(divider);
-  }
-
   if (group.socialMediaReports.length) {
     lines.push('', '📱 SOCIAL MEDIA REPORT', '');
-    for (const { lastContentUploaded, nextExpectedUploadDate } of group.socialMediaReports) {
-      lines.push(`Last Content Uploaded: ${lastContentUploaded || 'No content uploaded yet'}`);
-      lines.push(`Next Expected Upload Date: ${nextExpectedUploadDate || 'Not scheduled'}`);
-    }
+    const { lastContentUploaded, nextExpectedUploadDate } = group.socialMediaReports[0];
+    lines.push(`Last Content Uploaded: ${lastContentUploaded || 'No content uploaded yet'}`);
+    lines.push(`Next Expected Upload Date: ${nextExpectedUploadDate || 'Not scheduled'}`);
     lines.push(divider);
   }
 
@@ -262,6 +243,14 @@ exports.getMessagePreviews = async (req, res, next) => {
           uploads: socialMediaEntry.uploads || { records: [] },
         };
       });
+      group.socialMediaReports.sort((left, right) => {
+        const leftDate = Date.parse(left.lastContentUploaded);
+        const rightDate = Date.parse(right.lastContentUploaded);
+        const leftTimestamp = Number.isNaN(leftDate) ? 0 : leftDate;
+        const rightTimestamp = Number.isNaN(rightDate) ? 0 : rightDate;
+        return rightTimestamp - leftTimestamp;
+      });
+      group.socialMediaReports = group.socialMediaReports.slice(0, 1);
     }));
     const allProjectIds = [...new Set(grouped.flatMap((group) => group.projects.map((project) => project.id)))];
     const pendingItems = allProjectIds.length
