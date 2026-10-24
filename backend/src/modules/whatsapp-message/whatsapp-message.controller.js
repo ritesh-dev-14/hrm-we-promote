@@ -565,7 +565,7 @@ exports.sendManualMessage = async (req, res, next) => {
 exports.sendHandaBanglesTestMessage = async (req, res, next) => {
   try {
     const { projectId, messageBody } = req.body;
-    const clientPhoneNumber = '+919729105240';
+    const clientPhoneNumber = '+918077742337';
     if (!projectId || typeof messageBody !== 'string' || !messageBody.trim() || messageBody.length > 10000) {
       throw new ApiError(400, {
         code: 'INVALID_INPUT',
@@ -605,7 +605,7 @@ exports.sendHandaBanglesTestMessage = async (req, res, next) => {
         },
         select: { id: true, clientPhoneNumber: true },
       });
-      if (previousMessages.some((message) => normalizePhoneKey(message.clientPhoneNumber) === '9729105240')) {
+      if (previousMessages.some((message) => normalizePhoneKey(message.clientPhoneNumber) === '8077742337')) {
         throw new ApiError(409, {
           code: 'TEST_ALREADY_SENT',
           message: 'A Handa Bangles test report has already been sent to this number today.',
