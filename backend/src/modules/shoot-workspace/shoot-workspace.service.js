@@ -280,8 +280,17 @@ const getVerifiedEditorMediaCounts = async (workspaces) => {
     },
     select: {
       id: true,
+      title: true,
       mediaType: true,
       task: { select: { projectId: true, projectName: true } },
+      shootTask: { select: { title: true } },
+      assignments: {
+        where: { status: "VERIFIED" },
+        select: {
+          employee: { select: { name: true } },
+          submission: { select: { id: true, driveLink: true, submittedAt: true } },
+        },
+      },
     },
   });
 
@@ -292,8 +301,21 @@ const getVerifiedEditorMediaCounts = async (workspaces) => {
       `name:${sanitizeString(item.task.projectName).toLowerCase()}`,
     ].filter(Boolean);
     for (const key of keys) {
-      const existing = counts.get(key) || { videos: 0, pics: 0 };
-      existing[item.mediaType === "PIC" ? "pics" : "videos"] += 1;
+      const existing = counts.get(key) || { videos: 0, pics: 0, videoLinks: [], picLinks: [] };
+      const isPic = item.mediaType === "PIC";
+      existing[isPic ? "pics" : "videos"] += 1;
+      item.assignments.forEach((assignment) => {
+        const url = sanitizeString(assignment.submission?.driveLink);
+        if (!url) return;
+        existing[isPic ? "picLinks" : "videoLinks"].push({
+          id: `${item.id}-${assignment.submission.id}`,
+          title: item.title,
+          shootTitle: item.shootTask?.title || item.task.projectName || "Editor task",
+          submittedBy: assignment.employee?.name || "Editor",
+          submittedAt: assignment.submission.submittedAt,
+          url,
+        });
+      });
       counts.set(key, existing);
     }
   }
@@ -412,6 +434,36 @@ const formatShootManagementWorkspace = (workspace) => {
       (sum, task) => sum + countExtraContent(task.extraContent, "PIC"),
       0,
     ),
+    extraReelLinks: tasks.flatMap((task) =>
+      (task.extraContent || [])
+        .filter((item) => item.type === "REEL" || (!item.type && Number(item.extraReels) > 0))
+        .filter((item) => sanitizeString(item.driveLink))
+        .map((item) => ({
+          id: item.id,
+          shootTitle: task.title,
+          submittedBy: item.submittedBy?.name || "Shoot team",
+          submittedAt: item.submittedAt,
+          title: item.notes || "Extra reel submission",
+          url: item.driveLink,
+          referenceLink: item.referenceLink,
+        })),
+    ),
+    extraPicLinks: tasks.flatMap((task) =>
+      (task.extraContent || [])
+        .filter((item) => item.type === "PIC" || (!item.type && Number(item.extraPics) > 0))
+        .filter((item) => sanitizeString(item.driveLink))
+        .map((item) => ({
+          id: item.id,
+          shootTitle: task.title,
+          submittedBy: item.submittedBy?.name || "Shoot team",
+          submittedAt: item.submittedAt,
+          title: item.notes || "Extra photo submission",
+          url: item.driveLink,
+          referenceLink: item.referenceLink,
+        })),
+    ),
+    editedVideoLinks: workspace.editorVideoLinks || [],
+    editedPicLinks: workspace.editorPicLinks || [],
     reelsApprovedByManager,
     picsApprovedByManager,
     totalVideosAvailable: 0,
@@ -731,6 +783,8 @@ exports.getShootManagementSummary = async (user, monthStr) => {
       ...workspace,
       editorVideosEdited: editorMediaCounts.get(projectKey)?.videos || 0,
       editorPicsEdited: editorMediaCounts.get(projectKey)?.pics || 0,
+      editorVideoLinks: editorMediaCounts.get(projectKey)?.videoLinks || [],
+      editorPicLinks: editorMediaCounts.get(projectKey)?.picLinks || [],
       tasks: (workspace.tasks || []).map((task) => ({
         ...task,
         extraContent: task.extraContent || [],
@@ -917,11 +971,13 @@ exports.markEditorItemUploaded = async (user, workspaceId, itemId) => {
         assignments: { include: { employee: { select: assignedEmployeeSelect }, submission: true } },
       },
     });
-    const workspace = await transaction.shootWorkspace.update({
-      where: { id: workspaceId },
-      data: { videosUploadedCount: { increment: 1 } },
-      select: { id: true, videosUploadedCount: true },
-    });
+    const workspace = item.mediaType === "VIDEO"
+      ? await transaction.shootWorkspace.update({
+          where: { id: workspaceId },
+          data: { videosUploadedCount: { increment: 1 } },
+          select: { id: true, videosUploadedCount: true },
+        })
+      : null;
     return { item: formatEditorUploadItem(updatedItem), workspace };
   });
 };
