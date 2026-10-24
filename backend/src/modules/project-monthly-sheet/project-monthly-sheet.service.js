@@ -167,7 +167,9 @@ const formatSheet = (sheet) => ({
     name: sheet.createdBy.name,
     role: sheet.createdBy.role,
   },
-  days: sheet.days.map(formatDay),
+  days: [...sheet.days]
+    .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
+    .map(formatDay),
   createdAt: sheet.createdAt,
   updatedAt: sheet.updatedAt,
 });
