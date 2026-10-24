@@ -76,20 +76,9 @@ function formatCombinedClientMessage(group, date) {
 
   if (group.socialMediaReports.length) {
     lines.push('', '📱 SOCIAL MEDIA REPORT', '');
-    for (const { projectName, contentCalendar, uploads } of group.socialMediaReports) {
-      lines.push(`Project: ${projectName}`);
-      lines.push(`Last Content Uploaded: ${contentCalendar.lastContentUploaded || 'No content uploaded yet'}`);
-      lines.push(`Next Expected Upload Date: ${contentCalendar.nextExpectedUploadDate || 'Not scheduled'}`);
-      if (contentCalendar.hasEntry) {
-        if (contentCalendar.contentType) lines.push(`Content Type: ${contentCalendar.contentType}`);
-        if (contentCalendar.title) lines.push(`Content: ${contentCalendar.title}`);
-        if (contentCalendar.uploadStatus) lines.push(`Status: ${contentCalendar.uploadStatus}`);
-      }
-      const items = (uploads.records || []).flatMap((record) => record.items || []);
-      if (items.length) {
-        lines.push(`Recent content posted: ${items.map((item) => `${item.dataType}${item.platform ? ` (${item.platform})` : ''}`).join(', ')}`);
-      }
-      if (contentCalendar.hasEntry || items.length) lines.push('');
+    for (const { lastContentUploaded, nextExpectedUploadDate } of group.socialMediaReports) {
+      lines.push(`Last Content Uploaded: ${lastContentUploaded || 'No content uploaded yet'}`);
+      lines.push(`Next Expected Upload Date: ${nextExpectedUploadDate || 'Not scheduled'}`);
     }
     lines.push(divider);
   }
