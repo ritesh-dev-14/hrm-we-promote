@@ -684,8 +684,7 @@ model ProjectMonthlySheetDay {
   shootSubTasks ShootSubTask[]
   editorItems   TaskItem[]
 
-  @@unique([sheetId, date])
-  @@index([sheetId])
+  @@index([sheetId, date])
 }
 
 model SeoReport {

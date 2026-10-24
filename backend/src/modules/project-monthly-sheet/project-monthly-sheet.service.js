@@ -422,21 +422,21 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
 
   if (body.days && Array.isArray(body.days)) {
     const existingDays = sheet.days || [];
-    const existingDaysByDateMap = new Map();
     const existingDaysByIdMap = new Map();
 
     existingDays.forEach((d) => {
-      const dateKey = new Date(d.date).toISOString().split("T")[0];
-      existingDaysByDateMap.set(dateKey, d);
       existingDaysByIdMap.set(d.id, d);
     });
 
     for (const dayInput of body.days) {
       const inputDate = new Date(dayInput.date);
-      const dateKey = inputDate.toISOString().split("T")[0];
-
-      const existingDay = (dayInput.id && existingDaysByIdMap.get(dayInput.id)) ||
-        existingDaysByDateMap.get(dateKey);
+      const existingDay = dayInput.id ? existingDaysByIdMap.get(dayInput.id) : null;
+      if (dayInput.id && !existingDay) {
+        throw new ApiError(400, {
+          code: ERRORS.VALIDATION.INVALID_INPUT.code,
+          message: "Calendar row does not belong to this monthly sheet.",
+        });
+      }
 
       // Preserve submission links from shoot subtask approvals / existing day data
       let submissionLinksToKeep = existingDay ? (existingDay.submissionLinks || []) : [];
