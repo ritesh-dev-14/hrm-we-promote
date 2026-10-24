@@ -15,6 +15,25 @@ const normalizePhoneKey = (phone) => {
   return digits;
 };
 
+const normalizeClientName = (name) => String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+const getDateKeyInIST = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(date));
+  const dateParts = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+};
+
+const shiftDateKey = (dateKey, days) => {
+  const date = new Date(`${dateKey}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
 function formatCombinedClientMessage(group, date) {
   const divider = '━━━━━━━━━━━━━━━━━━━━';
   const marketingReports = group.marketing.filter((entry) => entry.report.hasReport);
@@ -104,25 +123,21 @@ function formatCombinedClientMessage(group, date) {
 
 /**
  * GET /api/whatsapp-messages/previews
- * Generate one client-ready message per normalized client phone number.
+ * Generate one client-ready message per client.
  */
 exports.getMessagePreviews = async (req, res, next) => {
   try {
     const roles = (req.user.roles?.length ? req.user.roles : [req.user.role])
       .map((role) => String(role).toUpperCase());
     const role = roles.includes('ADMIN') ? 'ADMIN' : roles.includes('HR') ? 'HR' : 'MANAGER';
-    const dateParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(new Date());
-    const todayDateParts = Object.fromEntries(dateParts.map(({ type, value }) => [type, value]));
-    const today = `${todayDateParts.year}-${todayDateParts.month}-${todayDateParts.day}`;
-    const report = await dailyReportService.getDailyReport(
-      { ...req.user, role },
-      { date: today, department: 'all' }
-    );
+    const today = getDateKeyInIST();
+    const yesterday = shiftDateKey(today, -1);
+    const reportUser = { ...req.user, role };
+    const [report, yesterdayMarketingReport] = await Promise.all([
+      dailyReportService.getDailyReport(reportUser, { date: today, department: 'all' }),
+      dailyReportService.getDailyReport(reportUser, { date: yesterday, department: 'marketing' }),
+    ]);
+    report.marketing = yesterdayMarketingReport.marketing;
 
     const groups = new Map();
     for (const [department, entries] of [
@@ -133,10 +148,17 @@ exports.getMessagePreviews = async (req, res, next) => {
       for (const entry of entries) {
         const phone = entry.clientContactNumber || entry.report?.clientContactNumber || null;
         const phoneKey = normalizePhoneKey(phone);
-        const groupId = phoneKey ? `phone:${phoneKey}` : `project:${entry.projectId}`;
+        const clientName = entry.clientName || entry.report?.clientName || entry.projectName || '';
+        const clientNameKey = normalizeClientName(clientName);
+        const groupId = clientNameKey
+          ? `client:${clientNameKey}`
+          : phoneKey
+            ? `phone:${phoneKey}`
+            : `project:${entry.projectId}`;
         if (!groups.has(groupId)) {
           groups.set(groupId, {
             groupId,
+            clientName,
             clientPhone: phone,
             isClientPhoneValid: Boolean(whatsappService.formatPhoneNumber(phone)),
             projects: [],
@@ -148,13 +170,20 @@ exports.getMessagePreviews = async (req, res, next) => {
           });
         }
         const group = groups.get(groupId);
-        if (!group.clientPhone && phone) group.clientPhone = phone;
-        group.isClientPhoneValid ||= Boolean(whatsappService.formatPhoneNumber(phone));
-        group.projects.push({
-          id: entry.projectId,
-          projectName: entry.projectName,
-          clientName: entry.clientName || entry.report?.clientName || null,
-        });
+        const isPhoneValid = Boolean(whatsappService.formatPhoneNumber(phone));
+        if (isPhoneValid && !group.isClientPhoneValid) {
+          group.clientPhone = phone;
+          group.isClientPhoneValid = true;
+        } else if (!group.clientPhone && phone) {
+          group.clientPhone = phone;
+        }
+        if (!group.projects.some((project) => project.id === entry.projectId)) {
+          group.projects.push({
+            id: entry.projectId,
+            projectName: entry.projectName,
+            clientName: entry.clientName || entry.report?.clientName || null,
+          });
+        }
         entry.managers.forEach((manager) => group.managerNames.add(manager));
         group[department].push(entry);
       }
