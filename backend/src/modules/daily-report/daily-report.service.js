@@ -55,7 +55,26 @@ exports.getSocialMediaContentDates = async (projects, referenceDate = new Date()
 
   const [calendarDays, uploads] = await Promise.all([
     prisma.projectMonthlySheetDay.findMany({
-      where: { sheet: { projectId: { in: projectIds } } },
+      where: {
+        OR: [
+          { sheet: { projectId: { in: projectIds } } },
+          ...(projectNames.length
+            ? [{
+              sheet: {
+                is: {
+                  project: {
+                    is: {
+                      OR: projectNames.map((projectName) => ({
+                        projectName: { contains: projectName, mode: 'insensitive' },
+                      })),
+                    },
+                  },
+                },
+              },
+            }]
+            : []),
+        ],
+      },
       select: {
         date: true,
         reelType: true,
@@ -68,7 +87,7 @@ exports.getSocialMediaContentDates = async (projects, referenceDate = new Date()
         title: true,
         script: true,
         description: true,
-        sheet: { select: { projectId: true } },
+        sheet: { select: { projectId: true, project: { select: { projectName: true } } } },
       },
       orderBy: { date: 'asc' },
     }),
@@ -87,20 +106,31 @@ exports.getSocialMediaContentDates = async (projects, referenceDate = new Date()
       : [],
   ]);
 
-  const projectIdByName = new Map(
-    projects.map((project) => [String(project.projectName || '').toLowerCase().trim(), project.id]),
-  );
+  const projectsByName = new Map();
+  projects.forEach((project) => {
+    const key = String(project.projectName || '').toLowerCase().trim();
+    const matches = projectsByName.get(key) || [];
+    matches.push(project);
+    projectsByName.set(key, matches);
+  });
   const lastUploadDateByProject = new Map();
   uploads.forEach((upload) => {
-    const projectId = projectIdByName.get(String(upload.projectName || '').toLowerCase().trim());
-    if (projectId && !lastUploadDateByProject.has(projectId)) {
-      lastUploadDateByProject.set(projectId, upload.uploadDate);
-    }
+    const matches = projectsByName.get(String(upload.projectName || '').toLowerCase().trim()) || [];
+    matches.forEach((project) => {
+      if (!lastUploadDateByProject.has(project.id)) {
+        lastUploadDateByProject.set(project.id, upload.uploadDate);
+      }
+    });
   });
 
   const nextUploadDateByProject = new Map();
   calendarDays.forEach((day) => {
-    const projectId = day.sheet.projectId;
+    const projectName = String(day.sheet.project.projectName || '').toLowerCase().trim();
+    const matchingProjects = projects.filter((project) =>
+      project.id === day.sheet.projectId
+      || String(project.projectName || '').toLowerCase().trim() === projectName,
+    );
+    if (!matchingProjects.length) return;
     const dayKey = getDateKeyInIST(day.date);
     const hasCalendarContent = [
       day.reelType,
@@ -112,22 +142,27 @@ exports.getSocialMediaContentDates = async (projects, referenceDate = new Date()
     ].some((value) => String(value || '').trim());
 
     if (day.uploadStatus === 'APPROVED') {
-      const lastUploadDate = lastUploadDateByProject.get(projectId);
-      if (!lastUploadDate || dayKey > getDateKeyInIST(lastUploadDate)) {
-        lastUploadDateByProject.set(projectId, day.date);
-      }
+      matchingProjects.forEach((project) => {
+        const lastUploadDate = lastUploadDateByProject.get(project.id);
+        if (!lastUploadDate || dayKey > getDateKeyInIST(lastUploadDate)) {
+          lastUploadDateByProject.set(project.id, day.date);
+        }
+      });
     }
 
     if (
       hasCalendarContent
       && getDateKeyInIST(day.uploadStatus === 'REJECTED' && day.uploadRetryDate ? day.uploadRetryDate : day.date) >= referenceDateKey
       && day.uploadStatus !== 'APPROVED'
-      && !nextUploadDateByProject.has(projectId)
     ) {
-      nextUploadDateByProject.set(
-        projectId,
-        day.uploadStatus === 'REJECTED' && day.uploadRetryDate ? day.uploadRetryDate : day.date,
-      );
+      matchingProjects.forEach((project) => {
+        if (!nextUploadDateByProject.has(project.id)) {
+          nextUploadDateByProject.set(
+            project.id,
+            day.uploadStatus === 'REJECTED' && day.uploadRetryDate ? day.uploadRetryDate : day.date,
+          );
+        }
+      });
     }
   });
 
