@@ -138,7 +138,7 @@ exports.getEmployeeStats = async (userId) => {
 exports.getAllEmployeesStats = async () => {
   const users = await prisma.user.findMany({
     where: {
-      role: { in: ["EMPLOYEE", "MANAGER", "COORDINATOR", "QA", "EA"] }
+      role: "EMPLOYEE"
     },
     include: {
       department: true,
