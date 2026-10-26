@@ -6,7 +6,6 @@ const {
   getMessageById,
   getMessageStats,
   sendManualMessage,
-  sendHandaBanglesTestMessage,
   triggerJobManually,
   getMessagePreviews,
 } = require('./whatsapp-message.controller');
@@ -26,8 +25,6 @@ router.get('/:id', authorize('ADMIN', 'HR', 'EA', 'MANAGER'), getMessageById);
 router.get('/stats/summary', authorize('ADMIN', 'HR', 'EA', 'MANAGER'), getMessageStats);
 
 router.post('/send-manual', authorize('ADMIN', 'HR', 'EA', 'MANAGER'), sendManualMessage);
-
-router.post('/send-handa-bangles-test', authorize('ADMIN'), sendHandaBanglesTestMessage);
 
 router.post('/trigger-job', authorize('ADMIN', 'HR'), triggerJobManually);
 

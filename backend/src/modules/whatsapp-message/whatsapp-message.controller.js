@@ -6,7 +6,6 @@ const ApiError = require('../../utils/ApiError');
 const ERRORS = require('../../utils/errors');
 const prisma = require('../../config/prisma');
 const dailyReportService = require('../daily-report/daily-report.service');
-const handaBanglesTestSendsInProgress = new Set();
 
 const normalizePhoneKey = (phone) => {
   let digits = String(phone || '').replace(/\D/g, '');
@@ -584,91 +583,6 @@ exports.sendManualMessage = async (req, res, next) => {
       success: sendResult.success,
       data: responseData,
     });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.sendHandaBanglesTestMessage = async (req, res, next) => {
-  try {
-    const { projectId, messageBody } = req.body;
-    const clientPhoneNumber = '+918077742337';
-    if (!projectId || typeof messageBody !== 'string' || !messageBody.trim() || messageBody.length > 10000) {
-      throw new ApiError(400, {
-        code: 'INVALID_INPUT',
-        message: 'A Handa Bangles project and its preview message are required.',
-      });
-    }
-
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true, projectName: true },
-    });
-    if (!project || !/handa\s*bangles/i.test(project.projectName) ||
-      !messageBody.toLowerCase().includes(project.projectName.toLowerCase())) {
-      throw new ApiError(400, {
-        code: 'INVALID_TEST_REPORT',
-        message: 'This test send is limited to a Handa Bangles report preview.',
-      });
-    }
-
-    const today = getDateKeyInIST();
-    const startOfDay = new Date(`${today}T00:00:00+05:30`);
-    const endOfDay = new Date(startOfDay.getTime() + 86400000);
-    if (handaBanglesTestSendsInProgress.has(clientPhoneNumber)) {
-      throw new ApiError(409, {
-        code: 'TEST_SEND_IN_PROGRESS',
-        message: 'A Handa Bangles test report is already being sent to this number.',
-      });
-    }
-
-    handaBanglesTestSendsInProgress.add(clientPhoneNumber);
-    try {
-      const previousMessages = await prisma.whatsappMessage.findMany({
-        where: {
-          status: { in: ['SENT', 'DELIVERED'] },
-          sentAt: { gte: startOfDay, lt: endOfDay },
-          project: { projectName: { contains: 'Handa Bangles', mode: 'insensitive' } },
-        },
-        select: { id: true, clientPhoneNumber: true },
-      });
-      if (previousMessages.some((message) => normalizePhoneKey(message.clientPhoneNumber) === '8077742337')) {
-        throw new ApiError(409, {
-          code: 'TEST_ALREADY_SENT',
-          message: 'A Handa Bangles test report has already been sent to this number today.',
-        });
-      }
-
-      const sendResult = await whatsappService.sendMessage(clientPhoneNumber, messageBody.trim());
-      const savedMessage = await messageLoggingService.logMessage({
-        projectId: project.id,
-        managerId: req.user.id,
-        clientPhoneNumber,
-        messageContent: messageBody.trim(),
-        status: sendResult.success ? 'SENT' : 'FAILED',
-        messageId: sendResult.messageId || null,
-        failureReason: sendResult.error || null,
-      });
-
-      if (!sendResult.success) {
-        throw new ApiError(400, {
-          code: sendResult.errorCode || 'WHATSAPP_SEND_FAILED',
-          message: sendResult.error || 'WhatsApp did not accept the test message.',
-        });
-      }
-
-      res.status(200).json({
-        success: true,
-        data: {
-          id: savedMessage.id,
-          clientPhone: clientPhoneNumber,
-          status: 'sent',
-          sentAt: savedMessage.sentAt,
-        },
-      });
-    } finally {
-      handaBanglesTestSendsInProgress.delete(clientPhoneNumber);
-    }
   } catch (error) {
     next(error);
   }
