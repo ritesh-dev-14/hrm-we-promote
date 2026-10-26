@@ -89,13 +89,12 @@ async function getSubmittedMarketingReports(dateKey, user) {
   return [...latestReportsByProject.values()];
 }
 
-function formatCombinedClientMessage(group, date) {
-  const divider = '━━━━━━━━━━━━━━━━━━━━';
+function getCombinedReportTemplateParameters(group, date) {
   const marketingReports = group.marketing.filter((entry) => entry.report.hasReport);
   const totalSpend = marketingReports.reduce((sum, entry) => sum + Number(entry.report.todayAmountSpend || 0), 0);
   const totalReach = marketingReports.reduce((sum, entry) => sum + Number(entry.report.todayReachObtained || 0), 0);
   const totalLeads = marketingReports.reduce((sum, entry) => sum + Number(entry.report.leadObtained || 0), 0);
-  const dateText = new Date(date).toLocaleDateString('en-IN', {
+  const reportDate = new Date(date).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -103,58 +102,81 @@ function formatCombinedClientMessage(group, date) {
   });
   const clientName = group.projects.find((project) => project.clientName)?.clientName ||
     group.projects[0]?.projectName || 'Client';
-  const lines = [
-    `Hello ${clientName},`,
-    '',
-    'Here is your complete daily report from We Promote.',
-    '',
-    `Yesterday add spent: ₹${totalSpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    `Reach: ${totalReach.toLocaleString('en-IN')}`,
-    `Leads Obtained: ${totalLeads.toLocaleString('en-IN')}`,
-    '',
-    divider,
-  ];
-
-  if (group.seo.length) {
-    lines.push('', `🌐 SEO REPORT :${dateText}`, '');
-    for (const { projectName, report } of group.seo) {
-      lines.push(`Project: ${projectName}`);
-      if (!report.hasReport) lines.push('No SEO report submitted today.');
-      else {
-        if (report.keywords?.length) lines.push(`Keywords: ${report.keywords.join(', ')}`);
-        if (report.rankingNo != null) lines.push(`Ranking: #${report.rankingNo}`);
-        if (report.remarks) lines.push(`Remarks: ${report.remarks}`);
-      }
-      lines.push('');
-    }
-    lines.push(divider);
-  }
-
-  if (group.socialMediaReports.length) {
-    lines.push('', '📱 SOCIAL MEDIA REPORT', '');
-    const { lastContentUploaded, nextExpectedUploadDate } = group.socialMediaReports[0];
-    lines.push(`Last Content Uploaded: ${lastContentUploaded || 'No content uploaded yet'}`);
-    lines.push(`Next Expected Upload Date: ${nextExpectedUploadDate || 'Not scheduled'}`);
-    lines.push(divider);
-  }
-
+  const seoReports = group.seo;
+  const seoProjects = seoReports.map((entry) => (
+    entry.report.hasReport ? entry.projectName : `${entry.projectName} (no report submitted)`
+  ));
+  const seoKeywords = seoReports.map((entry) => (
+    entry.report.hasReport && entry.report.keywords?.length
+      ? entry.report.keywords.join(', ')
+      : 'Not reported'
+  ));
+  const rankings = seoReports.map((entry) => (
+    entry.report.hasReport && entry.report.rankingNo != null
+      ? String(entry.report.rankingNo)
+      : 'N/A'
+  ));
   const pendingTasks = [...new Map(group.pendingItems.map((item) => [
     `${item.dueDate.toISOString().slice(0, 10)}:${item.note.trim()}`,
-    `${new Date(item.dueDate).toLocaleDateString('en-IN', {
+    `• ${new Date(item.dueDate).toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
       timeZone: 'Asia/Kolkata',
     })} — ${item.note.trim()}`,
   ])).values()];
-  lines.push('', '📌 PENDING FROM YOUR SIDE');
-  if (pendingTasks.length) {
-    pendingTasks.forEach((task) => lines.push(`• ${task}`));
-  } else {
-    lines.push('• None');
-  }
-  lines.push('', divider, '', 'Thank you for choosing We Promote');
-  return lines.join('\n');
+  const socialMediaReport = group.socialMediaReports[0];
+
+  return [
+    clientName,
+    totalSpend.toFixed(2),
+    String(totalReach),
+    String(totalLeads),
+    reportDate,
+    seoProjects.join('\nProject: ') || 'Not available',
+    seoKeywords.join('\nKeywords: ') || 'Not available',
+    rankings.join('\n#') || 'N/A',
+    socialMediaReport?.lastContentUploaded || 'No content uploaded yet',
+    socialMediaReport?.nextExpectedUploadDate || 'Not scheduled',
+    pendingTasks.length ? pendingTasks.join('\n') : '• None',
+  ];
+}
+
+function formatCombinedClientMessage(templateParameters) {
+  const template = [
+    'Hello {{1}},',
+    '',
+    'Here is your complete daily report from We Promote.',
+    '',
+    'Yesterday add spent: ₹{{2}}',
+    'Reach: {{3}}',
+    'Leads Obtained: {{4}}',
+    '',
+    '━━━━━━━━━━━━━━━━━━━━',
+    '',
+    '🌐 SEO REPORT : {{5}}',
+    '',
+    'Project: {{6}}',
+    'Keywords: {{7}}',
+    'Ranking: #{{8}}',
+    '',
+    '━━━━━━━━━━━━━━━━━━━━',
+    '',
+    '📱 SOCIAL MEDIA REPORT',
+    '',
+    'Last Content Uploaded: {{9}}',
+    'Next Expected Upload Date: {{10}}',
+    '━━━━━━━━━━━━━━━━━━━━',
+    '',
+    '📌 PENDING FROM YOUR SIDE',
+    '{{11}}',
+    '',
+    '━━━━━━━━━━━━━━━━━━━━',
+    '',
+    'Thank you for choosing We Promote',
+  ].join('\n');
+
+  return template.replace(/\{\{(\d+)\}\}/g, (_, index) => templateParameters[Number(index) - 1]);
 }
 
 /**
@@ -163,12 +185,20 @@ function formatCombinedClientMessage(group, date) {
  */
 exports.getMessagePreviews = async (req, res, next) => {
   try {
-    const roles = (req.user.roles?.length ? req.user.roles : [req.user.role])
+    const data = await exports.buildClientMessagePreviews(req.user);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.buildClientMessagePreviews = async (user) => {
+    const roles = (user.roles?.length ? user.roles : [user.role])
       .map((role) => String(role).toUpperCase());
     const role = roles.includes('ADMIN') ? 'ADMIN' : roles.includes('HR') ? 'HR' : 'MANAGER';
     const today = getDateKeyInIST();
     const yesterday = shiftDateKey(today, -1);
-    const reportUser = { ...req.user, role };
+    const reportUser = { ...user, role };
     const [report, yesterdayMarketingReport, submittedMarketingReports] = await Promise.all([
       dailyReportService.getDailyReport(reportUser, { date: today, department: 'all' }),
       dailyReportService.getDailyReport(reportUser, { date: yesterday, department: 'marketing' }),
@@ -267,11 +297,12 @@ exports.getMessagePreviews = async (req, res, next) => {
       items.push(item);
       pendingItemsByProject.set(item.projectId, items);
     });
-    const data = grouped.map((group) => {
+    return grouped.map((group) => {
       group.projects.forEach((project) => {
         group.pendingItems.push(...(pendingItemsByProject.get(project.id) || []));
       });
       const reportEntries = [...group.seo, ...group.marketing, ...group.socialMedia];
+      const templateParameters = getCombinedReportTemplateParameters(group, today);
       return {
         groupId: group.groupId,
         projectIds: [...new Set(group.projects.map((project) => project.id))],
@@ -288,14 +319,10 @@ exports.getMessagePreviews = async (req, res, next) => {
           lastContentUploaded,
           nextExpectedUploadDate,
         })),
-        messageBody: formatCombinedClientMessage(group, today),
+        templateParameters,
+        messageBody: formatCombinedClientMessage(templateParameters),
       };
     });
-
-    res.status(200).json({ success: true, data });
-  } catch (error) {
-    next(error);
-  }
 };
 
 /**

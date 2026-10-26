@@ -1,530 +1,126 @@
 const cron = require('node-cron');
 const whatsappService = require('../services/whatsappService');
-const messageTemplateService = require('../services/messageTemplateService');
 const messageLoggingService = require('../services/messageLoggingService');
-const dailyReportService = require('../modules/daily-report/daily-report.service');
-
-/**
- * Daily client messaging job
- * Runs at 8:00 PM IST
- * 
- * Flow:
- * 1. Fetch all Social Media projects with phone numbers
- * 2. For each project with assigned managers:
- *    - Generate daily message (upload status + today's stats)
- *    - Send message via WhatsApp
- *    - Log message to database
- * 3. Handle failures gracefully (don't block other projects)
- * 4. Log job execution summary
- */
 
 let jobInstance = null;
 
-/**
- * Initialize and start the daily messaging job
- */
 exports.initializeDailyMessagingJob = () => {
-  try {
-    // 8:00 PM IST = 20:00
-    // Cron format: minute hour day-of-month month day-of-week.
-    jobInstance = cron.schedule('0 20 * * *', async () => {
-
-      try {
-        await runDailyMessagingJob();
-      } catch (error) {
-        console.error('❌ Daily messaging job failed:', error);
-        // Don't throw - the job should keep running
-      }
-    }, {
-      scheduled: true,
-      timezone: 'Asia/Kolkata', // IST timezone
-    });
-
-
-    return jobInstance;
-  } catch (error) {
-    console.error('Failed to initialize daily messaging job:', error);
-    throw error;
+  if (!process.env.WHATSAPP_TEMPLATE_NAME) {
+    console.warn('Daily WhatsApp reports are not scheduled: WHATSAPP_TEMPLATE_NAME is not configured.');
+    return null;
   }
+
+  if (jobInstance) return jobInstance;
+
+  jobInstance = cron.schedule('16 19 * * *', async () => {
+    try {
+      const stats = await runDailyMessagingJob();
+      console.info('Daily WhatsApp report job completed:', stats);
+    } catch (error) {
+      console.error('Daily WhatsApp report job failed:', error);
+    }
+  }, {
+    scheduled: true,
+    timezone: 'Asia/Kolkata',
+  });
+
+  return jobInstance;
 };
 
-/**
- * Stop the scheduled job
- */
 exports.stopDailyMessagingJob = () => {
-  if (jobInstance) {
-    jobInstance.stop();
-    jobInstance.destroy();
-    jobInstance = null;
-
-  }
+  if (!jobInstance) return;
+  jobInstance.stop();
+  jobInstance.destroy();
+  jobInstance = null;
 };
 
-/**
- * Main job execution logic
- */
-
-/**
- * Main job execution logic — sends per-report WhatsApp messages to clients.
- * Sources contact numbers from:
- *   SEO:          seoReport.clientContactNumber
- *   Marketing:    marketingReport.clientContactNumber
- *   Social Media: project.phone
- */
 async function runDailyMessagingJob() {
+  if (!process.env.WHATSAPP_TEMPLATE_NAME) {
+    throw new Error('Daily WhatsApp reports are disabled until WHATSAPP_TEMPLATE_NAME is configured.');
+  }
 
-  return { disabled: true };
+  const prisma = require('../config/prisma');
+  const admin = await prisma.user.findFirst({
+    where: { role: 'ADMIN' },
+    select: { id: true, role: true },
+  });
+  if (!admin) throw new Error('No admin account is available to audit scheduled WhatsApp reports.');
 
-  const startTime = Date.now();
-  const jobStats = {
+  const controller = require('../modules/whatsapp-message/whatsapp-message.controller');
+  const previews = await controller.buildClientMessagePreviews({
+    ...admin,
+    roles: ['ADMIN'],
+  });
+  const stats = {
     totalMessages: 0,
     messagesSent: 0,
     messagesFailed: 0,
     skipped: 0,
     errors: [],
   };
+  const inFlightNumbers = new Set();
 
-  try {
-    const prisma = require('../config/prisma');
-    const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
-    const fallbackManagerId = adminUser?.id;
-    const today = new Date();
-
-    // ── Fetch today's full daily report ──────────────────────────────────
-
-    const dailyReport = await dailyReportService.getDailyReport(
-      { id: 'system', role: 'ADMIN' },
-      { date: today.toISOString().split('T')[0], department: 'all' }
-    );
-
-    // ── Group all reports by phone number ────────────────────────────────
-    const messagesByPhone = {};
-
-    const getMessageGroup = (phone, managerId) => {
-      if (!messagesByPhone[phone]) {
-        messagesByPhone[phone] = {
-          messages: [],
-          managerId,
-          projectIds: [],
-          reports: { seo: [], marketing: [], socialMedia: [] },
-        };
-      }
-      return messagesByPhone[phone];
-    };
-
-    // ── 1. SEO reports ───────────────────────────────────────────────────
-
-    for (const proj of dailyReport.seo) {
-      // Skip if no report data exists
-      if (!proj.report?.hasReport) {
-
-        jobStats.skipped++;
-        continue;
-      }
-
-      const phone = proj.report?.clientContactNumber;
-      if (!phone) { 
-
-        jobStats.skipped++; 
-        continue; 
-      }
-
-      const message = messageTemplateService.buildSeoReportMessage({
-        projectName: proj.projectName,
-        clientName:  proj.clientName,
-        report:      proj.report,
-        date:        today,
-      });
-
-      // Skip if message is empty
-      if (!message || message.trim() === '') {
-
-        jobStats.skipped++;
-        continue;
-      }
-
-      // Group by phone number
-      const group = getMessageGroup(phone, proj.report?.managerId || proj.assignments?.[0]?.managerId);
-      group.messages.push(message);
-      group.projectIds.push(proj.projectId);
-      group.reports.seo.push({ project: proj, report: proj.report });
-
+  for (const preview of previews) {
+    const recipient = whatsappService.formatPhoneNumber(preview.clientPhone);
+    const projectId = preview.projectIds.find(Boolean);
+    if (!recipient || !preview.isClientPhoneValid || !projectId) {
+      stats.skipped++;
+      continue;
     }
-
-    // ── 2. Marketing reports ─────────────────────────────────────────────
-
-    for (const proj of dailyReport.marketing) {
-      // Skip if no report data exists
-      if (!proj.report?.hasReport) {
-
-        jobStats.skipped++;
-        continue;
-      }
-
-      const phone = proj.report?.clientContactNumber;
-      if (!phone) { 
-
-        jobStats.skipped++; 
-        continue; 
-      }
-
-      const message = messageTemplateService.buildMarketingReportMessage({
-        projectName: proj.projectName,
-        clientName:  proj.report?.clientName || proj.clientName,
-        report:      proj.report,
-        date:        today,
-      });
-
-      // Skip if message is empty
-      if (!message || message.trim() === '') {
-
-        jobStats.skipped++;
-        continue;
-      }
-
-      // Group by phone number
-      const group = getMessageGroup(phone, proj.report?.managerId || proj.assignments?.[0]?.managerId);
-      group.messages.push(message);
-      group.projectIds.push(proj.projectId);
-      group.reports.marketing.push({ project: proj, report: proj.report });
-
+    if (inFlightNumbers.has(recipient)) {
+      stats.skipped++;
+      continue;
     }
+    inFlightNumbers.add(recipient);
+    stats.totalMessages++;
 
-    // ── 3. Social Media projects (use project.phone) ─────────────────────
-
-    for (const proj of dailyReport.socialMedia) {
-      // Skip if no uploads or content calendar data exists
-      if (!proj.uploads || proj.uploads.length === 0) {
-
-        jobStats.skipped++;
-        continue;
+    try {
+      if (!Array.isArray(preview.templateParameters) || preview.templateParameters.length !== 11) {
+        throw new Error(`Expected 11 WhatsApp template variables for ${recipient}.`);
       }
 
-      const phone = proj.clientContactNumber;
-      if (!phone) { 
-
-        jobStats.skipped++; 
-        continue; 
-      }
-
-      const message = messageTemplateService.buildSocialMediaReportMessage({
-        projectName:     proj.projectName,
-        clientName:      proj.clientName,
-        contentCalendar: proj.contentCalendar,
-        uploads:         proj.uploads,
-        date:            today,
-      });
-
-      // Skip if message is empty
-      if (!message || message.trim() === '') {
-
-        jobStats.skipped++;
-        continue;
-      }
-
-      // Group by phone number
-      const group = getMessageGroup(phone, proj.assignments?.[0]?.managerId);
-      group.messages.push(message);
-      group.projectIds.push(proj.projectId);
-      group.reports.socialMedia.push({ project: proj });
-
-    }
-
-    // ── Send consolidated messages by phone number ────────────────────────
-
-    for (const [phone, data] of Object.entries(messagesByPhone)) {
-      const formatted = whatsappService.formatPhoneNumber(phone);
-      if (!formatted) {
-        console.warn(`⚠️  Invalid phone: "${phone}" — skipping`);
-        jobStats.skipped++;
-        continue;
-      }
-
-      // Combine all messages into one consolidated message using professional template
-      const consolidatedMessage = buildConsolidatedClientMessage(data, today);
-      const templateParameters = buildApprovedTemplateParameters(data, today);
-
-      jobStats.totalMessages++;
-
-
-      const clientName = data.reports.socialMedia[0]?.project?.clientName ||
-        data.reports.marketing[0]?.project?.clientName ||
-        'Client';
       const result = await whatsappService.sendTemplateMessage(
-        formatted,
-        templateParameters,
-        consolidatedMessage
+        recipient,
+        preview.templateParameters,
+        preview.messageBody,
       );
-
-      // Log the consolidated message
       await messageLoggingService.logMessage({
-        projectId: data.projectIds[0] || null,
-        managerId: data.managerId || fallbackManagerId,
-        clientPhoneNumber: formatted,
-        messageContent: consolidatedMessage,
+        projectId,
+        managerId: admin.id,
+        clientPhoneNumber: recipient,
+        messageContent: preview.messageBody,
         status: result.success ? 'SENT' : 'FAILED',
         messageId: result.messageId || null,
         failureReason: result.error || null,
-        templateId: null,
       });
 
       if (result.success) {
-        jobStats.messagesSent++;
-
+        stats.messagesSent++;
       } else {
-        jobStats.messagesFailed++;
-        console.error(`❌ Failed to send to ${formatted}: ${result.error}`);
-        jobStats.errors.push({ phone: formatted, error: result.error });
+        stats.messagesFailed++;
+        stats.errors.push({
+          phone: recipient,
+          error: result.error || 'WhatsApp template send failed.',
+        });
       }
-    }
-
-  } catch (error) {
-    console.error('❌ Critical error in daily messaging job:', error);
-    jobStats.errors.push({ type: 'CRITICAL', error: error.message });
-  }
-
-  // ── Summary ─────────────────────────────────────────────────────────────
-  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-
-
-
-
-
-
-
-
-  if (jobStats.errors.length > 0) {
-  }
-
-
-  // Weekly cleanup
-  if (shouldCleanupMessages()) {
-
-    const deleted = await messageLoggingService.deleteOldMessages(90);
-
-  }
-
-  return jobStats;
-}
-
-/**
- * Build the 5 body parameters required by the approved Meta template.
- */
-function buildApprovedTemplateParameters(data, today) {
-  const marketing = data.reports?.marketing?.[0]?.report || {};
-  const socialProject = data.reports?.socialMedia?.[0]?.project || {};
-  const marketingProject = data.reports?.marketing?.[0]?.project || {};
-  const seoProject = data.reports?.seo?.[0]?.project || {};
-  const project = socialProject.projectName ? socialProject : marketingProject.projectName ? marketingProject : seoProject;
-  
-  const lastUpdate = today.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  return [
-    project.clientName || marketing.clientName || 'Client', // {{1}} Client Name
-    marketing.todayAmountSpend != null ? Number(marketing.todayAmountSpend).toFixed(2) : '0', // {{2}} Yesterday's Ad Spent
-    marketing.todayReachObtained ?? '0', // {{3}} Reach
-    marketing.leadObtained ?? '0', // {{4}} Leads Obtained
-    lastUpdate, // {{5}} Last Update Date
-  ].map(String);
-}
-
-/**
- * Build professional consolidated message using detailed template format
- */
-function buildConsolidatedClientMessage(data, today) {
-  const dateStr = today.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
-  const nextDateStr = new Date(today.getTime() + 86400000).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
-  
-  let message = `Hi Client,\n\nHere's your *daily brand activity update* from *We Promote* for *${dateStr}*.\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-  let hasSocialMedia = false;
-  let hasAds = false;
-  let hasSEO = false;
-
-  // Extract data from messages
-  let socialMediaInfo = { status: '', contentStatus: '', contentType: '', reel: '', post: '', video: '', uploadStatus: '' };
-  let adsInfo = { platform: '', area: '', status: '', spend: '', reach: '', leads: '' };
-  let seoInfo = { keyword: '', ranking: '', lastChecked: '', focus: '' };
-
-  // Parse messages to extract structured data
-  for (const msg of data.messages) {
-    if (msg.includes('Social Media') || msg.includes('📱')) {
-      hasSocialMedia = true;
-      // Extract social media details
-      if (msg.includes('APPROVED')) socialMediaInfo.contentStatus = 'Approved';
-      if (msg.includes('Reel')) socialMediaInfo.reel = 'AI Production Required';
-      if (msg.includes('Post')) socialMediaInfo.post = 'Shoot Required';
-      if (msg.includes('Video')) socialMediaInfo.video = 'Horizontal Video';
-      if (msg.includes('No uploads')) socialMediaInfo.uploadStatus = 'No upload recorded today';
-      socialMediaInfo.status = 'On Track';
-    } else if (msg.includes('Marketing') || msg.includes('📣') || msg.includes('Ads')) {
-      hasAds = true;
-      // Extract ads details
-      if (msg.includes('meta') || msg.includes('Meta')) adsInfo.platform = 'Meta Ads';
-      if (msg.includes('mumb')) adsInfo.area = 'Mumbai';
-      if (msg.includes('Running') || msg.includes('running')) adsInfo.status = 'Running';
-      
-      // Extract spend using regex - look for ₹ symbol
-      const spendMatch = msg.match(/₹\s*([0-9.]+)/);
-      if (spendMatch) adsInfo.spend = `₹${spendMatch[1]}`;
-      
-      // Extract reach - more flexible pattern
-      const reachMatch = msg.match(/(?:👁️?\s*)?Reach\s*:\s*(\d+)/i);
-      if (reachMatch) {
-        adsInfo.reach = reachMatch[1];
-
-      } else {
-
-      }
-      
-      // Extract leads - more flexible pattern to handle "Leads Obtained:"
-      const leadsMatch = msg.match(/(?:🎯?\s*)?Leads\s+Obtained\s*:\s*(\d+)/i) || msg.match(/(?:🎯?\s*)?Leads\s*:\s*(\d+)/i);
-      if (leadsMatch) {
-        adsInfo.leads = leadsMatch[1];
-
-      } else {
-
-      }
-    } else if (msg.includes('SEO') || msg.includes('🔍') || msg.includes('🌐')) {
-      hasSEO = true;
-      // Extract SEO details
-      const keywordMatch = msg.match(/(?:Keywords?|Tracked)[:\s]+•?\s*([^\n]+)/i);
-      if (keywordMatch) seoInfo.keyword = keywordMatch[1].trim();
-      
-      // Extract ranking - look for "Ranking:" or "Current Ranking:" with # symbol
-      const rankingMatch = msg.match(/(?:Current\s+)?Ranking[:\s]+#?(\d+)/i);
-      if (rankingMatch) {
-        seoInfo.ranking = `#${rankingMatch[1]}`;
-
-      }
-      
-      seoInfo.lastChecked = dateStr;
-      seoInfo.focus = 'Improving and maintaining search visibility';
-      seoInfo.status = 'On Track';
+    } catch (error) {
+      stats.messagesFailed++;
+      stats.errors.push({ phone: recipient, error: error.message });
+      console.error(`Failed to send scheduled report to ${recipient}:`, error);
+    } finally {
+      inFlightNumbers.delete(recipient);
     }
   }
 
-  // Use raw database values so metrics are not lost while parsing display text.
-  const marketingReport = data.reports?.marketing?.[0]?.report;
-  if (marketingReport) {
-    hasAds = true;
-    adsInfo.platform = marketingReport.typeOfAds || 'Meta Ads';
-    adsInfo.area = marketingReport.areaName || '';
-    adsInfo.status = marketingReport.isAdRunning === false ? 'Paused' : 'Running';
-    adsInfo.spend = marketingReport.todayAmountSpend != null
-      ? `₹${Number(marketingReport.todayAmountSpend).toFixed(2)}`
-      : '';
-    adsInfo.reach = marketingReport.todayReachObtained != null
-      ? Number(marketingReport.todayReachObtained).toLocaleString('en-IN')
-      : '';
-    adsInfo.leads = marketingReport.leadObtained != null
-      ? Number(marketingReport.leadObtained).toLocaleString('en-IN')
-      : '';
-  }
-
-  const seoReport = data.reports?.seo?.[0]?.report;
-  if (seoReport) {
-    hasSEO = true;
-    seoInfo.keyword = Array.isArray(seoReport.keywords)
-      ? seoReport.keywords.join(', ')
-      : '';
-    seoInfo.ranking = seoReport.rankingNo != null ? `#${seoReport.rankingNo}` : '';
-    seoInfo.lastChecked = seoReport.checkDate
-      ? new Date(seoReport.checkDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })
-      : dateStr;
-    seoInfo.focus = 'Improving and maintaining search visibility';
-  }
-
-  // BUILD SOCIAL MEDIA SECTION
-  if (hasSocialMedia) {
-    message += `📱 *SOCIAL MEDIA*\n\n`;
-    message += `Content Status: *${socialMediaInfo.contentStatus || 'Pending'}* ✅\n`;
-    message += `Content Type: *Reel + Post + Horizontal Video*\n`;
-    if (socialMediaInfo.reel) message += `Reel: *${socialMediaInfo.reel}*\n`;
-    if (socialMediaInfo.post) message += `Post: *${socialMediaInfo.post}*\n`;
-    message += `Content Title: *"fgdh"*\n\n`;
-    message += `Upload Status: *${socialMediaInfo.uploadStatus || 'Pending'}*\n\n`;
-    message += `Overall Status: *On Track* ✅\n\n`;
-    message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-  }
-
-  // BUILD ADS SECTION
-  if (hasAds) {
-    message += `📊 *ADS*\n\n`;
-    if (adsInfo.platform) message += `Platform: *${adsInfo.platform}*\n`;
-    if (adsInfo.area) message += `Target Area: *${adsInfo.area}*\n`;
-    message += `Campaign Status: *Running* 🟢\n\n`;
-    message += `Today's Performance:\n\n`;
-    if (adsInfo.spend) message += `• Spend: *${adsInfo.spend}*\n`;
-    if (adsInfo.reach) message += `• Reach: *${adsInfo.reach}*\n`;
-    if (adsInfo.leads) message += `• Leads: *${adsInfo.leads}*\n`;
-    message += `\nOverall Status: *Active* ✅\n\n`;
-    message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-  }
-
-  // BUILD SEO SECTION
-  if (hasSEO) {
-    message += `🔎 *SEO*\n\n`;
-    if (seoInfo.keyword) message += `Keyword Tracked: *${seoInfo.keyword}*\n`;
-    if (seoInfo.ranking) message += `Current Ranking: *${seoInfo.ranking}* 🥇\n`;
-    message += `Last Checked: *${seoInfo.lastChecked}*\n\n`;
-    message += `Current Focus: *${seoInfo.focus}*\n\n`;
-    message += `Overall Status: *On Track* ✅\n\n`;
-    message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-  }
-
-  // CLIENT REQUESTS SECTION
-  message += `📩 *CLIENT REQUESTS*\n\n`;
-  message += `Open Requests: *0*\n\n`;
-  message += `No pending client requests at this time.\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-  // ACCOUNT STATUS SECTION
-  message += `⚡ *ACCOUNT STATUS*\n\n`;
-  message += `Content: *On Track* ${hasSocialMedia ? '✅' : '⏳'}\n`;
-  message += `Ads: *On Track* ${hasAds ? '✅' : '⏳'}\n`;
-  message += `SEO: *On Track* ${hasSEO ? '✅' : '⏳'}\n`;
-  message += `Requests: *0 Open*\n\n`;
-  message += `*Next scheduled update: ${nextDateStr}*\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-  // FOOTER
-  message += `This is an automated update by *We Promote* to keep you informed about your brand's ongoing activities and performance.\n\n`;
-  message += `*WE PROMOTE*\n`;
-  message += `*A Brand Authority House.*`;
-
-  return message;
+  console.info('Daily WhatsApp report summary:', stats);
+  return stats;
 }
 
-function shouldCleanupMessages() {
-  const today = new Date();
-  // Run cleanup on Sundays
-  return today.getDay() === 0;
-}
+exports.triggerMessagingJobManually = async () => runDailyMessagingJob();
 
-/**
- * Manual trigger for testing - allows immediate job execution
- */
-exports.triggerMessagingJobManually = async () => {
-
-  try {
-    const stats = await runDailyMessagingJob();
-    return stats;
-  } catch (error) {
-    console.error('Error in manual job trigger:', error);
-    throw error;
-  }
-};
-
-/**
- * Get job status
- */
-exports.getJobStatus = () => {
-  return {
-    isRunning: jobInstance !== null,
-    nextExecution: jobInstance ? 'Check logs for exact time' : 'Job not initialized',
-    timezone: 'Asia/Kolkata (IST)',
-    scheduledTime: '8:00 PM IST daily',
-  };
-};
+exports.getJobStatus = () => ({
+  isRunning: jobInstance !== null,
+  nextExecution: jobInstance ? 'Check logs for exact time' : 'Job not initialized',
+  timezone: 'Asia/Kolkata (IST)',
+  scheduledTime: '7:16 PM IST daily',
+});
