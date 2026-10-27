@@ -4,7 +4,15 @@ const messageLoggingService = require('../services/messageLoggingService');
 
 let jobInstance = null;
 
+const isDailyMessagingEnabled = () =>
+  process.env.WHATSAPP_DAILY_MESSAGES_ENABLED === 'true';
+
 exports.initializeDailyMessagingJob = () => {
+  if (!isDailyMessagingEnabled()) {
+    console.info('Daily WhatsApp reports are disabled: set WHATSAPP_DAILY_MESSAGES_ENABLED=true to enable them.');
+    return null;
+  }
+
   if (!process.env.WHATSAPP_TEMPLATE_NAME) {
     console.warn('Daily WhatsApp reports are not scheduled: WHATSAPP_TEMPLATE_NAME is not configured.');
     return null;
@@ -35,6 +43,10 @@ exports.stopDailyMessagingJob = () => {
 };
 
 async function runDailyMessagingJob() {
+  if (!isDailyMessagingEnabled()) {
+    throw new Error('Daily WhatsApp reports are disabled. Set WHATSAPP_DAILY_MESSAGES_ENABLED=true to enable them.');
+  }
+
   if (!process.env.WHATSAPP_TEMPLATE_NAME) {
     throw new Error('Daily WhatsApp reports are disabled until WHATSAPP_TEMPLATE_NAME is configured.');
   }
@@ -119,8 +131,9 @@ async function runDailyMessagingJob() {
 exports.triggerMessagingJobManually = async () => runDailyMessagingJob();
 
 exports.getJobStatus = () => ({
-  isRunning: jobInstance !== null,
-  nextExecution: jobInstance ? 'Check logs for exact time' : 'Job not initialized',
+  enabled: isDailyMessagingEnabled(),
+  isRunning: isDailyMessagingEnabled() && jobInstance !== null,
+  nextExecution: isDailyMessagingEnabled() && jobInstance ? 'Check logs for exact time' : 'Job not initialized',
   timezone: 'Asia/Kolkata (IST)',
   scheduledTime: '7:16 PM IST daily',
 });
