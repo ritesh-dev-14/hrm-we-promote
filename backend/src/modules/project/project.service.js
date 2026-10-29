@@ -1,6 +1,7 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const cloudinary = require("../../utils/cloudinary");
 const { sendProjectAssignedToManagerMail } = require("../mail/mail.service");
 const { incrementUnread } = require("../../services/sidebarUnread.service");
 
@@ -553,7 +554,9 @@ exports.getProjects = async (user, query = {}) => {
 };
 
 exports.getAssignedProjects = async (user, query = {}) => {
-  const userRoles = user.roles?.length ? user.roles : [user.role];
+  const userRoles = (user.roles?.length ? user.roles : [user.role])
+    .filter(Boolean)
+    .map((role) => String(role).toUpperCase());
   if (!userRoles.includes("MANAGER")) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
@@ -678,7 +681,9 @@ const assertPendingItemProjectAccess = async (user, projectId) => {
     });
   }
 
-  const userRoles = user.roles?.length ? user.roles : [user.role];
+  const userRoles = (user.roles?.length ? user.roles : [user.role])
+    .filter(Boolean)
+    .map((role) => String(role).toUpperCase());
   const isManager = userRoles.includes("MANAGER");
   const isAdmin = userRoles.includes("ADMIN");
   const canViewProject = userRoles.some((role) =>
@@ -705,6 +710,12 @@ exports.getPendingItems = async (user, projectId) => {
     include: {
       createdBy: {
         select: { id: true, name: true, employeeId: true },
+      },
+      followUps: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          submittedBy: { select: { id: true, name: true, employeeId: true } },
+        },
       },
     },
   });
@@ -750,6 +761,12 @@ exports.getAssignedClientPendingOverview = async (user, department) => {
           createdBy: {
             select: { id: true, name: true, employeeId: true },
           },
+          followUps: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              submittedBy: { select: { id: true, name: true, employeeId: true } },
+            },
+          },
         },
       },
     },
@@ -771,6 +788,12 @@ exports.getClientConversation = async (user, projectId) => {
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
         include: {
           createdBy: { select: { id: true, name: true, employeeId: true } },
+          followUps: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              submittedBy: { select: { id: true, name: true, employeeId: true } },
+            },
+          },
         },
       },
     },
@@ -849,6 +872,70 @@ exports.createPendingItem = async (user, projectId, body) => {
       createdBy: {
         select: { id: true, name: true, employeeId: true },
       },
+    },
+  });
+};
+
+exports.createPendingItemFollowUp = async (user, projectId, pendingItemId, body, files = {}) => {
+  await assertPendingItemProjectAccess(user, projectId);
+
+  const pendingItem = await prisma.projectPendingItem.findFirst({
+    where: { id: pendingItemId, projectId },
+    select: { id: true },
+  });
+  if (!pendingItem) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Pending item not found for this project.",
+    });
+  }
+
+  const audioFile = files.audio?.[0];
+  const screenshotFiles = files.screenshots || [];
+  let audioUrl = null;
+  let screenshotUrls = [];
+
+  if (body.mediaType === "VOICE") {
+    if (!audioFile || !audioFile.mimetype.startsWith("audio/")) {
+      throw new ApiError(400, "Please upload a valid audio recording.");
+    }
+    if (screenshotFiles.length > 0) {
+      throw new ApiError(400, "Upload either an audio recording or screenshots, not both.");
+    }
+    const uploadResult = await cloudinary.uploadBuffer(audioFile.buffer, {
+      folder: "project_pending_items/follow_ups/audio",
+      resource_type: "video",
+    });
+    audioUrl = uploadResult.secure_url;
+  } else if (body.mediaType === "SCREENSHOTS") {
+    if (audioFile || screenshotFiles.length === 0) {
+      throw new ApiError(400, "Please upload at least one conversation screenshot.");
+    }
+    if (screenshotFiles.some((file) => !file.mimetype.startsWith("image/"))) {
+      throw new ApiError(400, "All uploaded screenshots must be image files.");
+    }
+    const uploadResults = await Promise.all(screenshotFiles.map((file) =>
+      cloudinary.uploadBuffer(file.buffer, {
+        folder: "project_pending_items/follow_ups/screenshots",
+        resource_type: "image",
+      }),
+    ));
+    screenshotUrls = uploadResults.map((result) => result.secure_url);
+  } else {
+    throw new ApiError(400, "Choose voice recording or screenshots as the evidence type.");
+  }
+
+  return prisma.projectPendingItemFollowUp.create({
+    data: {
+      pendingItemId,
+      submittedById: user.id,
+      status: body.status,
+      mediaType: body.mediaType,
+      audioUrl,
+      screenshots: screenshotUrls.length ? screenshotUrls : undefined,
+    },
+    include: {
+      submittedBy: { select: { id: true, name: true, employeeId: true } },
     },
   });
 };

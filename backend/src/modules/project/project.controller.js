@@ -120,6 +120,21 @@ exports.createPendingItem = async (req, res, next) => {
   }
 };
 
+exports.createPendingItemFollowUp = async (req, res, next) => {
+  try {
+    const data = await service.createPendingItemFollowUp(
+      req.user,
+      req.params.id,
+      req.params.pendingItemId,
+      req.body,
+      req.files,
+    );
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.updateProject = async (req, res, next) => {
   try {
     req.body = req.body || {};

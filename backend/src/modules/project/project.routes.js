@@ -6,14 +6,22 @@ const role = require("../../middlewares/role.middleware");
 const validate = require("../../middlewares/validate.middleware");
 const controller = require("./project.controller");
 const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+const pendingFollowUpUpload = multer({
+  storage,
+  limits: { fileSize: 30 * 1024 * 1024, files: 10 },
+});
 const {
   createProjectSchema,
   updateProjectSchema,
   updateProjectLogoSchema,
   renewProjectSchema,
 } = require("./project.validation");
-const { createPendingItemSchema } = require("./pending.validation");
+const {
+  createPendingItemSchema,
+  createPendingItemFollowUpSchema,
+} = require("./pending.validation");
 
 router.post(
   "/",
@@ -40,6 +48,18 @@ router.post(
   role("MANAGER", "ADMIN"),
   validate(createPendingItemSchema),
   controller.createPendingItem
+);
+
+router.post(
+  "/:id/pending-items/:pendingItemId/follow-ups",
+  auth,
+  role("MANAGER", "ADMIN"),
+  pendingFollowUpUpload.fields([
+    { name: "audio", maxCount: 1 },
+    { name: "screenshots", maxCount: 10 },
+  ]),
+  validate(createPendingItemFollowUpSchema),
+  controller.createPendingItemFollowUp
 );
 
 router.get("/:id", auth, controller.getProjectById);

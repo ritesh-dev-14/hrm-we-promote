@@ -630,12 +630,30 @@ model ProjectPendingItem {
   dueDate     DateTime
   note        String
   createdAt   DateTime @default(now())
+  followUps   ProjectPendingItemFollowUp[]
 
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdBy User    @relation("CreatedProjectPendingItems", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([projectId, dueDate])
   @@index([createdById])
+}
+
+model ProjectPendingItemFollowUp {
+  id            String   @id @default(uuid())
+  pendingItemId String
+  submittedById String
+  status        String
+  mediaType     String
+  audioUrl      String?
+  screenshots   Json?
+  createdAt     DateTime @default(now())
+
+  pendingItem ProjectPendingItem @relation(fields: [pendingItemId], references: [id], onDelete: Cascade)
+  submittedBy User               @relation("SubmittedProjectPendingItemFollowUps", fields: [submittedById], references: [id], onDelete: Cascade)
+
+  @@index([pendingItemId, createdAt])
+  @@index([submittedById])
 }
 
 model ProjectMonthlySheet {
@@ -1091,6 +1109,7 @@ model User {
   createdProjects             Project[]                      @relation("CreatedProjects")
   createdProjectMonthlySheets ProjectMonthlySheet[]          @relation("CreatedProjectMonthlySheets")
   createdProjectPendingItems  ProjectPendingItem[]           @relation("CreatedProjectPendingItems")
+  submittedPendingItemFollowUps ProjectPendingItemFollowUp[] @relation("SubmittedProjectPendingItemFollowUps")
   createdShootWorkspaces      ShootWorkspace[]               @relation("UserCreatedShootWorkspaces")
   createdShootTasks           ShootTask[]                    @relation("UserCreatedShootTasks")
   shootTaskAssignments        ShootTaskAssignment[]          @relation("UserShootTaskAssignments")
