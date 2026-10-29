@@ -711,8 +711,11 @@ exports.getPendingItems = async (user, projectId) => {
 };
 
 exports.getAssignedClientPendingOverview = async (user, department) => {
-  const userRoles = user.roles?.length ? user.roles : [user.role];
-  if (!userRoles.includes("MANAGER")) {
+  const userRoles = (user.roles?.length ? user.roles : [user.role])
+    .filter(Boolean)
+    .map((role) => String(role).toUpperCase());
+  const canViewAllProjects = userRoles.some((role) => ["ADMIN", "HR", "EA"].includes(role));
+  if (!canViewAllProjects && !userRoles.includes("MANAGER")) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -731,7 +734,7 @@ exports.getAssignedClientPendingOverview = async (user, department) => {
 
   return prisma.project.findMany({
     where: {
-      assignments: { some: { managerId: user.id } },
+      ...(!canViewAllProjects ? { assignments: { some: { managerId: user.id } } } : {}),
       OR: filters.map((name) => ({
         department: { name: { contains: name, mode: "insensitive" } },
       })),

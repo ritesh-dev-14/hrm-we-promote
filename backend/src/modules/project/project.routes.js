@@ -28,7 +28,7 @@ router.get("/", auth, controller.getProjects);
 
 router.get("/assigned", auth, role("MANAGER"), controller.getAssignedProjects);
 
-router.get("/client-pending", auth, role("MANAGER"), controller.getAssignedClientPendingOverview);
+router.get("/client-pending", auth, role("MANAGER", "ADMIN", "HR", "EA"), controller.getAssignedClientPendingOverview);
 
 router.get("/:id/client-conversation", auth, role("ADMIN"), controller.getClientConversation);
 
