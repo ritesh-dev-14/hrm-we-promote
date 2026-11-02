@@ -81,7 +81,7 @@ router.get(
 router.get(
   "/team-assignments",
   auth,
-  role("COORDINATOR", "EA"),
+  role("COORDINATOR", "EA", "HR"),
   controller.getTeamAssignments
 );
 

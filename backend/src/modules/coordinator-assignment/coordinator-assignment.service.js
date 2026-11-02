@@ -561,7 +561,7 @@ exports.getAssignmentsByCoordinator = async (
 };
 
 exports.getTeamAssignments = async (user, filters = {}) => {
-  if (!(["COORDINATOR", "EA"].includes(user.role))) {
+  if (!(["COORDINATOR", "EA", "HR"].includes(user.role))) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
