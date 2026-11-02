@@ -15,6 +15,7 @@ const controller =
 const {
   createTaskItemSchema,
   assignTaskItemSchema,
+  updateTaskItemSchema,
   updateTaskItemStatusSchema,
 } = require("./task-item.validation");
 
@@ -80,6 +81,7 @@ router.patch(
   "/:itemId",
   auth,
   role("ADMIN", "HR", "MANAGER"),
+  validate(updateTaskItemSchema),
   controller.updateTaskItem
 );
 

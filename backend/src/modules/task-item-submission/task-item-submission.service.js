@@ -127,6 +127,12 @@ exports.getMyAssignedItems =
         rawDataLink:
           a.taskItem.rawDataLink,
 
+        referenceLinks:
+          a.taskItem.referenceLinks,
+
+        rawDataLinks:
+          a.taskItem.rawDataLinks,
+
         status:
           a.taskItem.status,
 

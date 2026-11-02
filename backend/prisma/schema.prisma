@@ -979,6 +979,8 @@ model TaskItem {
   mediaType             TaskItemMediaType       @default(VIDEO)
   referenceLink         String?
   rawDataLink           String?
+  referenceLinks        String[]                @default([])
+  rawDataLinks          String[]                @default([])
   shootTaskId           String?
   monthlySheetDayId     String?
   shootSubTaskId        String?

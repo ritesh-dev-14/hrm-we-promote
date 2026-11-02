@@ -1152,6 +1152,8 @@ exports.getTaskItemsWithDetails =
           title: item.title,
           referenceLink: item.referenceLink,
           rawDataLink: item.rawDataLink,
+          referenceLinks: item.referenceLinks,
+          rawDataLinks: item.rawDataLinks,
           description:
             item.description,
           status:

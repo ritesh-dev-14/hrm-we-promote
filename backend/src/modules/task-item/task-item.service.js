@@ -172,8 +172,24 @@ exports.createTaskItem = async (
       priority: body.priority || "MEDIUM",
       status: body.status || "DRAFT",
       mediaType: body.mediaType || "VIDEO",
-      referenceLink: body.referenceLink ?? null,
-      rawDataLink: body.rawDataLink ?? null,
+      referenceLinks: Array.isArray(body.referenceLinks)
+        ? body.referenceLinks.map((link) => link.trim()).filter(Boolean)
+        : body.referenceLink
+          ? [body.referenceLink.trim()]
+          : [],
+      rawDataLinks: Array.isArray(body.rawDataLinks)
+        ? body.rawDataLinks.map((link) => link.trim()).filter(Boolean)
+        : body.rawDataLink
+          ? [body.rawDataLink.trim()]
+          : [],
+      referenceLink:
+        body.referenceLinks?.find((link) => link.trim())?.trim() ||
+        body.referenceLink?.trim() ||
+        null,
+      rawDataLink:
+        body.rawDataLinks?.find((link) => link.trim())?.trim() ||
+        body.rawDataLink?.trim() ||
+        null,
       shootTaskId: body.shootTaskId || null,
       monthlySheetDayId: body.monthlySheetDayId || null,
       shootSubTaskId: body.shootSubTaskId || null,
@@ -264,6 +280,8 @@ exports.createTaskItem = async (
     title: item.title,
     referenceLink: item.referenceLink,
     rawDataLink: item.rawDataLink,
+    referenceLinks: item.referenceLinks,
+    rawDataLinks: item.rawDataLinks,
     shootTaskId: item.shootTaskId,
     project: task.projectName,
     assignedToEmployee: {
@@ -395,6 +413,8 @@ exports.getTaskItems = async (
         : null,
       referenceLink: item.referenceLink,
       rawDataLink: item.rawDataLink,
+      referenceLinks: item.referenceLinks,
+      rawDataLinks: item.rawDataLinks,
       shootTaskId: item.shootTaskId,
       dueDate: item.dueDate,
       priority: item.priority,
@@ -811,8 +831,28 @@ exports.updateTaskItem = async (itemId, body) => {
       ...(body.priority && { priority: body.priority }),
       ...(body.mediaType && { mediaType: body.mediaType }),
       ...(body.dueDate !== undefined && { dueDate: body.dueDate }),
-      ...(body.referenceLink !== undefined && { referenceLink: body.referenceLink }),
-      ...(body.rawDataLink !== undefined && { rawDataLink: body.rawDataLink }),
+      ...(body.referenceLinks !== undefined
+        ? {
+            referenceLinks: body.referenceLinks.map((link) => link.trim()).filter(Boolean),
+            referenceLink: body.referenceLinks.find((link) => link.trim())?.trim() || null,
+          }
+        : body.referenceLink !== undefined
+          ? {
+              referenceLinks: body.referenceLink ? [body.referenceLink.trim()] : [],
+              referenceLink: body.referenceLink,
+            }
+          : {}),
+      ...(body.rawDataLinks !== undefined
+        ? {
+            rawDataLinks: body.rawDataLinks.map((link) => link.trim()).filter(Boolean),
+            rawDataLink: body.rawDataLinks.find((link) => link.trim())?.trim() || null,
+          }
+        : body.rawDataLink !== undefined
+          ? {
+              rawDataLinks: body.rawDataLink ? [body.rawDataLink.trim()] : [],
+              rawDataLink: body.rawDataLink,
+            }
+          : {}),
       ...(body.shootTaskId !== undefined ? { shootTaskId: body.shootTaskId || null } : {}),
       ...(body.status && { status: body.status }),
     },

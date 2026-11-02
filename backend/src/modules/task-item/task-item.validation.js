@@ -42,6 +42,8 @@ exports.createTaskItemSchema = Joi.object({
     .default("VIDEO"),
   referenceLink: Joi.string().uri().allow("", null).optional(),
   rawDataLink: Joi.string().uri().allow("", null).optional(),
+  referenceLinks: Joi.array().items(Joi.string().uri().allow("")).optional(),
+  rawDataLinks: Joi.array().items(Joi.string().uri().allow("")).optional(),
   shootTaskId: Joi.string().allow("", null).optional(),
   monthlySheetDayId: Joi.string().allow("", null).optional(),
   shootSubTaskId: Joi.string().allow("", null).optional(),
@@ -68,6 +70,34 @@ exports.updateTaskItemStatusSchema = Joi.object({
     .min(0)
     .max(100)
     .optional(),
+})
+  .unknown(false);
+
+exports.updateTaskItemSchema = Joi.object({
+  title: Joi.string().min(2).max(200).optional(),
+  employeeId: Joi.string().allow("").optional(),
+  dueDate: Joi.date().allow(null).optional(),
+  priority: Joi.string().valid("LOW", "MEDIUM", "HIGH").optional(),
+  description: Joi.string().allow("", null).optional(),
+  status: Joi.string()
+    .valid(
+      "DRAFT",
+      "ASSIGNED",
+      "IN_PROGRESS",
+      "SUBMITTED",
+      "VERIFIED",
+      "REJECTED",
+      "COMPLETED",
+      "PENDING",
+      "UNABLE_TO_SUBMIT",
+    )
+    .optional(),
+  mediaType: Joi.string().uppercase().valid("VIDEO", "PIC").optional(),
+  referenceLink: Joi.string().uri().allow("", null).optional(),
+  rawDataLink: Joi.string().uri().allow("", null).optional(),
+  referenceLinks: Joi.array().items(Joi.string().uri().allow("")).optional(),
+  rawDataLinks: Joi.array().items(Joi.string().uri().allow("")).optional(),
+  shootTaskId: Joi.string().allow("", null).optional(),
 })
   .unknown(false);
 
