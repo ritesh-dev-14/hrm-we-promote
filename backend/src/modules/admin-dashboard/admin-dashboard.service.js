@@ -32,7 +32,30 @@ exports.getControlTowerStats = async () => {
         title: true,
         dueDate: true,
         task: {
-          select: { project: { select: { projectName: true, clientName: true } } },
+          select: {
+            createdBy: { select: { id: true, name: true, employeeId: true, role: true } },
+            assignments: {
+              select: {
+                employee: { select: { id: true, name: true, employeeId: true, role: true } },
+              },
+            },
+            project: {
+              select: {
+                projectName: true,
+                clientName: true,
+                assignments: {
+                  select: {
+                    manager: { select: { id: true, name: true, employeeId: true, role: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        assignments: {
+          select: {
+            employee: { select: { id: true, name: true, employeeId: true, role: true } },
+          },
         },
       },
     }),
