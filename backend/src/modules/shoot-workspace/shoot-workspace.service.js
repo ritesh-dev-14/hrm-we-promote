@@ -1162,10 +1162,10 @@ exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
   }
 
   const employeeIds = [...new Set(body.employeeIds)];
-  const [employees, existingAssignments, manager] = await Promise.all([
+  const [assignees, existingAssignments, manager] = await Promise.all([
     employeeIds.length
       ? prisma.user.findMany({
-          where: { employeeId: { in: employeeIds }, role: "EMPLOYEE" },
+          where: { employeeId: { in: employeeIds }, role: { in: ["EMPLOYEE", "MANAGER"] } },
           select: assignedEmployeeSelect,
         })
       : [],
@@ -1178,26 +1178,26 @@ exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
       select: { name: true },
     }),
   ]);
-  if (employees.length !== employeeIds.length) {
+  if (assignees.length !== employeeIds.length) {
     throw new ApiError(400, {
       code: ERRORS.TASK.EMPLOYEE_NOT_FOUND.code,
-      message: ERRORS.TASK.EMPLOYEE_NOT_FOUND.message,
+      message: "One or more selected shoot assignees could not be found.",
     });
   }
 
-  const employeeUserIds = employees.map((employee) => employee.id);
-  const selectedUserIds = new Set(employeeUserIds);
+  const assigneeUserIds = assignees.map((assignee) => assignee.id);
+  const selectedUserIds = new Set(assigneeUserIds);
   const existingUserIds = new Set(existingAssignments.map(({ userId }) => userId));
-  const newEmployees = employees.filter((employee) => !existingUserIds.has(employee.id));
+  const newAssignees = assignees.filter((assignee) => !existingUserIds.has(assignee.id));
 
   await prisma.$transaction(async (transaction) => {
-    if (employeeUserIds.length) {
+    if (assigneeUserIds.length) {
       await transaction.shootTaskAssignment.deleteMany({
-        where: { taskId, userId: { notIn: employeeUserIds } },
+        where: { taskId, userId: { notIn: assigneeUserIds } },
       });
-      if (newEmployees.length) {
+      if (newAssignees.length) {
         await transaction.shootTaskAssignment.createMany({
-          data: newEmployees.map((employee) => ({ taskId, userId: employee.id })),
+          data: newAssignees.map((assignee) => ({ taskId, userId: assignee.id })),
           skipDuplicates: true,
         });
       }
@@ -1206,11 +1206,11 @@ exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
     }
   });
 
-  for (const employee of newEmployees) {
-    if (employee.email) {
+  for (const assignee of newAssignees) {
+    if (assignee.email) {
       sendShootTaskAssignedToEmployeeMail({
-        email: employee.email,
-        employeeName: employee.name,
+        email: assignee.email,
+        employeeName: assignee.name,
         managerName: manager?.name || null,
         workspaceName: workspace?.name || null,
         taskTitle: task.title,
@@ -1218,10 +1218,10 @@ exports.assignShootTaskEmployees = async (user, workspaceId, taskId, body) => {
         taskLocation: task.location,
         description: task.description,
       }).catch((err) =>
-        console.error(`[Mail] Failed to send shoot task email to ${employee.email}:`, err.message)
+        console.error(`[Mail] Failed to send shoot task email to ${assignee.email}:`, err.message)
       );
     }
-    incrementUnread(employee.id, "shoots").catch(() => {});
+    incrementUnread(assignee.id, "shoots").catch(() => {});
   }
 
   const assignments = await prisma.shootTaskAssignment.findMany({
@@ -1251,7 +1251,7 @@ exports.removeShootTaskEmployee = async (user, workspaceId, taskId, employeeId) 
   }
 
   const employee = await prisma.user.findFirst({
-    where: { employeeId, role: "EMPLOYEE" },
+    where: { employeeId, role: { in: ["EMPLOYEE", "MANAGER"] } },
     select: { id: true },
   });
   if (!employee) {
@@ -1272,7 +1272,11 @@ exports.removeShootTaskEmployee = async (user, workspaceId, taskId, employeeId) 
 exports.submitShootExtraContent = async (user, workspaceId, taskId, body) => {
   const { task } = await verifyShootTaskAccess(user, workspaceId, taskId);
 
-  if ((user.role || "").toUpperCase() !== "EMPLOYEE") {
+  const userRole = (user.role || "").toUpperCase();
+  if (!["EMPLOYEE", "MANAGER"].includes(userRole)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+  if (!task.assignments.some((assignment) => assignment.userId === user.id)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -1352,8 +1356,6 @@ exports.getMyShootTasks = async (user) => {
   const where =
     ["ADMIN", "HR"].includes(user.role)
       ? undefined
-      : user.role === "MANAGER"
-      ? { workspace: { createdById: user.id } }
       : { assignments: { some: { userId: user.id } } };
 
   const tasks = await prisma.shootTask.findMany({
@@ -1566,7 +1568,13 @@ exports.createShootSubTask = async (user, workspaceId, taskId, body) => {
 };
 
 exports.submitShootSubTask = async (user, workspaceId, taskId, subtaskId, body) => {
-  await verifyShootTaskAccess(user, workspaceId, taskId);
+  const { task } = await verifyShootTaskAccess(user, workspaceId, taskId);
+  if (
+    (user.role || "").toUpperCase() === "MANAGER" &&
+    !task.assignments.some((assignment) => assignment.userId === user.id)
+  ) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
 
   const subtask = await prisma.shootSubTask.findFirst({
     where: {

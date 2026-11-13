@@ -19,6 +19,13 @@ router.get(
 );
 
 router.get(
+  "/shoot-assignees",
+  auth,
+  role("MANAGER"),
+  controller.getShootAssignees
+);
+
+router.get(
   "/dashboard",
   auth,
   role("MANAGER"),

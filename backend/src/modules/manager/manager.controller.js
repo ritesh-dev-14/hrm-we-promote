@@ -59,6 +59,15 @@ exports.getMyEmployees =
     }
   };
 
+exports.getShootAssignees = async (req, res, next) => {
+  try {
+    const data = await service.getShootAssignees();
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getDashboardStats = async (
   req,
   res,

@@ -119,6 +119,21 @@ exports.getMyEmployees =
     return employees;
   };
 
+exports.getShootAssignees = async () => {
+  return prisma.user.findMany({
+    where: { role: { in: ["EMPLOYEE", "MANAGER"] } },
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      email: true,
+      position: true,
+      role: true,
+    },
+    orderBy: { name: "asc" },
+  });
+};
+
 //
 // 🔒 MANAGER LOGOUT STATUS
 // Checks if the manager can log out:

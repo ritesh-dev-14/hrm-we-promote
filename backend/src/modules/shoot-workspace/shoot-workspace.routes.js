@@ -129,7 +129,7 @@ router.delete(
 router.post(
   "/:workspaceId/tasks/:taskId/extra-content",
   auth,
-  role("EMPLOYEE"),
+  role("EMPLOYEE", "MANAGER"),
   validate(submitShootExtraContentSchema),
   controller.submitShootExtraContent
 );
@@ -189,7 +189,7 @@ router.post(
 router.post(
   "/:workspaceId/tasks/:taskId/subtasks/:subtaskId/submit",
   auth,
-  role("EMPLOYEE"),
+  role("EMPLOYEE", "MANAGER"),
   validate(submitShootSubTaskSchema),
   controller.submitShootSubTask
 );
