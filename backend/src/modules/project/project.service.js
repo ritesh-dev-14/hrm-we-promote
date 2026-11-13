@@ -436,7 +436,7 @@ exports.createProject = async (user, body) => {
 };
 
 exports.getProjects = async (user, query = {}) => {
-  const { page = 1, limit = 15, search = "", department = "", status = "", isRunning } = query;
+  const { page = 1, limit = 15, search = "", department = "", status = "", activation = "", isRunning } = query;
 
   const take = Math.min(Number(limit), 100);
   const skip = (Math.max(Number(page), 1) - 1) * take;
@@ -461,6 +461,8 @@ exports.getProjects = async (user, query = {}) => {
     } : {}),
     ...(department ? { department: { name: { contains: department, mode: "insensitive" } } } : {}),
     ...(status ? { status } : {}),
+    ...(activation === "active" ? { status: { not: "PAUSED" } } : {}),
+    ...(activation === "deactivated" ? { status: "PAUSED" } : {}),
     ...(isRunning !== undefined ? { isRunning: isRunning === "true" || isRunning === true } : {}),
   };
  
