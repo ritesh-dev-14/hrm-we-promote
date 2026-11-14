@@ -121,6 +121,9 @@ exports.getMyAssignedItems =
         instructions:
           a.taskItem.instructions,
 
+        googleDriveLink:
+          a.taskItem.googleDriveLink,
+
         referenceLink:
           a.taskItem.referenceLink,
 

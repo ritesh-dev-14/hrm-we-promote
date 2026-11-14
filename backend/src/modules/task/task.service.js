@@ -1150,6 +1150,7 @@ exports.getTaskItemsWithDetails =
         (item) => ({
           id: item.id,
           title: item.title,
+          googleDriveLink: item.googleDriveLink,
           referenceLink: item.referenceLink,
           rawDataLink: item.rawDataLink,
           referenceLinks: item.referenceLinks,

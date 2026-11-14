@@ -977,6 +977,7 @@ model TaskItem {
   dueDate               DateTime
   priority              Priority                @default(MEDIUM)
   mediaType             TaskItemMediaType       @default(VIDEO)
+  googleDriveLink       String?
   referenceLink         String?
   rawDataLink           String?
   referenceLinks        String[]                @default([])

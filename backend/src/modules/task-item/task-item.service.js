@@ -172,6 +172,7 @@ exports.createTaskItem = async (
       priority: body.priority || "MEDIUM",
       status: body.status || "DRAFT",
       mediaType: body.mediaType || "VIDEO",
+      googleDriveLink: body.googleDriveLink?.trim() || null,
       referenceLinks: Array.isArray(body.referenceLinks)
         ? body.referenceLinks.map((link) => link.trim()).filter(Boolean)
         : body.referenceLink
@@ -278,6 +279,7 @@ exports.createTaskItem = async (
   return {
     id: item.id,
     title: item.title,
+    googleDriveLink: item.googleDriveLink,
     referenceLink: item.referenceLink,
     rawDataLink: item.rawDataLink,
     referenceLinks: item.referenceLinks,
@@ -401,6 +403,7 @@ exports.getTaskItems = async (
     return {
       id: item.id,
       title: item.title,
+      googleDriveLink: item.googleDriveLink,
       project: task.projectName,
       assignedToEmployee: assignment
         ? {
@@ -830,6 +833,9 @@ exports.updateTaskItem = async (itemId, body) => {
       ...(body.description !== undefined && { description: body.description }),
       ...(body.priority && { priority: body.priority }),
       ...(body.mediaType && { mediaType: body.mediaType }),
+      ...(body.googleDriveLink !== undefined
+        ? { googleDriveLink: body.googleDriveLink?.trim() || null }
+        : {}),
       ...(body.dueDate !== undefined && { dueDate: body.dueDate }),
       ...(body.referenceLinks !== undefined
         ? {

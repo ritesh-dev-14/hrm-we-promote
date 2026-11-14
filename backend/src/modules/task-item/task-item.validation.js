@@ -40,6 +40,7 @@ exports.createTaskItemSchema = Joi.object({
     .valid("VIDEO", "PIC")
     .optional()
     .default("VIDEO"),
+  googleDriveLink: Joi.string().uri().allow("", null).optional(),
   referenceLink: Joi.string().uri().allow("", null).optional(),
   rawDataLink: Joi.string().uri().allow("", null).optional(),
   referenceLinks: Joi.array().items(Joi.string().uri().allow("")).optional(),
@@ -93,6 +94,7 @@ exports.updateTaskItemSchema = Joi.object({
     )
     .optional(),
   mediaType: Joi.string().uppercase().valid("VIDEO", "PIC").optional(),
+  googleDriveLink: Joi.string().uri().allow("", null).optional(),
   referenceLink: Joi.string().uri().allow("", null).optional(),
   rawDataLink: Joi.string().uri().allow("", null).optional(),
   referenceLinks: Joi.array().items(Joi.string().uri().allow("")).optional(),
