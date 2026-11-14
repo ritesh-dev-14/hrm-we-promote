@@ -260,6 +260,23 @@ exports.getSubmittedProjectIds = async (user, query = {}) => {
   return submittedProjects.map(({ projectId }) => projectId);
 };
 
+exports.getPendingMarketingReportCount = async (user) => {
+  if (!["ADMIN", "HR"].includes(user.role)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  return prisma.marketingReport.count({
+    where: {
+      approvalStatus: "PENDING",
+      project: {
+        department: {
+          name: { contains: "marketing", mode: "insensitive" },
+        },
+      },
+    },
+  });
+};
+
 exports.getCampaignReports = async (user, campaignId) => {
   if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);

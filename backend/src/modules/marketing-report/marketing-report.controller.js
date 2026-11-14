@@ -34,6 +34,15 @@ exports.getSubmittedProjectIds = async (req, res, next) => {
   }
 };
 
+exports.getPendingMarketingReportCount = async (req, res, next) => {
+  try {
+    const count = await service.getPendingMarketingReportCount(req.user);
+    res.json({ success: true, data: { count } });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createCampaignReport = async (req, res, next) => {
   try {
     const data = await service.createMarketingReport(req.user, {

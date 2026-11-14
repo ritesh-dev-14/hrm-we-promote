@@ -10,6 +10,7 @@ router.post("/", auth, role("MANAGER"), controller.createMarketingReport);
 
 // Get all marketing reports for a project (?projectId=...)
 router.get("/submitted-projects", auth, role("ADMIN"), controller.getSubmittedProjectIds);
+router.get("/pending-count", auth, role("ADMIN", "HR"), controller.getPendingMarketingReportCount);
 router.get("/", auth, role("ADMIN", "HR", "EA", "MANAGER"), controller.getMarketingReports);
 
 // Get single marketing report
