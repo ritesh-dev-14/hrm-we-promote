@@ -313,11 +313,13 @@ exports.getAllUploadCalendarSheets = async (user, query = {}) => {
     ? { assignments: { some: { managerId: user.id } } }
     : {};
   const isSummary = query.summary === "true";
+  const activeProjectsOnly = query.activeProjectsOnly === "true";
 
   const sheets = await prisma.projectMonthlySheet.findMany({
     where: {
       project: {
         ...projectAccess,
+        ...(activeProjectsOnly ? { status: { not: "PAUSED" } } : {}),
         department: { name: { in: FREQUENCY_DEPARTMENTS } },
       },
     },
