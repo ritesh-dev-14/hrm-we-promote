@@ -148,8 +148,13 @@ const formatDay = (day) => ({
   uploadStatus: day.uploadStatus || "PENDING",
   uploadRejectReason: day.uploadRejectReason,
   uploadRetryDate: day.uploadRetryDate,
+  uploadedAt: day.uploadedAt,
   createdAt: day.createdAt,
 });
+
+const hasUploadLinks = (contentUploadLinks, videoUploadLinks) =>
+  [...(contentUploadLinks || []), ...(videoUploadLinks || [])]
+    .some((link) => String(link || "").trim());
 
 const formatSheet = (sheet) => ({
   id: sheet.id,
@@ -334,6 +339,7 @@ exports.getAllUploadCalendarSheets = async (user, query = {}) => {
               uploadStatus: true,
               videoUploadLinks: true,
               contentUploadLinks: true,
+              uploadedAt: true,
             },
           }
         : true,
@@ -458,6 +464,13 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
         videoUploadLinksToKeep = dayInput.videoUploadLinks;
       }
 
+      const uploadLinksChanged = existingDay
+        && (JSON.stringify(contentUploadLinksToKeep) !== JSON.stringify(existingDay.contentUploadLinks || [])
+          || JSON.stringify(videoUploadLinksToKeep) !== JSON.stringify(existingDay.videoUploadLinks || []));
+      const uploadedAt = hasUploadLinks(contentUploadLinksToKeep, videoUploadLinksToKeep)
+        ? (uploadLinksChanged ? new Date() : existingDay?.uploadedAt || null)
+        : null;
+
       if (existingDay) {
         // Update existing day record IN-PLACE so day ID and shootSubTask relations are preserved!
         await prisma.projectMonthlySheetDay.update({
@@ -474,6 +487,7 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
             submissionLinks: submissionLinksToKeep,
             contentUploadLinks: contentUploadLinksToKeep,
             videoUploadLinks: videoUploadLinksToKeep,
+            uploadedAt,
           },
         });
       } else {
@@ -490,6 +504,7 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
             submissionLinks: submissionLinksToKeep,
             contentUploadLinks: contentUploadLinksToKeep,
             videoUploadLinks: videoUploadLinksToKeep,
+            uploadedAt,
             script: dayInput.script || null,
             description: dayInput.description || null,
           },
@@ -618,6 +633,21 @@ exports.updateUploadStatus = async (user, projectId, sheetId, dayId, body) => {
       updateData.uploadRetryDate = retryDate;
     } else {
       updateData.uploadRetryDate = null;
+    }
+
+    if (body.uploadStatus === "APPROVED") {
+      const linksChanged =
+        (body.contentUploadLinks !== undefined
+          && JSON.stringify(body.contentUploadLinks) !== JSON.stringify(currentDay.contentUploadLinks))
+        || (body.videoUploadLinks !== undefined
+          && JSON.stringify(body.videoUploadLinks) !== JSON.stringify(currentDay.videoUploadLinks));
+      const contentUploadLinks = body.contentUploadLinks ?? currentDay.contentUploadLinks;
+      const videoUploadLinks = body.videoUploadLinks ?? currentDay.videoUploadLinks;
+      if (!hasUploadLinks(contentUploadLinks, videoUploadLinks)) {
+        updateData.uploadedAt = null;
+      } else if (linksChanged || !currentDay.uploadedAt) {
+        updateData.uploadedAt = new Date();
+      }
     }
 
     return tx.projectMonthlySheetDay.update({

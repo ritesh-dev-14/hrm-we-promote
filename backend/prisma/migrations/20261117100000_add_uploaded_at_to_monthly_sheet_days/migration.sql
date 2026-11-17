@@ -1,0 +1,2 @@
+ALTER TABLE "ProjectMonthlySheetDay"
+ADD COLUMN IF NOT EXISTS "uploadedAt" TIMESTAMP(3);
