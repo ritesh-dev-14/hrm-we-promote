@@ -58,13 +58,23 @@ exports.createSeoReport = async (user, body, file) => {
   if (
     !body.projectId ||
     !body.keywords ||
-    !body.rankingNo ||
+    body.rankingNo === undefined ||
+    body.rankingNo === null ||
+    String(body.rankingNo).trim() === "" ||
     !body.checkDate ||
     !body.sheetUrl
   ) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
       message: "projectId, keywords, rankingNo, checkDate, and sheetUrl are required.",
+    });
+  }
+
+  const rankingNo = Number(body.rankingNo);
+  if (!Number.isInteger(rankingNo) || rankingNo < 0 || rankingNo > 9999) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "A valid ranking number is required.",
     });
   }
 
@@ -162,7 +172,7 @@ exports.createSeoReport = async (user, body, file) => {
       managerId: user.id,
       clientContactNumber: body.clientContactNumber || null,
       keywords,
-      rankingNo: parseInt(body.rankingNo, 10),
+      rankingNo,
       checkDate: new Date(body.checkDate),
       sheetUrl: sheetUrl.toString(),
       screenshotUrl,
@@ -228,7 +238,7 @@ exports.updateSeoReport = async (user, reportId, body, file) => {
   }
 
   const rankingNo = Number(body.rankingNo);
-  if (!Number.isInteger(rankingNo) || rankingNo < 1 || rankingNo > 9999) {
+  if (String(body.rankingNo ?? "").trim() === "" || !Number.isInteger(rankingNo) || rankingNo < 0 || rankingNo > 9999) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
       message: "A valid ranking number is required.",
