@@ -46,6 +46,9 @@ router.post(
   "/:id/pending-items",
   auth,
   role("MANAGER", "ADMIN"),
+  pendingFollowUpUpload.fields([
+    { name: "screenshots", maxCount: 10 },
+  ]),
   validate(createPendingItemSchema),
   controller.createPendingItem
 );

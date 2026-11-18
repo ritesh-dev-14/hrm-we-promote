@@ -860,8 +860,21 @@ exports.getClientConversation = async (user, projectId) => {
   };
 };
 
-exports.createPendingItem = async (user, projectId, body) => {
+exports.createPendingItem = async (user, projectId, body, files = {}) => {
   await assertPendingItemProjectAccess(user, projectId);
+
+  const screenshotFiles = files.screenshots || [];
+  if (screenshotFiles.some((file) => !file.mimetype.startsWith("image/"))) {
+    throw new ApiError(400, "All uploaded screenshots must be image files.");
+  }
+
+  const uploadResults = await Promise.all(screenshotFiles.map((file) =>
+    cloudinary.uploadBuffer(file.buffer, {
+      folder: "project_pending_items/screenshots",
+      resource_type: "image",
+    }),
+  ));
+  const screenshots = uploadResults.map((result) => result.secure_url);
 
   return prisma.projectPendingItem.create({
     data: {
@@ -869,6 +882,7 @@ exports.createPendingItem = async (user, projectId, body) => {
       createdById: user.id,
       dueDate: new Date(body.dueDate),
       note: body.note.trim(),
+      screenshots: screenshots.length ? screenshots : undefined,
     },
     include: {
       createdBy: {

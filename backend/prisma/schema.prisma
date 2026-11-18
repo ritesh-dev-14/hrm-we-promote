@@ -629,6 +629,7 @@ model ProjectPendingItem {
   createdById String
   dueDate     DateTime
   note        String
+  screenshots Json?
   createdAt   DateTime @default(now())
   followUps   ProjectPendingItemFollowUp[]
 

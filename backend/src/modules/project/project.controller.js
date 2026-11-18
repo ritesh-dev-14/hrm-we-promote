@@ -113,7 +113,7 @@ exports.getClientConversation = async (req, res, next) => {
 
 exports.createPendingItem = async (req, res, next) => {
   try {
-    const data = await service.createPendingItem(req.user, req.params.id, req.body);
+    const data = await service.createPendingItem(req.user, req.params.id, req.body, req.files);
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
