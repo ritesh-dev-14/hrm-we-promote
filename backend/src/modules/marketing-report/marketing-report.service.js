@@ -97,6 +97,10 @@ exports.createMarketingReport = async (user, body) => {
   }
 
   const unableToSubmitReason = body.unableToSubmitReason?.trim() || null;
+  const isUnableToSubmit = Object.prototype.hasOwnProperty.call(body, "unableToSubmitReason");
+  if (isUnableToSubmit && !unableToSubmitReason) {
+    throw new ApiError(400, "Provide a reason when you are unable to submit a report.");
+  }
   const hasRunningReportField = body.isAdRunning !== undefined
     && body.isAdRunning !== null
     && body.isAdRunning !== "";
