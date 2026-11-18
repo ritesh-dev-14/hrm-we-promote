@@ -97,11 +97,11 @@ exports.createMarketingReport = async (user, body) => {
   }
 
   const unableToSubmitReason = body.unableToSubmitReason?.trim() || null;
-  if (unableToSubmitReason && body.isAdRunning !== undefined) {
+  const hasRunningReportField = body.isAdRunning !== undefined
+    && body.isAdRunning !== null
+    && body.isAdRunning !== "";
+  if (unableToSubmitReason && hasRunningReportField) {
     throw new ApiError(400, "Do not submit running-report fields with an unable-to-submit reason.");
-  }
-  if (!unableToSubmitReason && body.isAdRunning === undefined) {
-    throw new ApiError(400, "Select whether the project is running or provide a reason for not filling the report.");
   }
   if (body.isAdRunning === false && !body.reasonNotRunning?.trim()) {
     throw new ApiError(400, "Provide a reason when the project is not running.");
@@ -251,13 +251,50 @@ exports.getSubmittedProjectIds = async (user, query = {}) => {
 
   const submittedProjects = await prisma.marketingReport.findMany({
     where: {
-      createdAt: { gte: from, lt: to },
+      date: { gte: from, lt: to },
+      isAdRunning: { not: null },
+      unableToSubmitReason: null,
     },
     distinct: ["projectId"],
     select: { projectId: true },
   });
 
   return submittedProjects.map(({ projectId }) => projectId);
+};
+
+exports.getSubmissionDetails = async (user, query = {}) => {
+  if (user.role !== "ADMIN") {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const from = new Date(query.from);
+  const to = new Date(query.to);
+  if (
+    !query.from ||
+    !query.to ||
+    Number.isNaN(from.getTime()) ||
+    Number.isNaN(to.getTime()) ||
+    from >= to
+  ) {
+    throw new ApiError(400, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Valid from and to date boundaries are required.",
+    });
+  }
+
+  return prisma.marketingReport.findMany({
+    where: {
+      date: { gte: from, lt: to },
+      isAdRunning: null,
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      projectId: true,
+      date: true,
+      unableToSubmitReason: true,
+      manager: { select: { id: true, name: true } },
+    },
+  });
 };
 
 exports.getPendingMarketingReportCount = async (user) => {
@@ -364,6 +401,20 @@ exports.updateMarketingReport = async (user, reportId, body) => {
 
   // Build update payload — only update fields that were explicitly provided
   const data = {};
+  if (body.unableToSubmitReason !== undefined) {
+    const unableToSubmitReason = body.unableToSubmitReason?.trim() || null;
+    data.unableToSubmitReason = unableToSubmitReason;
+    if (unableToSubmitReason) {
+      data.isAdRunning = null;
+      data.todayReachObtained = null;
+      data.todayAmountSpend = null;
+      data.reasonNotRunning = null;
+      data.typeOfAds = null;
+      data.leadObtained = null;
+      data.decidedDailyBudget = null;
+      data.leadSentToClient = null;
+    }
+  }
   if (body.clientName !== undefined) data.clientName = body.clientName || null;
   if (body.clientContactNumber !== undefined) data.clientContactNumber = body.clientContactNumber || null;
   if (body.videoLinks !== undefined || body.videoLink !== undefined) {
