@@ -33,6 +33,14 @@ const shiftDateKey = (dateKey, days) => {
   return date.toISOString().slice(0, 10);
 };
 
+const formatDateKeyInIST = (dateKey) => new Date(`${dateKey}T12:00:00Z`).toLocaleDateString('en-IN', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'Asia/Kolkata',
+});
+exports.formatDateKeyInIST = formatDateKeyInIST;
+
 async function getSubmittedMarketingReports(dateKey, user) {
   const startOfDay = new Date(`${dateKey}T00:00:00+05:30`);
   const endOfDay = new Date(startOfDay.getTime() + 86400000 - 1);
@@ -315,6 +323,7 @@ exports.buildClientMessagePreviews = async (user) => {
           lastContentUploaded,
           nextExpectedUploadDate,
         })),
+        metaAdsReportDate: formatDateKeyInIST(yesterday),
         templateParameters,
         messageBody: formatCombinedClientMessage(templateParameters),
       };
