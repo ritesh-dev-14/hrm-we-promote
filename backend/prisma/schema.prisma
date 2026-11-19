@@ -1164,6 +1164,7 @@ model WeeklyVoiceReport {
   clients       Json?
   reportType    String    @default("VOICE")
   audioUrl      String?
+  audioUrls     Json?
   screenshots   Json?
   reportDate    DateTime  @default(now())
   weekNumber    Int

@@ -16,7 +16,7 @@ router.post(
   auth,
   role("MANAGER"),
   upload.fields([
-    { name: "audio", maxCount: 1 },
+    { name: "audio", maxCount: 30 },
     { name: "screenshots", maxCount: 30 },
   ]),
   controller.submitReport

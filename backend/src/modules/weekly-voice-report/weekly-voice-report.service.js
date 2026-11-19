@@ -10,12 +10,16 @@ exports.submitReport = async (user, body, files, singleFile) => {
   }
 
   // Extract audio file if provided
-  const audioFile =
-    singleFile ||
-    files?.audio?.[0] ||
-    (Array.isArray(files)
-      ? files.find((f) => f.fieldname === "audio" || f.mimetype.startsWith("audio/"))
-      : null);
+  let audioFiles = [];
+  if (singleFile) {
+    audioFiles = [singleFile];
+  } else if (files?.audio) {
+    audioFiles = Array.isArray(files.audio) ? files.audio : [files.audio];
+  } else if (Array.isArray(files)) {
+    audioFiles = files.filter(
+      (f) => f.fieldname === "audio" || f.fieldname === "audio[]" || f.mimetype.startsWith("audio/") || f.mimetype === "video/mp4"
+    );
+  }
 
   // Extract screenshot files if provided
   let screenshotFiles = [];
@@ -33,7 +37,7 @@ exports.submitReport = async (user, body, files, singleFile) => {
   // Determine report type
   let reportType = requestedReportType;
   if (!reportType) {
-    if (audioFile) {
+    if (audioFiles.length > 0) {
       reportType = "VOICE";
     } else if (screenshotFiles.length > 0) {
       reportType = "SCREENSHOTS";
@@ -42,7 +46,7 @@ exports.submitReport = async (user, body, files, singleFile) => {
     }
   }
 
-  let audioUrl = null;
+  let audioUrls = [];
   let screenshotUrls = [];
 
   if (reportType === "UNABLE_TO_SUBMIT") {
@@ -50,21 +54,25 @@ exports.submitReport = async (user, body, files, singleFile) => {
       throw new ApiError(400, "Please provide a reason explaining why you are unable to submit the report.");
     }
   } else if (reportType === "VOICE") {
-    if (!audioFile) {
+    if (audioFiles.length === 0) {
       throw new ApiError(400, "Please upload a voice recording audio or MP4 file.");
     }
-    const isSupportedRecording =
-      audioFile.mimetype?.startsWith("audio/") ||
-      audioFile.mimetype === "video/mp4" ||
-      /\.mp4$/i.test(audioFile.originalname || "");
-    if (!isSupportedRecording) {
-      throw new ApiError(400, "Please upload a supported audio or MP4 file.");
-    }
-    const uploadResult = await cloudinary.uploadBuffer(audioFile.buffer, {
-      folder: "weekly_voice_reports",
-      resource_type: "video" // Cloudinary uses 'video' for audio files
-    });
-    audioUrl = uploadResult.secure_url;
+    const invalidFile = audioFiles.find((audioFile) =>
+      !audioFile.mimetype?.startsWith("audio/") &&
+      audioFile.mimetype !== "video/mp4" &&
+      !/\.mp4$/i.test(audioFile.originalname || "")
+    );
+    if (invalidFile) throw new ApiError(400, "Please upload supported audio or MP4 files.");
+
+    const uploadResults = await Promise.all(
+      audioFiles.map((audioFile) =>
+        cloudinary.uploadBuffer(audioFile.buffer, {
+          folder: "weekly_voice_reports",
+          resource_type: "video"
+        })
+      )
+    );
+    audioUrls = uploadResults.map((result) => result.secure_url);
   } else if (reportType === "SCREENSHOTS") {
     if (!screenshotFiles || screenshotFiles.length === 0) {
       throw new ApiError(400, "Please upload at least one conversation screenshot.");
@@ -121,7 +129,8 @@ exports.submitReport = async (user, body, files, singleFile) => {
       data: {
         department,
         reportType,
-        audioUrl: reportType === "VOICE" ? audioUrl : null,
+        audioUrl: reportType === "VOICE" ? (audioUrls[0] || null) : null,
+        audioUrls: reportType === "VOICE" && audioUrls.length > 0 ? audioUrls : null,
         screenshots: reportType === "SCREENSHOTS" && screenshotUrls.length > 0 ? screenshotUrls : null,
         status: reportType === "UNABLE_TO_SUBMIT" ? "Unable to Submit" : "Submitted",
         qaStatus: "PENDING", // Resets QA review back to PENDING so QA reviews the updated submission!
@@ -139,7 +148,8 @@ exports.submitReport = async (user, body, files, singleFile) => {
       managerId: user.id,
       department,
       reportType,
-      audioUrl,
+      audioUrl: audioUrls[0] || null,
+      audioUrls: audioUrls.length > 0 ? audioUrls : null,
       screenshots: screenshotUrls.length > 0 ? screenshotUrls : null,
       status: reportType === "UNABLE_TO_SUBMIT" ? "Unable to Submit" : "Submitted",
       qaStatus: "PENDING",
