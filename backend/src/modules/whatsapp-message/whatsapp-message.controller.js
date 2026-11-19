@@ -14,6 +14,7 @@ const normalizePhoneKey = (phone) => {
   if (digits.startsWith('0') && digits.length === 11) digits = digits.slice(1);
   return digits;
 };
+exports.normalizePhoneKey = normalizePhoneKey;
 
 const getDateKeyInIST = (date = new Date()) => {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -192,12 +193,9 @@ exports.getMessagePreviews = async (req, res, next) => {
 };
 
 exports.buildClientMessagePreviews = async (user) => {
-    const roles = (user.roles?.length ? user.roles : [user.role])
-      .map((role) => String(role).toUpperCase());
-    const role = roles.includes('ADMIN') ? 'ADMIN' : roles.includes('HR') ? 'HR' : 'MANAGER';
     const today = getDateKeyInIST();
     const yesterday = shiftDateKey(today, -1);
-    const reportUser = { ...user, role };
+    const reportUser = { ...user, role: 'ADMIN' };
     const [report, yesterdayMarketingReport, submittedMarketingReports] = await Promise.all([
       dailyReportService.getDailyReport(reportUser, { date: today, department: 'all' }),
       dailyReportService.getDailyReport(reportUser, { date: yesterday, department: 'marketing' }),
@@ -280,7 +278,6 @@ exports.buildClientMessagePreviews = async (user) => {
         const rightTimestamp = Number.isNaN(rightDate) ? 0 : rightDate;
         return rightTimestamp - leftTimestamp;
       });
-      group.socialMediaReports = group.socialMediaReports.slice(0, 1);
     }));
     const allProjectIds = [...new Set(grouped.flatMap((group) => group.projects.map((project) => project.id)))];
     const pendingItems = allProjectIds.length
@@ -308,7 +305,7 @@ exports.buildClientMessagePreviews = async (user) => {
         projectNames: [...new Set(group.projects.map((project) => project.projectName))],
         clientName: group.projects.find((project) => project.clientName)?.clientName ||
           group.projects[0]?.projectName || 'Client',
-        clientPhone: group.clientPhone,
+        clientPhone: group.clientPhone ? String(group.clientPhone).replace(/\s+/g, '') : null,
         isClientPhoneValid: group.isClientPhoneValid,
         departmentNames: [...new Set(reportEntries.map((entry) => entry.department))],
         managerNames: [...group.managerNames],
