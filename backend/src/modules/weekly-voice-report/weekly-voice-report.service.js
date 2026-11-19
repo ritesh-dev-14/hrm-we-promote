@@ -51,7 +51,14 @@ exports.submitReport = async (user, body, files, singleFile) => {
     }
   } else if (reportType === "VOICE") {
     if (!audioFile) {
-      throw new ApiError(400, "Please upload a voice recording audio file.");
+      throw new ApiError(400, "Please upload a voice recording audio or MP4 file.");
+    }
+    const isSupportedRecording =
+      audioFile.mimetype?.startsWith("audio/") ||
+      audioFile.mimetype === "video/mp4" ||
+      /\.mp4$/i.test(audioFile.originalname || "");
+    if (!isSupportedRecording) {
+      throw new ApiError(400, "Please upload a supported audio or MP4 file.");
     }
     const uploadResult = await cloudinary.uploadBuffer(audioFile.buffer, {
       folder: "weekly_voice_reports",
