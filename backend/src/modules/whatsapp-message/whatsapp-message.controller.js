@@ -124,15 +124,7 @@ function getCombinedReportTemplateParameters(group, date) {
       ? String(entry.report.rankingNo)
       : 'N/A'
   ));
-  const pendingTasks = [...new Map(group.pendingItems.map((item) => [
-    `${item.dueDate.toISOString().slice(0, 10)}:${item.note.trim()}`,
-    `• ${new Date(item.dueDate).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      timeZone: 'Asia/Kolkata',
-    })} — ${item.note.trim()}`,
-  ])).values()];
+  const pendingTasks = formatPendingItems(group.pendingItems);
   const socialMediaReport = group.socialMediaReports[0];
 
   return [
@@ -149,6 +141,34 @@ function getCombinedReportTemplateParameters(group, date) {
     pendingTasks.length ? pendingTasks.join('\n') : '• None',
   ];
 }
+
+function formatPendingItems(items) {
+  return [...new Map(items.map((item) => [
+    `${item.dueDate.toISOString().slice(0, 10)}:${item.note.trim()}`,
+    `• ${new Date(item.dueDate).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    })} — ${item.note.trim()}`,
+  ])).values()];
+}
+
+function groupPendingItemsByDepartment(projects, pendingItemsByProject, departmentByProject) {
+  const groupedItems = {
+    seo: [],
+    marketing: [],
+    socialMedia: [],
+  };
+  projects.forEach((project) => {
+    const department = departmentByProject.get(project.id);
+    if (department && groupedItems[department]) {
+      groupedItems[department].push(...(pendingItemsByProject.get(project.id) || []));
+    }
+  });
+  return groupedItems;
+}
+exports.groupPendingItemsByDepartment = groupPendingItemsByDepartment;
 
 function formatCombinedClientMessage(templateParameters) {
   const template = [
@@ -236,6 +256,7 @@ exports.buildClientMessagePreviews = async (user) => {
             seo: [],
             marketing: [],
             socialMedia: [],
+            pendingItemDepartments: new Map(),
           });
         }
         const group = groups.get(groupId);
@@ -255,6 +276,7 @@ exports.buildClientMessagePreviews = async (user) => {
         }
         entry.managers.forEach((manager) => group.managerNames.add(manager));
         group[department].push(entry);
+        group.pendingItemDepartments.set(entry.projectId, department);
       }
     }
 
@@ -302,9 +324,12 @@ exports.buildClientMessagePreviews = async (user) => {
       pendingItemsByProject.set(item.projectId, items);
     });
     return grouped.map((group) => {
-      group.projects.forEach((project) => {
-        group.pendingItems.push(...(pendingItemsByProject.get(project.id) || []));
-      });
+      group.pendingItemsByDepartment = groupPendingItemsByDepartment(
+        group.projects,
+        pendingItemsByProject,
+        group.pendingItemDepartments,
+      );
+      group.pendingItems = Object.values(group.pendingItemsByDepartment).flat();
       const reportEntries = [...group.seo, ...group.marketing, ...group.socialMedia];
       const templateParameters = getCombinedReportTemplateParameters(group, today);
       return {
@@ -323,6 +348,12 @@ exports.buildClientMessagePreviews = async (user) => {
           lastContentUploaded,
           nextExpectedUploadDate,
         })),
+        pendingItemsByDepartment: Object.fromEntries(
+          Object.entries(group.pendingItemsByDepartment).map(([department, items]) => [
+            department,
+            formatPendingItems(items),
+          ]),
+        ),
         metaAdsReportDate: formatDateKeyInIST(yesterday),
         templateParameters,
         messageBody: formatCombinedClientMessage(templateParameters),
