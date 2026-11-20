@@ -156,6 +156,34 @@ const hasUploadLinks = (contentUploadLinks, videoUploadLinks) =>
   [...(contentUploadLinks || []), ...(videoUploadLinks || [])]
     .some((link) => String(link || "").trim());
 
+const countApprovedUploads = (days = []) =>
+  (days || []).reduce(
+    (counts, day) => {
+      if (day.uploadStatus !== "APPROVED") return counts;
+      counts.reels += (day.videoUploadLinks || []).filter((link) => String(link || "").trim()).length;
+      counts.posts += (day.contentUploadLinks || []).filter((link) => String(link || "").trim()).length;
+      return counts;
+    },
+    { reels: 0, posts: 0 }
+  );
+
+const syncMonthlySheetUploadTotals = async (client, sheetId) => {
+  const sheet = await client.projectMonthlySheet.findUnique({
+    where: { id: sheetId },
+    include: { days: true },
+  });
+  if (!sheet) return null;
+
+  const counts = countApprovedUploads(sheet.days);
+  return client.projectMonthlySheet.update({
+    where: { id: sheetId },
+    data: {
+      totalReelsUploaded: counts.reels,
+      totalPostsUploaded: counts.posts,
+    },
+  });
+};
+
 const formatSheet = (sheet) => ({
   id: sheet.id,
   projectId: sheet.projectId,
@@ -163,8 +191,8 @@ const formatSheet = (sheet) => ({
   year: sheet.year,
   totalReels: sheet.totalReels,
   totalPosts: sheet.totalPosts,
-  totalReelsUploaded: sheet.totalReelsUploaded,
-  totalPostsUploaded: sheet.totalPostsUploaded,
+  totalReelsUploaded: countApprovedUploads(sheet.days).reels,
+  totalPostsUploaded: countApprovedUploads(sheet.days).posts,
   moodBoardLink: sheet.moodBoardLink,
   createdBy: {
     id: sheet.createdBy.id,
@@ -243,8 +271,8 @@ exports.createProjectMonthlySheet = async (user, projectId, body) => {
       year: body.year,
       totalReels: body.totalReels,
       totalPosts: body.totalPosts,
-      totalReelsUploaded: body.totalReelsUploaded,
-      totalPostsUploaded: body.totalPostsUploaded,
+      totalReelsUploaded: 0,
+      totalPostsUploaded: 0,
       moodBoardLink: body.moodBoardLink,
       createdById: user.id,
       days: {
@@ -357,6 +385,8 @@ exports.getAllUploadCalendarSheets = async (user, query = {}) => {
 
   return sheets.map((sheet) => ({
     ...sheet,
+    totalReelsUploaded: countApprovedUploads(sheet.days).reels,
+    totalPostsUploaded: countApprovedUploads(sheet.days).posts,
     projectName: sheet.project?.projectName,
     clientName: sheet.project?.clientName,
     project: undefined,
@@ -417,8 +447,8 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
   const data = {};
   if (body.totalReels !== undefined) data.totalReels = body.totalReels;
   if (body.totalPosts !== undefined) data.totalPosts = body.totalPosts;
-  if (body.totalReelsUploaded !== undefined) data.totalReelsUploaded = body.totalReelsUploaded;
-  if (body.totalPostsUploaded !== undefined) data.totalPostsUploaded = body.totalPostsUploaded;
+  delete data.totalReelsUploaded;
+  delete data.totalPostsUploaded;
   if (body.moodBoardLink !== undefined) data.moodBoardLink = body.moodBoardLink;
 
   const updateData = {
@@ -514,6 +544,8 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
       }
     }
   }
+
+  await syncMonthlySheetUploadTotals(prisma, sheetId);
 
   const updatedSheet = await prisma.projectMonthlySheet.update({
     where: { id: sheetId },
@@ -652,10 +684,13 @@ exports.updateUploadStatus = async (user, projectId, sheetId, dayId, body) => {
       }
     }
 
-    return tx.projectMonthlySheetDay.update({
+    const updated = await tx.projectMonthlySheetDay.update({
       where: { id: dayId },
       data: updateData,
     });
+
+    await syncMonthlySheetUploadTotals(tx, sheetId);
+    return updated;
   });
 
   return formatDay(updatedDay);

@@ -22,8 +22,8 @@ exports.createProjectMonthlySheetSchema = Joi.object({
   year: Joi.number().integer().min(2000).required(),
   totalReels: Joi.number().integer().min(0).required(),
   totalPosts: Joi.number().integer().min(0).required(),
-  totalReelsUploaded: Joi.number().integer().min(0).required(),
-  totalPostsUploaded: Joi.number().integer().min(0).required(),
+  totalReelsUploaded: Joi.number().integer().min(0).optional(),
+  totalPostsUploaded: Joi.number().integer().min(0).optional(),
   moodBoardLink: Joi.string().uri().required(),
   days: Joi.array().items(monthlySheetDaySchema).min(1).required(),
 }).unknown(false);
