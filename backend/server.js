@@ -4,6 +4,7 @@ const { setupSocketIO } = require("./src/config/socket.config");
 const { setupEscalationJobs } = require("./src/jobs/escalationJobs");
 const { initializeDailyMessagingJob } = require("./src/jobs/dailyClientMessagesJob");
 const { initializeWeeklyVoiceReportJob } = require("./src/jobs/weeklyVoiceReportJob");
+const { initializeEaAdminPendingTasksJob } = require("./src/jobs/eaAdminPendingTasksJob");
 const mailService = require("./src/modules/mail/mail.service");
 
 // Server configuration & port
@@ -31,6 +32,13 @@ try {
   initializeWeeklyVoiceReportJob();
 } catch (error) {
   console.error("Failed to initialize weekly voice report job:", error);
+}
+
+// Setup daily EA to Admin pending task summary email
+try {
+  initializeEaAdminPendingTasksJob();
+} catch (error) {
+  console.error("Failed to initialize EA Admin pending tasks job:", error);
 }
 
 server.listen(PORT, async () => {
