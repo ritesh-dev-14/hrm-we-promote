@@ -582,7 +582,7 @@ const verifyWorkspaceAccess = async (user, workspaceId) => {
     task.assignments.some((assignment) => assignment.userId === user.id)
   );
   const isOwner = workspace.createdById === user.id;
-  const canView = ["ADMIN", "HR", "MANAGER", "COORDINATOR"].includes(userRole) || isMember || isOwner;
+  const canView = ["ADMIN", "HR", "MANAGER", "COORDINATOR", "EA"].includes(userRole) || isMember || isOwner;
   if (!canView) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
@@ -670,7 +670,7 @@ exports.getShootWorkspaces = async (user, query = {}) => {
       }
     : {};
 
-  if (["ADMIN", "HR"].includes(userRole)) {
+  if (["ADMIN", "HR", "EA", "COORDINATOR"].includes(userRole)) {
     const workspaces = await prisma.shootWorkspace.findMany({
       where: projectFilter,
       include: { createdBy: true, project: { select: { id: true, projectName: true, clientName: true } }, members: { include: { user: true } }, tasks: { include: shootTaskInclude } },
@@ -705,7 +705,7 @@ exports.getShootManagementSummary = async (user, monthStr) => {
 
   let workspaces = [];
 
-  if (["ADMIN", "HR"].includes(userRole)) {
+  if (["ADMIN", "HR", "EA", "COORDINATOR"].includes(userRole)) {
     workspaces = await prisma.shootWorkspace.findMany({
       include: {
         createdBy: true,

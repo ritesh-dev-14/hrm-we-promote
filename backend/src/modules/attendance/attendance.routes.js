@@ -35,7 +35,7 @@ router.post("/appeal-sidebar/:attendanceId/reject", auth, role("EA", "ADMIN", "H
 router.get(
   "/:employeeId",
   auth,
-  role("HR", "ADMIN"),
+  role("HR", "ADMIN", "EA", "COORDINATOR"),
   controller.getEmployeeAttendance
 );
 

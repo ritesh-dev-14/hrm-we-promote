@@ -29,7 +29,7 @@ router.post(
 router.get(
   "/",
   auth,
-  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE", "EA", "COORDINATOR"),
   controller.getShootWorkspaces
 );
 
@@ -49,14 +49,14 @@ router.get(
 router.get(
   "/management-summary",
   auth,
-  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE", "EA", "COORDINATOR"),
   controller.getShootManagementSummary
 );
 
 router.get(
   "/:workspaceId/upload-feed",
   auth,
-  role("ADMIN", "HR", "MANAGER"),
+  role("ADMIN", "HR", "MANAGER", "EA", "COORDINATOR"),
   controller.getWorkspaceUploadFeed
 );
 
@@ -77,7 +77,7 @@ router.post(
 router.get(
   "/:workspaceId",
   auth,
-  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE", "EA", "COORDINATOR"),
   controller.getShootWorkspaceById
 );
 
@@ -137,7 +137,7 @@ router.post(
 router.get(
   "/:workspaceId/tasks/:taskId/extra-content",
   auth,
-  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE", "EA", "COORDINATOR"),
   controller.getShootExtraContent
 );
 
@@ -152,14 +152,14 @@ router.post(
 router.get(
   "/:workspaceId/tasks",
   auth,
-  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE", "EA", "COORDINATOR"),
   controller.getShootTasks
 );
 
 router.get(
   "/:workspaceId/tasks/:taskId",
   auth,
-  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE", "EA", "COORDINATOR"),
   controller.getShootTaskById
 );
 
@@ -205,14 +205,14 @@ router.post(
 router.get(
   "/:workspaceId/tasks/:taskId/subtasks",
   auth,
-  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE", "EA", "COORDINATOR"),
   controller.getShootSubTasks
 );
 
 router.get(
   "/:workspaceId/tasks/:taskId/subtasks/:subtaskId",
   auth,
-  role("ADMIN", "HR", "MANAGER", "EMPLOYEE"),
+  role("ADMIN", "HR", "MANAGER", "EMPLOYEE", "EA", "COORDINATOR"),
   controller.getShootSubTaskById
 );
 

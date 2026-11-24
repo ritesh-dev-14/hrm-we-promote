@@ -25,10 +25,10 @@ router.get("/active-clients", auth, role("MANAGER"), controller.getActiveClients
 router.get("/my-reports", auth, role("MANAGER"), controller.getMyReports);
 
 // Admin / EA / HR / QA routes
-router.get("/", auth, role("ADMIN", "EA", "HR", "QA"), controller.getAllReports);
+router.get("/", auth, role("ADMIN", "EA", "HR", "QA", "COORDINATOR"), controller.getAllReports);
 
 // QA Meta Ads Tracking and Review routes
-router.get("/qa/meta-ads-tracking", auth, role("QA", "ADMIN", "EA", "HR"), controller.getQAMetaAdsTracking);
-router.patch("/:id/qa-review", auth, role("QA", "ADMIN", "EA"), controller.reviewReportByQA);
+router.get("/qa/meta-ads-tracking", auth, role("QA", "ADMIN", "EA", "HR", "COORDINATOR"), controller.getQAMetaAdsTracking);
+router.patch("/:id/qa-review", auth, role("QA", "ADMIN", "EA", "COORDINATOR"), controller.reviewReportByQA);
 
 module.exports = router;

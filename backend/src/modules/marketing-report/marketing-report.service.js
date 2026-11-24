@@ -198,7 +198,7 @@ exports.createMarketingReport = async (user, body) => {
 
 // ─── Get all for a project ─────────────────────────────────────────────────────
 exports.getMarketingReports = async (user, projectId) => {
-  if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
+  if (!["ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -302,7 +302,7 @@ exports.getSubmissionDetails = async (user, query = {}) => {
 };
 
 exports.getPendingMarketingReportCount = async (user) => {
-  if (!["ADMIN", "HR"].includes(user.role)) {
+  if (!["ADMIN", "HR", "EA", "COORDINATOR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -340,7 +340,7 @@ exports.getCampaignReports = async (user, campaignId) => {
 
 // ─── Get single ────────────────────────────────────────────────────────────────
 exports.getMarketingReportById = async (user, reportId) => {
-  if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
+  if (!["ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -467,7 +467,7 @@ exports.updateMarketingReport = async (user, reportId, body) => {
 
 // ─── HR review ────────────────────────────────────────────────────────────────
 exports.reviewMarketingReport = async (user, reportId, body) => {
-  if (!["HR", "ADMIN"].includes(user.role)) {
+  if (!["HR", "ADMIN", "EA", "COORDINATOR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
   if (!["APPROVED", "REJECTED"].includes(body.status)) {

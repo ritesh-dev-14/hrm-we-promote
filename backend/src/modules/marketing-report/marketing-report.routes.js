@@ -11,17 +11,17 @@ router.post("/", auth, role("MANAGER"), controller.createMarketingReport);
 // Get all marketing reports for a project (?projectId=...)
 router.get("/submitted-projects", auth, role("ADMIN"), controller.getSubmittedProjectIds);
 router.get("/submission-details", auth, role("ADMIN"), controller.getSubmissionDetails);
-router.get("/pending-count", auth, role("ADMIN", "HR"), controller.getPendingMarketingReportCount);
-router.get("/", auth, role("ADMIN", "HR", "EA", "MANAGER"), controller.getMarketingReports);
+router.get("/pending-count", auth, role("ADMIN", "HR", "EA", "COORDINATOR"), controller.getPendingMarketingReportCount);
+router.get("/", auth, role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"), controller.getMarketingReports);
 
 // Get single marketing report
-router.get("/:id", auth, role("ADMIN", "HR", "EA", "MANAGER"), controller.getMarketingReportById);
+router.get("/:id", auth, role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"), controller.getMarketingReportById);
 
 // Update marketing report (MANAGER only — own reports)
 router.patch("/:id", auth, role("MANAGER"), controller.updateMarketingReport);
 
 // HR/Admin approve or reject today's marketing report
-router.patch("/:id/review", auth, role("HR", "ADMIN"), controller.reviewMarketingReport);
+router.patch("/:id/review", auth, role("HR", "ADMIN", "EA", "COORDINATOR"), controller.reviewMarketingReport);
 
 // Delete marketing report (ADMIN/HR/EA only)
 router.delete("/:id", auth, role("ADMIN", "HR", "EA"), controller.deleteMarketingReport);

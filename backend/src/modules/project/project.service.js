@@ -727,7 +727,7 @@ exports.getAssignedClientPendingOverview = async (user, department) => {
   const userRoles = (user.roles?.length ? user.roles : [user.role])
     .filter(Boolean)
     .map((role) => String(role).toUpperCase());
-  const canViewAllProjects = userRoles.some((role) => ["ADMIN", "HR", "EA"].includes(role));
+  const canViewAllProjects = userRoles.some((role) => ["ADMIN", "HR", "EA", "COORDINATOR"].includes(role));
   if (!canViewAllProjects && !userRoles.includes("MANAGER")) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }

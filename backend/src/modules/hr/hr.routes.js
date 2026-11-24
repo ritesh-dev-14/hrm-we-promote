@@ -18,7 +18,7 @@ const {
 router.post(
   "/manager",
   auth,
-  role("HR", "ADMIN"),
+  role("HR", "ADMIN", "EA", "COORDINATOR"),
   validate(createManagerSchema),
   controller.createManager
 );
@@ -30,18 +30,18 @@ router.get("/manager/:employeeId", auth, role("HR", "ADMIN", "EA", "COORDINATOR"
 router.put(
   "/manager/:employeeId",
   auth,
-  role("HR", "ADMIN"),
+  role("HR", "ADMIN", "EA", "COORDINATOR"),
   validate(updateManagerSchema),
   controller.updateManager
 );
 
-router.delete("/manager/:employeeId", auth, role("HR", "ADMIN"), controller.deleteManager);
+router.delete("/manager/:employeeId", auth, role("HR", "ADMIN", "EA", "COORDINATOR"), controller.deleteManager);
 
 // 🔹 Employee Routes
 router.post(
   "/employee",
   auth,
-  role("HR", "ADMIN"),
+  role("HR", "ADMIN", "EA", "COORDINATOR"),
   validate(createEmployeeSchema),
   controller.createEmployee
 );
@@ -53,7 +53,7 @@ router.get("/employee/:employeeId", auth, role("HR", "ADMIN", "EA", "COORDINATOR
 router.put(
   "/employee/:employeeId",
   auth,
-  role("HR", "ADMIN"),
+  role("HR", "ADMIN", "EA", "COORDINATOR"),
   validate(updateEmployeeSchema),
   controller.updateEmployee
 );
@@ -73,7 +73,7 @@ router.get(
   controller.getEmployeeAttendanceSummary
 );
 
-router.delete("/employee/:employeeId", auth, role("HR", "ADMIN"), controller.deleteEmployee);
+router.delete("/employee/:employeeId", auth, role("HR", "ADMIN", "EA", "COORDINATOR"), controller.deleteEmployee);
 
 
 // 🔹 Get all leave requests
@@ -88,7 +88,7 @@ router.get(
 router.get(
   "/leave/employee/:employeeId",
   auth,
-  role("HR", "ADMIN"),
+  role("HR", "ADMIN", "EA", "COORDINATOR"),
   controller.getEmployeeLeaveSummary
 );
 

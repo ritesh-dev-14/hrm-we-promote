@@ -7,7 +7,7 @@ const restrictTo = require('../../middlewares/role.middleware');
 router.get(
   '/',
   protect,
-  restrictTo('ADMIN', 'HR', 'MANAGER'),
+  restrictTo('ADMIN', 'HR', 'MANAGER', 'EA', 'COORDINATOR'),
   dailyReportController.getDailyReport
 );
 

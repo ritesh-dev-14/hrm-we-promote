@@ -24,7 +24,7 @@ const {
 router.post(
   "/",
   auth,
-  role("ADMIN", "HR"),
+  role("ADMIN", "HR", "EA", "COORDINATOR"),
   validate(departmentSchema),
   controller.createDepartment
 );
@@ -54,7 +54,7 @@ router.get(
 router.patch(
   "/:id",
   auth,
-  role("ADMIN", "HR"),
+  role("ADMIN", "HR", "EA", "COORDINATOR"),
   validate(departmentSchema),
   controller.updateDepartment
 );
@@ -65,7 +65,7 @@ router.patch(
 router.delete(
   "/:id",
   auth,
-  role("ADMIN", "HR"),
+  role("ADMIN", "HR", "EA", "COORDINATOR"),
   controller.deleteDepartment
 );
 

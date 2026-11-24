@@ -16,14 +16,14 @@ router.get(
 router.get(
   '/hr/employees',
   protect,
-  restrictTo('HR', 'ADMIN', 'MANAGER'),
+  restrictTo('HR', 'ADMIN', 'MANAGER', 'EA', 'COORDINATOR'),
   reportController.getAllEmployeesStats
 );
 
 router.get(
   '/hr/employee/:employeeId/projects',
   protect,
-  restrictTo('HR', 'ADMIN', 'MANAGER'),
+  restrictTo('HR', 'ADMIN', 'MANAGER', 'EA', 'COORDINATOR'),
   reportController.getEmployeeProjectStats
 );
 

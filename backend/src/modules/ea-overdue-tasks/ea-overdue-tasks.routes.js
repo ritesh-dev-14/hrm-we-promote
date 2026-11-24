@@ -4,7 +4,7 @@ const role = require("../../middlewares/role.middleware");
 const controller = require("./ea-overdue-tasks.controller");
 
 const router = express.Router();
-const permittedRoles = role("ADMIN", "HR", "EA");
+const permittedRoles = role("ADMIN", "HR", "EA", "COORDINATOR");
 
 router.get("/", auth, permittedRoles, controller.listOverdueTasks);
 router.get("/notifications/unread", auth, permittedRoles, controller.getUnreadDigestNotification);
