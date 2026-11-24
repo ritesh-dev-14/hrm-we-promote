@@ -1,5 +1,14 @@
 const prisma = require("../../config/prisma");
 
+const getValidDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getCompletionDate = (assignment) =>
+  getValidDate(assignment.completedAt) || getValidDate(assignment.submittedAt);
+
 /**
  * Get Editor Workload (Upgrade 6)
  */
@@ -67,7 +76,7 @@ exports.getEditorWorkload = async (req, res, next) => {
         
         if (isCompleted) {
           completedTasks.push(assignment);
-          const completedAtDate = new Date(assignment.completedAt || assignment.submittedAt || assignment.updatedAt);
+          const completedAtDate = getCompletionDate(assignment);
           
           let tatSec = 0;
           if (assignment.startedAt && assignment.completedAt) {
@@ -78,12 +87,14 @@ exports.getEditorWorkload = async (req, res, next) => {
 
           const mediaType = assignment.taskItem?.mediaType;
 
-          const dateKey = completedAtDate.toISOString().split('T')[0];
-          if (!dailyCompletionMap[dateKey]) {
-            dailyCompletionMap[dateKey] = { videoCount: 0, postCount: 0, date: completedAtDate };
+          if (completedAtDate) {
+            const dateKey = completedAtDate.toISOString().split('T')[0];
+            if (!dailyCompletionMap[dateKey]) {
+              dailyCompletionMap[dateKey] = { videoCount: 0, postCount: 0, date: completedAtDate };
+            }
+            if (mediaType === 'VIDEO') dailyCompletionMap[dateKey].videoCount++;
+            if (mediaType === 'PIC') dailyCompletionMap[dateKey].postCount++;
           }
-          if (mediaType === 'VIDEO') dailyCompletionMap[dateKey].videoCount++;
-          if (mediaType === 'PIC') dailyCompletionMap[dateKey].postCount++;
 
           const updateStats = (period) => {
             if (mediaType === 'VIDEO') {
@@ -102,9 +113,9 @@ exports.getEditorWorkload = async (req, res, next) => {
           };
 
           updateStats('allTime');
-          if (completedAtDate >= startOfMonth) updateStats('monthly');
-          if (completedAtDate >= startOfWeek) updateStats('weekly');
-          if (completedAtDate >= startOfDay) updateStats('daily');
+          if (completedAtDate && completedAtDate >= startOfMonth) updateStats('monthly');
+          if (completedAtDate && completedAtDate >= startOfWeek) updateStats('weekly');
+          if (completedAtDate && completedAtDate >= startOfDay) updateStats('daily');
           
         } else {
           activeCount++;
@@ -155,7 +166,11 @@ exports.getEditorWorkload = async (req, res, next) => {
       };
 
       // Sort completed tasks by completion date (newest first), limit to 10 for payload size
-      completedTasks.sort((a, b) => new Date(b.completedAt || b.submittedAt || b.updatedAt) - new Date(a.completedAt || a.submittedAt || a.updatedAt));
+      completedTasks.sort((a, b) => {
+        const dateA = getCompletionDate(a) || getValidDate(a.createdAt) || new Date(0);
+        const dateB = getCompletionDate(b) || getValidDate(b.createdAt) || new Date(0);
+        return dateB - dateA;
+      });
 
       return {
         ...employee,
