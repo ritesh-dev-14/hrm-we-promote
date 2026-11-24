@@ -5,6 +5,7 @@ const { setupEscalationJobs } = require("./src/jobs/escalationJobs");
 const { initializeDailyMessagingJob } = require("./src/jobs/dailyClientMessagesJob");
 const { initializeWeeklyVoiceReportJob } = require("./src/jobs/weeklyVoiceReportJob");
 const { initializeEaAdminPendingTasksJob } = require("./src/jobs/eaAdminPendingTasksJob");
+const { initializeEaOverdueTasksJob } = require("./src/jobs/eaOverdueTasksJob");
 const mailService = require("./src/modules/mail/mail.service");
 
 // Server configuration & port
@@ -39,6 +40,12 @@ try {
   initializeEaAdminPendingTasksJob();
 } catch (error) {
   console.error("Failed to initialize EA Admin pending tasks job:", error);
+}
+
+try {
+  initializeEaOverdueTasksJob();
+} catch (error) {
+  console.error("Failed to initialize EA overdue tasks job:", error);
 }
 
 server.listen(PORT, async () => {

@@ -160,6 +160,11 @@ app.use(
 );
 
 app.use(
+  "/api/ea-overdue-tasks",
+  require("./modules/ea-overdue-tasks/ea-overdue-tasks.routes")
+);
+
+app.use(
   "/api/approvals",
   require("./modules/approval-tracker/approval-tracker.routes")
 );
