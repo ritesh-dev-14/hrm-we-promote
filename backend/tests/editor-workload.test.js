@@ -16,12 +16,29 @@ test('completed assignments without completion timestamps do not break workload 
     dailyVideoTarget: 1,
     dailyPostTarget: 0,
   }];
-  prisma.taskItemAssignment.findMany = async () => [{
-    id: 'assignment-1',
-    status: 'VERIFIED',
-    createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    taskItem: { mediaType: 'VIDEO' },
-  }];
+  prisma.taskItemAssignment.findMany = async () => [
+    {
+      id: 'assignment-1',
+      status: 'VERIFIED',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      taskItem: { mediaType: 'VIDEO' },
+    },
+    {
+      id: 'assignment-2',
+      status: 'VERIFIED',
+      createdAt: new Date('2026-01-02T00:00:00.000Z'),
+      submittedAt: new Date(),
+      completedAt: new Date('2026-01-03T00:00:00.000Z'),
+      taskItem: { mediaType: 'VIDEO' },
+    },
+    {
+      id: 'assignment-3',
+      status: 'VERIFIED',
+      createdAt: new Date('2026-01-04T00:00:00.000Z'),
+      submittedAt: new Date(),
+      taskItem: { mediaType: 'PIC' },
+    },
+  ];
 
   try {
     await getEditorWorkload({}, { json: (body) => { response = body; } }, (error) => {
@@ -33,7 +50,31 @@ test('completed assignments without completion timestamps do not break workload 
   }
 
   assert.equal(response.success, true);
-  assert.equal(response.data[0].completedTasks.length, 1);
-  assert.equal(response.data[0].stats.allTime.videosEdited, 1);
-  assert.equal(response.data[0].stats.daily.videosEdited, 0);
+  assert.equal(response.data[0].completedTasks.length, 3);
+  assert.equal(response.data[0].stats.allTime.videosEdited, 2);
+  assert.equal(response.data[0].stats.allTime.postsEdited, 1);
+  assert.equal(response.data[0].stats.daily.videosEdited, 1);
+  assert.equal(response.data[0].stats.daily.averageVideosPerDay, 1);
+  assert.equal(response.data[0].stats.daily.postsEdited, 1);
+  assert.equal(response.data[0].stats.daily.averagePostsPerDay, 1);
+  assert.equal(response.data[0].stats.weekly.videosEdited, 1);
+  assert.equal(response.data[0].stats.weekly.postsEdited, 1);
+  assert.equal(
+    response.data[0].stats.weekly.averageVideosPerDay,
+    Number((1 / response.data[0].stats.weekly.workingDays).toFixed(1)),
+  );
+  assert.equal(
+    response.data[0].stats.weekly.averagePostsPerDay,
+    Number((1 / response.data[0].stats.weekly.workingDays).toFixed(1)),
+  );
+  assert.equal(response.data[0].stats.monthly.videosEdited, 1);
+  assert.equal(response.data[0].stats.monthly.postsEdited, 1);
+  assert.equal(
+    response.data[0].stats.monthly.averageVideosPerDay,
+    Number((1 / response.data[0].stats.monthly.workingDays).toFixed(1)),
+  );
+  assert.equal(
+    response.data[0].stats.monthly.averagePostsPerDay,
+    Number((1 / response.data[0].stats.monthly.workingDays).toFixed(1)),
+  );
 });

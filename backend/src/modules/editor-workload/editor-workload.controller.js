@@ -7,7 +7,22 @@ const getValidDate = (value) => {
 };
 
 const getCompletionDate = (assignment) =>
-  getValidDate(assignment.completedAt) || getValidDate(assignment.submittedAt);
+  getValidDate(assignment.submittedAt) || getValidDate(assignment.completedAt);
+
+const getWeekdaysElapsed = (startDate, endDate) => {
+  const date = new Date(startDate);
+  date.setHours(0, 0, 0, 0);
+  const lastDate = new Date(endDate);
+  lastDate.setHours(0, 0, 0, 0);
+
+  let weekdays = 0;
+  while (date <= lastDate) {
+    if (date.getDay() !== 0 && date.getDay() !== 6) weekdays++;
+    date.setDate(date.getDate() + 1);
+  }
+
+  return Math.max(weekdays, 1);
+};
 
 /**
  * Get Editor Workload (Upgrade 6)
@@ -66,8 +81,8 @@ exports.getEditorWorkload = async (req, res, next) => {
       
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      stats.weekly.workingDays = dayOfWeek;
-      stats.monthly.workingDays = now.getDate();
+      stats.weekly.workingDays = getWeekdaysElapsed(startOfWeek, now);
+      stats.monthly.workingDays = getWeekdaysElapsed(startOfMonth, now);
 
       const dailyCompletionMap = {};
 
@@ -159,6 +174,12 @@ exports.getEditorWorkload = async (req, res, next) => {
           // Calculate TAT in hours for precision
           videoAvgTat: p.videoTatCount > 0 ? (p.videoTatSec / p.videoTatCount / 3600).toFixed(1) : 0,
           postAvgTat: p.postTatCount > 0 ? (p.postTatSec / p.postTatCount / 3600).toFixed(1) : 0,
+          averageVideosPerDay: period === 'allTime'
+            ? null
+            : Number((p.videoCount / Math.max(p.workingDays, 1)).toFixed(1)),
+          averagePostsPerDay: period === 'allTime'
+            ? null
+            : Number((p.postCount / Math.max(p.workingDays, 1)).toFixed(1)),
           videoHitDays: p.videoHitDays,
           postHitDays: p.postHitDays,
           workingDays: p.workingDays,
