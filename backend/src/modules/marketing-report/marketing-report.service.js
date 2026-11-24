@@ -234,7 +234,7 @@ exports.getMarketingReports = async (user, projectId) => {
 };
 
 exports.getSubmittedProjectIds = async (user, query = {}) => {
-  if (user.role !== "ADMIN") {
+  if (!["ADMIN", "HR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -267,7 +267,7 @@ exports.getSubmittedProjectIds = async (user, query = {}) => {
 };
 
 exports.getSubmissionDetails = async (user, query = {}) => {
-  if (user.role !== "ADMIN") {
+  if (!["ADMIN", "HR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 

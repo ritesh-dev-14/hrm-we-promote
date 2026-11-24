@@ -9,8 +9,8 @@ const controller = require("./marketing-report.controller");
 router.post("/", auth, role("MANAGER"), controller.createMarketingReport);
 
 // Get all marketing reports for a project (?projectId=...)
-router.get("/submitted-projects", auth, role("ADMIN"), controller.getSubmittedProjectIds);
-router.get("/submission-details", auth, role("ADMIN"), controller.getSubmissionDetails);
+router.get("/submitted-projects", auth, role("ADMIN", "HR"), controller.getSubmittedProjectIds);
+router.get("/submission-details", auth, role("ADMIN", "HR"), controller.getSubmissionDetails);
 router.get("/pending-count", auth, role("ADMIN", "HR", "EA", "COORDINATOR"), controller.getPendingMarketingReportCount);
 router.get("/", auth, role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"), controller.getMarketingReports);
 

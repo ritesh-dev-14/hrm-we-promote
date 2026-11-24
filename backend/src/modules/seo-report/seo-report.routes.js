@@ -24,13 +24,13 @@ router.patch(
   controller.updateSeoReport
 );
 
-router.get("/submitted-projects", auth, role("ADMIN"), controller.getSubmittedProjectIds);
+router.get("/submitted-projects", auth, role("ADMIN", "HR"), controller.getSubmittedProjectIds);
 
 // Get all SEO reports for a project (?projectId=...)
-router.get("/", auth, role("ADMIN", "HR", "EA", "MANAGER"), controller.getSeoReports);
+router.get("/", auth, role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"), controller.getSeoReports);
 
 // Get single SEO report
-router.get("/:id", auth, role("ADMIN", "HR", "EA", "MANAGER"), controller.getSeoReportById);
+router.get("/:id", auth, role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"), controller.getSeoReportById);
 
 // Delete SEO report (admin/hr/ea only)
 router.delete("/:id", auth, role("ADMIN", "HR", "EA"), controller.deleteSeoReport);

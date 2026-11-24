@@ -323,7 +323,11 @@ exports.updateSeoReport = async (user, reportId, body, file) => {
 };
 
 exports.getSeoReports = async (user, projectId) => {
-  if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
+  const canViewAllReports = ["ADMIN", "HR", "EA", "COORDINATOR"].some((role) =>
+    hasRole(user, role),
+  );
+  const isManager = hasRole(user, "MANAGER");
+  if (!canViewAllReports && !isManager) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -339,7 +343,7 @@ exports.getSeoReports = async (user, projectId) => {
     });
   }
 
-  if (user.role === "MANAGER") {
+  if (isManager && !canViewAllReports) {
     const isAssigned = project.assignments.some(
       (a) => a.managerId === user.id
     );
@@ -372,7 +376,7 @@ exports.getSeoReports = async (user, projectId) => {
 };
 
 exports.getSubmittedProjectIds = async (user, query = {}) => {
-  if (user.role !== "ADMIN") {
+  if (!["ADMIN", "HR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -395,7 +399,11 @@ exports.getSubmittedProjectIds = async (user, query = {}) => {
 };
 
 exports.getSeoReportById = async (user, reportId) => {
-  if (!["ADMIN", "HR", "EA", "MANAGER"].includes(user.role)) {
+  const canViewAllReports = ["ADMIN", "HR", "EA", "COORDINATOR"].some((role) =>
+    hasRole(user, role),
+  );
+  const isManager = hasRole(user, "MANAGER");
+  if (!canViewAllReports && !isManager) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
@@ -421,7 +429,7 @@ exports.getSeoReportById = async (user, reportId) => {
     });
   }
 
-  if (user.role === "MANAGER") {
+  if (isManager && !canViewAllReports) {
     const isAssigned = report.project.assignments.some(
       (a) => a.managerId === user.id
     );

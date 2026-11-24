@@ -466,7 +466,7 @@ exports.getProjects = async (user, query = {}) => {
     ...(isRunning !== undefined ? { isRunning: isRunning === "true" || isRunning === true } : {}),
   };
  
-  if (["ADMIN", "MANAGER"].includes(user.role) && query.summary === "true") {
+  if (["ADMIN", "HR", "MANAGER"].includes(user.role) && query.summary === "true") {
     const [projects, total] = await Promise.all([
       prisma.project.findMany({
         where,
@@ -652,7 +652,19 @@ exports.getProjectById = async (user, projectId) => {
     });
   }
 
-  if (user.role === "MANAGER") {
+  const userRoles = (user.roles?.length ? user.roles : [user.role])
+    .filter(Boolean)
+    .map((role) => String(role).toUpperCase());
+  const canViewAllProjects = userRoles.some((role) =>
+    ["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE", "QA"].includes(role),
+  );
+  const isManager = userRoles.includes("MANAGER");
+
+  if (!canViewAllProjects && !isManager) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  if (isManager && !canViewAllProjects) {
     const assigned = project.assignments.some(
       (assignment) => assignment.managerId === user.id
     );
@@ -660,8 +672,6 @@ exports.getProjectById = async (user, projectId) => {
     if (!assigned) {
       throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
     }
-  } else if (!["ADMIN", "HR", "EA", "COORDINATOR", "EMPLOYEE", "QA"].includes(user.role)) {
-    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
 
   return formatProject(project);
