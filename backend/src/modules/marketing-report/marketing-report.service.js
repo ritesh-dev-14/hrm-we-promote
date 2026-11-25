@@ -2,6 +2,32 @@ const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
 
+const getDateKeyInIST = (date) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
+const getDateRangeInIST = (dateValue) => {
+  const date = dateValue || getDateKeyInIST(new Date());
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) throw new ApiError(400, "A valid report date is required.");
+
+  const [, year, month, day] = match;
+  const utcDayStart = Date.UTC(Number(year), Number(month) - 1, Number(day));
+  if (new Date(utcDayStart).toISOString().slice(0, 10) !== date) {
+    throw new ApiError(400, "A valid report date is required.");
+  }
+
+  const start = new Date(utcDayStart - 330 * 60 * 1000);
+  return { gte: start, lt: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+};
+
 const getVideoLinks = (body) => {
   if (Array.isArray(body.videoLinks)) {
     return body.videoLinks
@@ -301,7 +327,7 @@ exports.getSubmissionDetails = async (user, query = {}) => {
   });
 };
 
-exports.getPendingMarketingReportCount = async (user) => {
+exports.getPendingMarketingReportCount = async (user, { date } = {}) => {
   if (!["ADMIN", "HR", "EA", "COORDINATOR"].includes(user.role)) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
   }
@@ -309,6 +335,7 @@ exports.getPendingMarketingReportCount = async (user) => {
   return prisma.marketingReport.count({
     where: {
       approvalStatus: "PENDING",
+      date: getDateRangeInIST(date),
       project: {
         department: {
           name: { contains: "marketing", mode: "insensitive" },

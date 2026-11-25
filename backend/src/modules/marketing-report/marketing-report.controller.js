@@ -45,7 +45,7 @@ exports.getSubmissionDetails = async (req, res, next) => {
 
 exports.getPendingMarketingReportCount = async (req, res, next) => {
   try {
-    const count = await service.getPendingMarketingReportCount(req.user);
+    const count = await service.getPendingMarketingReportCount(req.user, req.query);
     res.json({ success: true, data: { count } });
   } catch (err) {
     next(err);
