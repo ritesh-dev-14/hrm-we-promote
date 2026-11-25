@@ -1074,6 +1074,7 @@ exports.updateProject = async (user, projectId, body) => {
     ?.toLowerCase()
     .includes("marketing");
   const isWebDevDepartment = WEB_DEV_DEPARTMENTS.includes(department.name);
+  const isSeoDepartment = department.name?.toLowerCase().includes("seo");
   const currentEndDate = body.endDate
     ? new Date(body.endDate)
     : project.endDate;
@@ -1179,7 +1180,10 @@ exports.updateProject = async (user, projectId, body) => {
     }
     // 🔥 If already in Social Media, allow partial updates without requiring all fields
   } else if (
-    (!isWebDevDepartment && !isMarketingDepartment && (body.clientName || body.phone)) ||
+    (!isWebDevDepartment &&
+      !isMarketingDepartment &&
+      !isSeoDepartment &&
+      (body.clientName || body.phone)) ||
     body.location ||
     body.fbEmail ||
     body.fbPassword ||
@@ -1267,7 +1271,7 @@ exports.updateProject = async (user, projectId, body) => {
   }
 
   if (!isSocialMediaDepartment && !isMarketingDepartment) {
-    if (!isWebDevDepartment) {
+    if (!isWebDevDepartment && !isSeoDepartment) {
       data.clientName = null;
       data.phone = null;
     }
@@ -1300,9 +1304,6 @@ exports.updateProject = async (user, projectId, body) => {
   }
 
   // Clear SEO fields if not an SEO department
-  const isSeoDepartment = SEO_DEPARTMENTS.some((s) =>
-    department.name?.toLowerCase().includes("seo")
-  );
   if (!isSeoDepartment) {
     data.seoEmail = null;
     data.seoPassword = null;
