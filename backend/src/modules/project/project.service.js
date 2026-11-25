@@ -8,6 +8,8 @@ const { incrementUnread } = require("../../services/sidebarUnread.service");
 
 const FREQUENCY_DEPARTMENTS = [
   "SEO",
+  "SEO Department",
+  "Seo Department",
   "Social Media",
   "Social Media Department",
 ];
