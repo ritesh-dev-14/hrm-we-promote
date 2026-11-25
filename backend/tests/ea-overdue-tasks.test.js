@@ -3,24 +3,63 @@ const assert = require("node:assert/strict");
 
 const prisma = require("../src/config/prisma");
 const mailService = require("../src/modules/mail/mail.service");
+const eaOverdueTasksService = require("../src/modules/ea-overdue-tasks/ea-overdue-tasks.service");
+const eaOverdueTasksController = require("../src/modules/ea-overdue-tasks/ea-overdue-tasks.controller");
 const {
+  buildOutstandingWhere,
   buildOverdueWhere,
   getStartOfNextDayInIST,
 } = require("../src/modules/ea-overdue-tasks/ea-overdue-tasks.service");
 const { runEaOverdueTasksJob } = require("../src/jobs/eaOverdueTasksJob");
 
-test("overdue selection includes EA tasks due by end of today in India", () => {
+test("overdue selection includes coordinator-created tasks due by end of today in India", () => {
   const now = new Date("2026-11-24T12:45:00.000Z");
   const where = buildOverdueWhere(now);
 
   assert.equal(getStartOfNextDayInIST(now).toISOString(), "2026-11-24T18:30:00.000Z");
   assert.equal(where.completionDate.lt.toISOString(), "2026-11-24T18:30:00.000Z");
-  assert.deepEqual(where.status.in, ["ASSIGNED", "IN_PROGRESS", "REJECTED", "PENDING", "UNABLE_TO_SUBMIT"]);
-  assert.equal(where.createdBy.is.role, "EA");
+  assert.deepEqual(where.status.in, ["ASSIGNED", "IN_PROGRESS", "SUBMITTED", "REJECTED", "PENDING", "UNABLE_TO_SUBMIT"]);
+  assert.deepEqual(where.createdBy.is.role.in, ["COORDINATOR"]);
   assert.deepEqual(where.assignedTo.is.role.in, ["EMPLOYEE", "MANAGER", "HR"]);
 });
 
-test("daily overdue job emails each Admin, HR, and EA recipient and persists popup notifications", async () => {
+test("outstanding selection includes pending and overdue tasks created by coordinators", () => {
+  const where = buildOutstandingWhere();
+
+  assert.equal(where.completionDate, undefined);
+  assert.deepEqual(where.status.in, ["ASSIGNED", "IN_PROGRESS", "SUBMITTED", "REJECTED", "PENDING", "UNABLE_TO_SUBMIT"]);
+  assert.deepEqual(where.createdBy.is.role.in, ["COORDINATOR"]);
+  assert.deepEqual(where.assignedTo.is.role.in, ["EMPLOYEE", "MANAGER", "HR"]);
+});
+
+test("task list endpoint returns outstanding tasks and keeps count limited to overdue tasks", async () => {
+  const originalListOutstandingTasks = eaOverdueTasksService.listOutstandingTasks;
+  const originalListOverdueEaTasks = eaOverdueTasksService.listOverdueEaTasks;
+  const outstandingTasks = [{ id: "pending-task" }, { id: "overdue-task" }];
+  const overdueTasks = [{ id: "overdue-task" }];
+  let responseBody;
+
+  eaOverdueTasksService.listOutstandingTasks = async () => outstandingTasks;
+  eaOverdueTasksService.listOverdueEaTasks = async () => overdueTasks;
+
+  try {
+    await eaOverdueTasksController.listTasks(
+      {},
+      { json: (body) => { responseBody = body; } },
+      (error) => { throw error; },
+    );
+
+    assert.deepEqual(responseBody.data, {
+      tasks: outstandingTasks,
+      count: 1,
+    });
+  } finally {
+    eaOverdueTasksService.listOutstandingTasks = originalListOutstandingTasks;
+    eaOverdueTasksService.listOverdueEaTasks = originalListOverdueEaTasks;
+  }
+});
+
+test("daily overdue job emails Admin, HR, and Coordinator recipients and persists popup notifications", async () => {
   const originalAssignmentFindMany = prisma.coordinatorAssignment.findMany;
   const originalUserFindMany = prisma.user.findMany;
   const originalNotificationFindFirst = prisma.notification.findFirst;
@@ -32,17 +71,17 @@ test("daily overdue job emails each Admin, HR, and EA recipient and persists pop
   const events = [];
   const assignments = [{
     id: "assignment-1",
-    assignedBy: "EA",
+    assignedBy: "Coordinator",
     completionDate: new Date("2026-11-23T18:30:00.000Z"),
     status: "IN_PROGRESS",
     task: { id: "task-1", projectName: "Prepare report", description: null },
     assignedTo: { id: "employee-1", name: "Employee", role: "EMPLOYEE" },
-    createdBy: { id: "ea-1", name: "EA User" },
+    createdBy: { id: "coordinator-1", name: "Coordinator" },
   }];
   const recipients = [
     { id: "admin-1", name: "Admin", email: "admin@example.com" },
     { id: "hr-1", name: "HR", email: "hr@example.com" },
-    { id: "ea-1", name: "EA", email: "ea@example.com" },
+    { id: "coordinator-1", name: "Coordinator", email: "coordinator@example.com" },
     { id: "admin-1", name: "Admin duplicate", email: "admin@example.com" },
   ];
 

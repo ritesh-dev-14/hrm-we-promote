@@ -2,7 +2,8 @@ const prisma = require("../../config/prisma");
 
 const DIGEST_ENTITY_PREFIX = "ea-overdue-digest:";
 const IST_OFFSET_MINUTES = 330;
-const INCOMPLETE_STATUSES = ["ASSIGNED", "IN_PROGRESS", "REJECTED", "PENDING", "UNABLE_TO_SUBMIT"];
+const INCOMPLETE_STATUSES = ["ASSIGNED", "IN_PROGRESS", "SUBMITTED", "REJECTED", "PENDING", "UNABLE_TO_SUBMIT"];
+const CREATOR_ROLES = ["COORDINATOR"];
 const ASSIGNEE_ROLES = ["EMPLOYEE", "MANAGER", "HR"];
 
 const getDateKeyInIST = (date) => {
@@ -26,13 +27,19 @@ const getStartOfNextDayInIST = (date) => {
 const buildOverdueWhere = (date) => ({
   completionDate: { lt: getStartOfNextDayInIST(date) },
   status: { in: INCOMPLETE_STATUSES },
-  createdBy: { is: { role: "EA" } },
+  createdBy: { is: { role: { in: CREATOR_ROLES } } },
   assignedTo: { is: { role: { in: ASSIGNEE_ROLES } } },
 });
 
-const listOverdueEaTasks = (date = new Date()) =>
+const buildOutstandingWhere = () => ({
+  status: { in: INCOMPLETE_STATUSES },
+  createdBy: { is: { role: { in: CREATOR_ROLES } } },
+  assignedTo: { is: { role: { in: ASSIGNEE_ROLES } } },
+});
+
+const listAssignments = (where) =>
   prisma.coordinatorAssignment.findMany({
-    where: buildOverdueWhere(date),
+    where,
     select: {
       id: true,
       assignedBy: true,
@@ -60,11 +67,18 @@ const listOverdueEaTasks = (date = new Date()) =>
           id: true,
           name: true,
           email: true,
+          role: true,
         },
       },
     },
     orderBy: { completionDate: "asc" },
   });
+
+const listOverdueEaTasks = (date = new Date()) =>
+  listAssignments(buildOverdueWhere(date));
+
+const listOutstandingTasks = () =>
+  listAssignments(buildOutstandingWhere());
 
 const getUnreadDigestNotification = async (userId) => {
   const notification = await prisma.notification.findFirst({
@@ -108,9 +122,11 @@ const markDigestNotificationRead = (userId, notificationId) =>
   });
 
 exports.DIGEST_ENTITY_PREFIX = DIGEST_ENTITY_PREFIX;
+exports.buildOutstandingWhere = buildOutstandingWhere;
 exports.buildOverdueWhere = buildOverdueWhere;
 exports.getDateKeyInIST = getDateKeyInIST;
 exports.getStartOfNextDayInIST = getStartOfNextDayInIST;
 exports.getUnreadDigestNotification = getUnreadDigestNotification;
 exports.listOverdueEaTasks = listOverdueEaTasks;
+exports.listOutstandingTasks = listOutstandingTasks;
 exports.markDigestNotificationRead = markDigestNotificationRead;

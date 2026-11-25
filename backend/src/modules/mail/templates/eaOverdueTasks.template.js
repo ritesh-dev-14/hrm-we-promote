@@ -39,7 +39,7 @@ module.exports = ({ recipientName, tasks, date, applicationUrl }) => {
     <html>
       <body style="margin:0;padding:24px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a">
         <div style="max-width:900px;margin:auto;padding:28px;background:#fff;border-radius:12px">
-          <h2 style="margin-top:0">Overdue EA-Assigned Tasks</h2>
+          <h2 style="margin-top:0">Overdue Coordinator Tasks</h2>
           <p>Hello ${escapeHtml(recipientName || "there")},</p>
           <p>${tasks.length} task${tasks.length === 1 ? "" : "s"} due today or earlier remain incomplete as of ${escapeHtml(date)}.</p>
           <div style="overflow-x:auto">

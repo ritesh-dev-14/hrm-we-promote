@@ -8,7 +8,7 @@ const {
   listOverdueEaTasks,
 } = require("../modules/ea-overdue-tasks/ea-overdue-tasks.service");
 
-const RECIPIENT_ROLES = ["ADMIN", "HR", "EA"];
+const RECIPIENT_ROLES = ["ADMIN", "HR", "COORDINATOR"];
 const EVENT_NAME = "ea-overdue-tasks-popup";
 
 const runEaOverdueTasksJob = async ({ now = new Date(), io = global.io } = {}) => {
@@ -52,7 +52,7 @@ const runEaOverdueTasksJob = async ({ now = new Date(), io = global.io } = {}) =
       const notification = await prisma.notification.create({
         data: {
           userId: recipient.id,
-          title: "Overdue EA-Assigned Tasks",
+          title: "Overdue Coordinator Tasks",
           message: `${tasks.length} task${tasks.length === 1 ? "" : "s"} due today or earlier remain incomplete.`,
           type: "TASK_OVERDUE",
           level: "WARNING",
@@ -76,7 +76,7 @@ const runEaOverdueTasksJob = async ({ now = new Date(), io = global.io } = {}) =
       try {
         await mailService.sendMail({
           to: recipient.email,
-          subject: `Overdue EA-Assigned Tasks: ${tasks.length} task${tasks.length === 1 ? "" : "s"}`,
+          subject: `Overdue Coordinator Tasks: ${tasks.length} task${tasks.length === 1 ? "" : "s"}`,
           html: emailTemplate({
             recipientName: recipient.name,
             tasks,

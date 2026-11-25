@@ -1,12 +1,15 @@
 const ApiError = require("../../utils/ApiError");
 const service = require("./ea-overdue-tasks.service");
 
-exports.listOverdueTasks = async (req, res, next) => {
+exports.listTasks = async (req, res, next) => {
   try {
-    const tasks = await service.listOverdueEaTasks();
+    const [tasks, overdueTasks] = await Promise.all([
+      service.listOutstandingTasks(),
+      service.listOverdueEaTasks(),
+    ]);
     res.json({
       success: true,
-      data: { tasks, count: tasks.length },
+      data: { tasks, count: overdueTasks.length },
     });
   } catch (error) {
     next(error);

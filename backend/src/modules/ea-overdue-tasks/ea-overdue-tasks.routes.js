@@ -6,7 +6,7 @@ const controller = require("./ea-overdue-tasks.controller");
 const router = express.Router();
 const permittedRoles = role("ADMIN", "HR", "EA", "COORDINATOR");
 
-router.get("/", auth, permittedRoles, controller.listOverdueTasks);
+router.get("/", auth, permittedRoles, controller.listTasks);
 router.get("/notifications/unread", auth, permittedRoles, controller.getUnreadDigestNotification);
 router.patch(
   "/notifications/:notificationId/read",
