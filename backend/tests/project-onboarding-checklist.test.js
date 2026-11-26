@@ -1,6 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { getChecklistItems } = require("../src/modules/project-onboarding/project-onboarding.checklist");
+const {
+  getChecklistItems,
+  shouldEnableProjectOnboarding,
+} = require("../src/modules/project-onboarding/project-onboarding.checklist");
 const projectOnboardingService = require("../src/modules/project-onboarding/project-onboarding.service");
 
 test("all supported departments receive the shared four-day onboarding items", () => {
@@ -30,6 +33,13 @@ test("department-specific tasks have a seven-day deadline", () => {
 
 test("projects outside onboarding departments do not receive checklist items", () => {
   assert.deepEqual(getChecklistItems("Web Development"), []);
+});
+
+test("only new projects in the supported departments are onboarding eligible", () => {
+  for (const department of ["SEO", "Meta Ads", "Social Media"]) {
+    assert.equal(shouldEnableProjectOnboarding(department), true);
+  }
+  assert.equal(shouldEnableProjectOnboarding("Web Development"), false);
 });
 
 test("roles outside Admin, HR, and Coordinator cannot access onboarding", async () => {

@@ -29,6 +29,13 @@ const assertCanAccessProject = async (user, projectId) => {
     });
   }
 
+  if (!project.onboardingEnabled) {
+    throw new ApiError(404, {
+      code: ERRORS.VALIDATION.INVALID_INPUT.code,
+      message: "Project onboarding is not enabled for this project.",
+    });
+  }
+
   if (!getChecklistItems(project.department.name).length) {
     throw new ApiError(400, {
       code: ERRORS.VALIDATION.INVALID_INPUT.code,
@@ -71,6 +78,7 @@ exports.getProjectOnboarding = async (user) => {
 
   const projects = await prisma.project.findMany({
     where: {
+      onboardingEnabled: true,
       OR: [
         { department: { name: { contains: "social", mode: "insensitive" } } },
         { department: { name: { contains: "seo", mode: "insensitive" } } },

@@ -567,6 +567,7 @@ model Project {
   gmbStatus           String?
   clientPriority      ClientPriority?
   pendingClientTaskText String?
+  onboardingEnabled     Boolean              @default(false)
   createdById         String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

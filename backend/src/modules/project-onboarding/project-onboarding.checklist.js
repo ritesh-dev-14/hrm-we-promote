@@ -35,4 +35,6 @@ const getChecklistItems = (departmentName) => {
   return [...COMMON_ITEMS, ...DEPARTMENT_ITEMS[departmentKey]];
 };
 
-module.exports = { getChecklistItems };
+const shouldEnableProjectOnboarding = (departmentName) => getChecklistItems(departmentName).length > 0;
+
+module.exports = { getChecklistItems, shouldEnableProjectOnboarding };

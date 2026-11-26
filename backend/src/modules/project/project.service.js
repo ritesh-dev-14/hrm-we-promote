@@ -4,6 +4,7 @@ const ERRORS = require("../../utils/errors");
 const cloudinary = require("../../utils/cloudinary");
 const { sendProjectAssignedToManagerMail } = require("../mail/mail.service");
 const { incrementUnread } = require("../../services/sidebarUnread.service");
+const { shouldEnableProjectOnboarding } = require("../project-onboarding/project-onboarding.checklist");
 
 
 const FREQUENCY_DEPARTMENTS = [
@@ -381,6 +382,7 @@ exports.createProject = async (user, body) => {
       seoContact: body.seoContact || null,
       // Client classification
       clientPriority: body.clientPriority || null,
+      onboardingEnabled: shouldEnableProjectOnboarding(department.name),
       createdById: user.id,
       assignments: {
         create: managers.map((manager) => ({
