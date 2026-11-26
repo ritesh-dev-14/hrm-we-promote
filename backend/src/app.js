@@ -40,6 +40,7 @@ app.use("/api/manager/tasks", require("./modules/task/task.routes"));
 app.use("/api/employee", require("./modules/employee/employee.routes"));
 app.use("/api/manager", require("./modules/manager/manager.routes"));
 app.use("/api/projects", require("./modules/project/project.routes"));
+app.use("/api/project-onboarding", require("./modules/project-onboarding/project-onboarding.routes"));
 app.get(
   "/api/monthly-sheets/uploads",
   require("./middlewares/auth.middleware"),

@@ -586,6 +586,22 @@ model Project {
   campaigns                  Campaign[]
   shootWorkspaces            ShootWorkspace[]
   pendingItems               ProjectPendingItem[]
+  onboardingItems            ProjectOnboardingItem[]
+}
+
+model ProjectOnboardingItem {
+  id          String   @id @default(uuid())
+  projectId   String
+  itemKey     String
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, itemKey])
+  @@index([projectId])
 }
 
 model ProjectAssignment {
