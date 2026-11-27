@@ -34,7 +34,7 @@ exports.updateProjectMonthlySheetSchema = Joi.object({
   totalReelsUploaded: Joi.number().integer().min(0),
   totalPostsUploaded: Joi.number().integer().min(0),
   moodBoardLink: Joi.string().uri(),
-  days: Joi.array().items(monthlySheetDaySchema).min(1),
+  days: Joi.array().items(monthlySheetDaySchema),
 }).unknown(false);
 
 exports.updateUploadStatusSchema = Joi.object({

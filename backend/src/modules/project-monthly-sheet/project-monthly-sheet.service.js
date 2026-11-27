@@ -543,6 +543,16 @@ exports.updateProjectMonthlySheet = async (user, projectId, sheetId, body) => {
         });
       }
     }
+
+    const submittedDayIds = body.days
+      .filter((dayInput) => dayInput.id)
+      .map((dayInput) => dayInput.id);
+    await prisma.projectMonthlySheetDay.deleteMany({
+      where: {
+        sheetId,
+        ...(submittedDayIds.length ? { id: { notIn: submittedDayIds } } : {}),
+      },
+    });
   }
 
   await syncMonthlySheetUploadTotals(prisma, sheetId);
