@@ -1,12 +1,17 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 const auth = require("../../middlewares/auth.middleware");
 const role = require("../../middlewares/role.middleware");
 const controller = require("./marketing-report.controller");
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 
 // Create marketing report (MANAGER only)
-router.post("/", auth, role("MANAGER"), controller.createMarketingReport);
+router.post("/", auth, role("MANAGER"), upload.single("screenshot"), controller.createMarketingReport);
 
 // Get all marketing reports for a project (?projectId=...)
 router.get("/submitted-projects", auth, role("ADMIN", "HR"), controller.getSubmittedProjectIds);

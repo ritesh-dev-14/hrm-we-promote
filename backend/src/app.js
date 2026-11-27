@@ -156,6 +156,11 @@ app.use(
 );
 
 app.use(
+  "/api/manager-incentives",
+  require("./modules/manager-incentive/manager-incentive.routes")
+);
+
+app.use(
   "/api/editor-workload",
   require("./modules/editor-workload/editor-workload.routes")
 );

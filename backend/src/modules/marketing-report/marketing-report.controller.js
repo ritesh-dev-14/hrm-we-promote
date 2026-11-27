@@ -2,7 +2,7 @@ const service = require("./marketing-report.service");
 
 exports.createMarketingReport = async (req, res, next) => {
   try {
-    const data = await service.createMarketingReport(req.user, req.body);
+    const data = await service.createMarketingReport(req.user, req.body, req.file);
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -57,7 +57,7 @@ exports.createCampaignReport = async (req, res, next) => {
     const data = await service.createMarketingReport(req.user, {
       ...req.body,
       campaignId: req.params.campaignId,
-    });
+    }, req.file);
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);

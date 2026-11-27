@@ -1,6 +1,7 @@
 const prisma = require("../../config/prisma");
 const ApiError = require("../../utils/ApiError");
 const ERRORS = require("../../utils/errors");
+const cloudinary = require("../../utils/cloudinary");
 
 const getDateKeyInIST = (date) => {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -57,6 +58,8 @@ const formatReport = (report) => ({
   todayAmountSpend: report.todayAmountSpend,
   reasonNotRunning: report.reasonNotRunning,
   unableToSubmitReason: report.unableToSubmitReason,
+  unableToSubmitScreenshotUrl: report.unableToSubmitScreenshotUrl,
+  unableToSubmitScreenshotPublicId: report.unableToSubmitScreenshotPublicId,
   approvalStatus: report.approvalStatus,
   reviewedById: report.reviewedById,
   reviewedAt: report.reviewedAt,
@@ -107,7 +110,7 @@ const reportInclude = {
 };
 
 // ─── Create ────────────────────────────────────────────────────────────────────
-exports.createMarketingReport = async (user, body) => {
+exports.createMarketingReport = async (user, body, file) => {
   if (user.role !== "MANAGER") {
     throw new ApiError(403, {
       code: ERRORS.AUTH.ACCESS_DENIED.code,
@@ -133,6 +136,19 @@ exports.createMarketingReport = async (user, body) => {
   if (unableToSubmitReason && hasRunningReportField) {
     throw new ApiError(400, "Do not submit running-report fields with an unable-to-submit reason.");
   }
+  if (unableToSubmitReason && !file) {
+    throw new ApiError(400, "Upload a screenshot with the unable-to-submit reason.");
+  }
+  if (file && !file.mimetype?.startsWith("image/")) {
+    throw new ApiError(400, "The evidence file must be an image.");
+  }
+  if (unableToSubmitReason && !body.campaignId) {
+    throw new ApiError(400, "Select a campaign before submitting an unable-to-submit reason.");
+  }
+  if (unableToSubmitReason && (!body.date || Number.isNaN(new Date(body.date).getTime()))) {
+    throw new ApiError(400, "A valid report date is required.");
+  }
+  const unableReportDateRange = unableToSubmitReason ? getDateRangeInIST(body.date) : null;
   if (body.isAdRunning === false && !body.reasonNotRunning?.trim()) {
     throw new ApiError(400, "Provide a reason when the project is not running.");
   }
@@ -176,6 +192,34 @@ exports.createMarketingReport = async (user, body) => {
     });
   }
 
+  if (unableToSubmitReason) {
+    const existingReport = await prisma.marketingReport.findFirst({
+      where: {
+        campaignId: body.campaignId,
+        managerId: user.id,
+        date: unableReportDateRange,
+      },
+    });
+    if (existingReport) {
+      throw new ApiError(409, "A Meta Ads report or unable-to-submit reason already exists for this campaign and date.");
+    }
+  }
+
+  let unableToSubmitScreenshotUrl = null;
+  let unableToSubmitScreenshotPublicId = null;
+  if (unableToSubmitReason) {
+    try {
+      const upload = await cloudinary.uploadBuffer(file.buffer, {
+        folder: "marketing-reports/unable-to-submit",
+        resource_type: "image",
+      });
+      unableToSubmitScreenshotUrl = upload.secure_url;
+      unableToSubmitScreenshotPublicId = upload.public_id;
+    } catch (uploadErr) {
+      throw new ApiError(500, `Screenshot upload failed: ${uploadErr.message}`);
+    }
+  }
+
   // Parse optional boolean
   let isAdRunning = null;
   if (body.isAdRunning !== undefined && body.isAdRunning !== null && body.isAdRunning !== "") {
@@ -207,6 +251,8 @@ exports.createMarketingReport = async (user, body) => {
       todayAmountSpend: body.todayAmountSpend != null && body.todayAmountSpend !== "" ? parseFloat(body.todayAmountSpend) : null,
       reasonNotRunning: body.reasonNotRunning || null,
         unableToSubmitReason,
+      unableToSubmitScreenshotUrl,
+      unableToSubmitScreenshotPublicId,
         approvalStatus: "PENDING",
       typeOfAds: body.typeOfAds || null,
       leadObtained: body.leadObtained != null && body.leadObtained !== "" ? parseInt(body.leadObtained, 10) : null,

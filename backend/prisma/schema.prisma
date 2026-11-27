@@ -423,6 +423,8 @@ model MarketingReport {
   todayAmountSpend     Float?
   reasonNotRunning     String?
   unableToSubmitReason String?
+  unableToSubmitScreenshotUrl String?
+  unableToSubmitScreenshotPublicId String?
   approvalStatus       MarketingReportApprovalStatus @default(PENDING)
   reviewedById         String?
   reviewedAt           DateTime?
@@ -581,6 +583,7 @@ model Project {
   status                     ProjectStatus               @default(ONGOING)
   dailyReports               ProjectDailyReport[]
   seoReports                 SeoReport[]
+  seoUnableSubmissions       SeoUnableSubmission[]
   marketingReports           MarketingReport[]
   marketingMonthlyReportRows MarketingMonthlyReportRow[]
   whatsappMessages           WhatsappMessage[]           @relation("ProjectWhatsappMessages")
@@ -745,6 +748,25 @@ model SeoReport {
   @@index([projectId])
   @@index([managerId])
   @@index([checkDate])
+}
+
+model SeoUnableSubmission {
+  id                 String   @id @default(uuid())
+  projectId          String
+  managerId          String
+  reportDate         DateTime @db.Date
+  reason             String
+  screenshotUrl      String
+  screenshotPublicId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  manager User    @relation("ManagerSeoUnableSubmissions", fields: [managerId], references: [id])
+
+  @@unique([projectId, managerId, reportDate])
+  @@index([managerId, reportDate])
+  @@index([projectId, reportDate])
 }
 
 model SeoTask {
@@ -1161,6 +1183,7 @@ model User {
   uploadedPayslips            Payslip[]                      @relation("UploadedPayslips")
   projectDailyReports         ProjectDailyReport[]           @relation("EmployeeDailyReports")
   seoReports                  SeoReport[]                    @relation("ManagerSeoReports")
+  seoUnableSubmissions        SeoUnableSubmission[]          @relation("ManagerSeoUnableSubmissions")
   seoTasks                    SeoTask[]                      @relation("ManagerSeoTasks")
   uploads                     Upload[]
   marketingReports            MarketingReport[]              @relation("ManagerMarketingReports")

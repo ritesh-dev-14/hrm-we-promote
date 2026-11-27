@@ -196,6 +196,146 @@ exports.createSeoReport = async (user, body, file) => {
   return formatReport(report);
 };
 
+exports.createUnableSubmission = async (user, body, file) => {
+  if (!hasRole(user, "MANAGER")) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  const reportDate = typeof body.reportDate === "string" ? body.reportDate.trim() : "";
+  if (!body.projectId || !reason || reason.length > 2000 || !reportDate || !file) {
+    throw new ApiError(400, "Project, report date, reason, and screenshot are required.");
+  }
+  if (!file.mimetype?.startsWith("image/")) {
+    throw new ApiError(400, "The evidence file must be an image.");
+  }
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(reportDate);
+  const date = dateMatch
+    ? new Date(Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])))
+    : null;
+  if (!date || date.toISOString().slice(0, 10) !== reportDate) {
+    throw new ApiError(400, "A valid report date is required.");
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id: body.projectId },
+    include: { department: true, assignments: true },
+  });
+  if (!project) {
+    throw new ApiError(404, "Project not found.");
+  }
+  if (!project.department?.name?.toLowerCase().includes("seo")) {
+    throw new ApiError(400, "Unable-to-submit entries can only be added to SEO projects.");
+  }
+  if (!project.assignments.some((assignment) => assignment.managerId === user.id)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+
+  const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+  const existingReport = await prisma.seoReport.findFirst({
+    where: {
+      projectId: project.id,
+      managerId: user.id,
+      checkDate: { gte: date, lt: nextDate },
+    },
+  });
+  if (existingReport) {
+    throw new ApiError(409, "An SEO report has already been submitted for this date.");
+  }
+  const existingUnableSubmission = await prisma.seoUnableSubmission.findUnique({
+    where: {
+      projectId_managerId_reportDate: {
+        projectId: project.id,
+        managerId: user.id,
+        reportDate: date,
+      },
+    },
+  });
+  if (existingUnableSubmission) {
+    throw new ApiError(409, "An unable-to-submit entry already exists for this date.");
+  }
+
+  let uploadedScreenshot;
+  try {
+    uploadedScreenshot = await cloudinary.uploadBuffer(file.buffer, {
+      folder: "seo-reports/unable-to-submit",
+      resource_type: "image",
+    });
+  } catch (uploadErr) {
+    throw new ApiError(500, `Screenshot upload failed: ${uploadErr.message}`);
+  }
+
+  try {
+    const submission = await prisma.seoUnableSubmission.create({
+      data: {
+        projectId: project.id,
+        managerId: user.id,
+        reportDate: date,
+        reason,
+        screenshotUrl: uploadedScreenshot.secure_url,
+        screenshotPublicId: uploadedScreenshot.public_id,
+      },
+      include: {
+        manager: { select: { id: true, name: true, employeeId: true, role: true } },
+      },
+    });
+    return {
+      id: submission.id,
+      projectId: submission.projectId,
+      managerId: submission.managerId,
+      reportDate: submission.reportDate,
+      reason: submission.reason,
+      screenshotUrl: submission.screenshotUrl,
+      createdAt: submission.createdAt,
+      manager: submission.manager,
+    };
+  } catch (error) {
+    if (error.code === "P2002") {
+      throw new ApiError(409, "An unable-to-submit entry already exists for this date.");
+    }
+    throw error;
+  }
+};
+
+exports.getUnableSubmissions = async (user, projectId) => {
+  const canViewAllReports = ["ADMIN", "HR", "EA", "COORDINATOR"].some((role) =>
+    hasRole(user, role),
+  );
+  const isManager = hasRole(user, "MANAGER");
+  if (!canViewAllReports && !isManager) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+  if (!projectId) {
+    throw new ApiError(400, "projectId query param is required.");
+  }
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: { assignments: true },
+  });
+  if (!project) {
+    throw new ApiError(404, "Project not found.");
+  }
+  if (isManager && !canViewAllReports && !project.assignments.some((assignment) => assignment.managerId === user.id)) {
+    throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);
+  }
+  const submissions = await prisma.seoUnableSubmission.findMany({
+    where: { projectId },
+    orderBy: { reportDate: "desc" },
+    include: {
+      manager: { select: { id: true, name: true, employeeId: true, role: true } },
+    },
+  });
+  return submissions.map((submission) => ({
+    id: submission.id,
+    projectId: submission.projectId,
+    managerId: submission.managerId,
+    reportDate: submission.reportDate,
+    reason: submission.reason,
+    screenshotUrl: submission.screenshotUrl,
+    createdAt: submission.createdAt,
+    manager: submission.manager,
+  }));
+};
+
 exports.updateSeoReport = async (user, reportId, body, file) => {
   if (!hasRole(user, "MANAGER")) {
     throw new ApiError(403, ERRORS.AUTH.ACCESS_DENIED);

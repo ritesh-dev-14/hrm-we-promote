@@ -9,6 +9,24 @@ exports.createSeoReport = async (req, res, next) => {
   }
 };
 
+exports.createUnableSubmission = async (req, res, next) => {
+  try {
+    const data = await service.createUnableSubmission(req.user, req.body, req.file);
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getUnableSubmissions = async (req, res, next) => {
+  try {
+    const data = await service.getUnableSubmissions(req.user, req.query.projectId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.updateSeoReport = async (req, res, next) => {
   try {
     const data = await service.updateSeoReport(req.user, req.params.id, req.body, req.file);

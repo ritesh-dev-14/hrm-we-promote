@@ -1,9 +1,14 @@
 const express = require("express");
+const multer = require("multer");
 const auth = require("../../middlewares/auth.middleware");
 const role = require("../../middlewares/role.middleware");
 const validate = require("../../middlewares/validate.middleware");
 const controller = require("./campaign.controller");
 const marketingReportController = require("../marketing-report/marketing-report.controller");
+const reportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 const { createCampaignSchema, updateCampaignSchema } = require("./campaign.validation");
 
 const router = express.Router();
@@ -47,6 +52,7 @@ router.post(
   "/campaigns/:campaignId/reports",
   auth,
   role("MANAGER"),
+  reportUpload.single("screenshot"),
   marketingReportController.createCampaignReport
 );
 router.get(

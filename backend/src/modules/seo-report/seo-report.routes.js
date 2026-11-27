@@ -5,7 +5,10 @@ const auth = require("../../middlewares/auth.middleware");
 const role = require("../../middlewares/role.middleware");
 const controller = require("./seo-report.controller");
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 // Create SEO report (MANAGER, with screenshot upload)
 router.post(
@@ -14,6 +17,14 @@ router.post(
   role("MANAGER"),
   upload.single("screenshot"),
   controller.createSeoReport
+);
+
+router.post(
+  "/unable-to-submit",
+  auth,
+  role("MANAGER"),
+  upload.single("screenshot"),
+  controller.createUnableSubmission
 );
 
 router.patch(
@@ -25,6 +36,12 @@ router.patch(
 );
 
 router.get("/submitted-projects", auth, role("ADMIN", "HR"), controller.getSubmittedProjectIds);
+router.get(
+  "/unable-to-submit",
+  auth,
+  role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"),
+  controller.getUnableSubmissions
+);
 
 // Get all SEO reports for a project (?projectId=...)
 router.get("/", auth, role("ADMIN", "HR", "EA", "COORDINATOR", "MANAGER"), controller.getSeoReports);
